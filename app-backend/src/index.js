@@ -1,4 +1,3 @@
- 
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -6,14 +5,60 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// ── Middleware ──
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  credentials: true,
+}));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Backend funcionando ✅' });
+// ── Logging middleware ──
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} → ${res.statusCode} (${duration}ms)`);
+  });
+  next();
 });
 
+// ── Routes ──
+const productosRoutes = require('./routes/productos');
+const pedidosRoutes = require('./routes/pedidos');
+const mesasRoutes = require('./routes/mesas');
+const categoriasRoutes = require('./routes/categorias');
+const restauranteRoutes = require('./routes/restaurante');
+
+app.use('/api/productos', productosRoutes);
+app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/mesas', mesasRoutes);
+app.use('/api/categorias', categoriasRoutes);
+app.use('/api/restaurante', restauranteRoutes);
+
+// ── Health check ──
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'El Mijano API v1',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// ── Error handler ──
+app.use((err, req, res, next) => {
+  console.error('[Error]', err.message);
+  res.status(err.status || 500).json({
+    error: true,
+    message: err.message || 'Error interno del servidor',
+  });
+});
+
+// ── Start server ──
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`\n🍷 El Mijano API corriendo en http://localhost:${PORT}\n`);
 });
