@@ -90,6 +90,7 @@ export interface Mesa {
 export interface Usuario {
   id: string;
   id_restaurante: string;
+  auth_id: string | null;
   email: string | null;
   nombre: string;
   rol: RolUsuario;

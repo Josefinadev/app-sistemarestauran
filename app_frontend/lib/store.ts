@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { ItemCarrito, Producto, Agregado, RolUsuario, Restaurante, Mesa } from "@/lib/database.types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -49,38 +50,83 @@ export const useCarrito = create<CarritoState>((set, get) => ({
 }));
 
 /* ═══════════════════════════════════════════════════════════
-   Store de Sesión / Auth simulado
+   Store de Sesión / Auth real con Supabase
+   Persiste en localStorage para sobrevivir recargas de página
    ═══════════════════════════════════════════════════════════ */
 
+interface AuthUsuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  auth_id: string;
+}
+
+interface LoginSessionData {
+  accessToken: string;
+  refreshToken: string;
+  usuario: AuthUsuario;
+  restaurante: Restaurante;
+}
+
 interface AuthState {
+  accessToken: string | null;
+  refreshToken: string | null;
   rol: RolUsuario | null;
-  usuario: { nombre: string; rol: RolUsuario } | null;
+  usuario: AuthUsuario | null;
   restaurante: Restaurante | null;
   mesa: Mesa | null;
-  setRol: (rol: RolUsuario) => void;
+  _hasHydrated: boolean;
+  setSession: (data: LoginSessionData) => void;
   setRestaurante: (restaurante: Restaurante) => void;
   setMesa: (mesa: Mesa) => void;
   logout: () => void;
+  setHasHydrated: (val: boolean) => void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
-  rol: null,
-  usuario: null,
-  restaurante: null,
-  mesa: null,
+export const useAuth = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      refreshToken: null,
+      rol: null,
+      usuario: null,
+      restaurante: null,
+      mesa: null,
+      _hasHydrated: false,
 
-  setRol: (rol) =>
-    set({
-      rol,
-      usuario: { nombre: rol.charAt(0).toUpperCase() + rol.slice(1), rol },
+      setSession: ({ accessToken, refreshToken, usuario, restaurante }) =>
+        set({
+          accessToken,
+          refreshToken,
+          rol: usuario.rol,
+          usuario,
+          restaurante,
+        }),
+
+      setRestaurante: (restaurante) => set({ restaurante }),
+      setMesa: (mesa) => set({ mesa }),
+
+      logout: () =>
+        set({
+          accessToken: null,
+          refreshToken: null,
+          rol: null,
+          usuario: null,
+          restaurante: null,
+          mesa: null,
+        }),
+
+      setHasHydrated: (val) => set({ _hasHydrated: val }),
     }),
-
-  setRestaurante: (restaurante) => set({ restaurante }),
-  setMesa: (mesa) => set({ mesa }),
-
-  logout: () =>
-    set({ rol: null, usuario: null, restaurante: null, mesa: null }),
-}));
+    {
+      name: "el-mijano-auth",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
+  )
+);
 
 /* ═══════════════════════════════════════════════════════════
    Store de Notificaciones

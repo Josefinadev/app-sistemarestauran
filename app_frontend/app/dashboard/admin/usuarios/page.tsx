@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUsuarios, crearUsuario, actualizarUsuario, eliminarUsuario } from "@/lib/api";
+import { getUsuarios, actualizarUsuario, eliminarUsuario } from "@/lib/api";
+import { crearUsuarioAuth, cambiarPasswordAuth } from "@/lib/api";
 import {
   Users, Plus, X, Crown, Flame, UtensilsCrossed, Wallet, UserCircle,
-  Search, Shield, Trash2, ToggleLeft, ToggleRight, Mail,
+  Search, Shield, Trash2, ToggleLeft, ToggleRight, Mail, Pencil,
+  Lock, Eye, EyeOff, AlertTriangle, Check, Key,
 } from "lucide-react";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
@@ -17,14 +19,50 @@ const roleConfig: Record<string, { label: string; Icon: any; color: string }> = 
   cliente: { label: "Cliente", Icon: UserCircle, color: "var(--text-muted)" },
 };
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRol, setFilterRol] = useState<string>("all");
-  const [showModal, setShowModal] = useState(false);
+
+  // ── Modal de Crear ──
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newUser, setNewUser] = useState({ nombre: "", email: "", rol: "mesero" });
+  const [createError, setCreateError] = useState("");
+  const [showCreatePwd, setShowCreatePwd] = useState(false);
+  const [newUser, setNewUser] = useState({ nombre: "", email: "", rol: "mesero", password: "" });
+
+  // ── Modal de Editar ──
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
+  const [editData, setEditData] = useState({ nombre: "", email: "", rol: "" });
+  const [editError, setEditError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // ── Modal de Cambiar Contraseña ──
+  const [showPwdModal, setShowPwdModal] = useState(false);
+  const [pwdUser, setPwdUser] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSaving, setPwdSaving] = useState(false);
+
+  // ── Modal de Confirmar Eliminación ──
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteUser, setDeleteUser] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // ── Feedback ──
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 4000);
+  };
 
   const loadUsers = useCallback(async () => {
     try {
@@ -40,39 +78,136 @@ export default function UsuariosPage() {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
+  // ═══════════════════════════════════════════
+  // CREAR USUARIO (con Supabase Auth)
+  // ═══════════════════════════════════════════
   const handleCreate = async () => {
-    if (!newUser.nombre || !newUser.rol) return;
+    setCreateError("");
+
+    if (!newUser.nombre.trim()) { setCreateError("El nombre es obligatorio."); return; }
+    if (!newUser.email.trim()) { setCreateError("El email es obligatorio."); return; }
+    if (!isValidEmail(newUser.email)) { setCreateError("Ingresa un email válido (ej: usuario@gmail.com)."); return; }
+    if (!newUser.password.trim()) { setCreateError("La contraseña es obligatoria."); return; }
+    if (newUser.password.length < 6) { setCreateError("La contraseña debe tener al menos 6 caracteres."); return; }
+
     setSaving(true);
     try {
-      await crearUsuario({ id_restaurante: ID_RESTAURANTE, ...newUser });
-      setShowModal(false);
-      setNewUser({ nombre: "", email: "", rol: "mesero" });
+      await crearUsuarioAuth({
+        id_restaurante: ID_RESTAURANTE,
+        nombre: newUser.nombre.trim(),
+        email: newUser.email.trim().toLowerCase(),
+        rol: newUser.rol,
+        password: newUser.password,
+      });
+      setShowCreateModal(false);
+      setNewUser({ nombre: "", email: "", rol: "mesero", password: "" });
+      showFeedback("success", `✅ Usuario "${newUser.nombre}" creado exitosamente.`);
       loadUsers();
-    } catch (err) {
-      console.error("Error creating user:", err);
+    } catch (err: any) {
+      setCreateError(err.message || "Error al crear usuario.");
     } finally {
       setSaving(false);
     }
   };
 
+  // ═══════════════════════════════════════════
+  // EDITAR USUARIO
+  // ═══════════════════════════════════════════
+  const openEditModal = (user: any) => {
+    setEditUser(user);
+    setEditData({ nombre: user.nombre, email: user.email || "", rol: user.rol });
+    setEditError("");
+    setShowEditModal(true);
+  };
+
+  const handleEdit = async () => {
+    setEditError("");
+    if (!editData.nombre.trim()) { setEditError("El nombre es obligatorio."); return; }
+    if (editData.email && !isValidEmail(editData.email)) { setEditError("Ingresa un email válido."); return; }
+
+    setEditSaving(true);
+    try {
+      await actualizarUsuario(editUser.id, {
+        nombre: editData.nombre.trim(),
+        email: editData.email.trim().toLowerCase() || null,
+        rol: editData.rol,
+      });
+      setShowEditModal(false);
+      showFeedback("success", `✅ Usuario "${editData.nombre}" actualizado.`);
+      loadUsers();
+    } catch (err: any) {
+      setEditError(err.message || "Error al actualizar usuario.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════
+  // CAMBIAR CONTRASEÑA
+  // ═══════════════════════════════════════════
+  const openPwdModal = (user: any) => {
+    setPwdUser(user);
+    setNewPassword("");
+    setPwdError("");
+    setShowPwd(false);
+    setShowPwdModal(true);
+  };
+
+  const handleChangePassword = async () => {
+    setPwdError("");
+    if (!newPassword.trim()) { setPwdError("Ingresa la nueva contraseña."); return; }
+    if (newPassword.length < 6) { setPwdError("Mínimo 6 caracteres."); return; }
+
+    setPwdSaving(true);
+    try {
+      await cambiarPasswordAuth(pwdUser.id, newPassword);
+      setShowPwdModal(false);
+      showFeedback("success", `🔑 Contraseña de "${pwdUser.nombre}" actualizada.`);
+    } catch (err: any) {
+      setPwdError(err.message || "Error al cambiar contraseña.");
+    } finally {
+      setPwdSaving(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════
+  // ACTIVAR / DESACTIVAR
+  // ═══════════════════════════════════════════
   const handleToggleActive = async (user: any) => {
     try {
       await actualizarUsuario(user.id, { activo: !user.activo });
       setUsuarios((prev) => prev.map((u) => u.id === user.id ? { ...u, activo: !u.activo } : u));
+      showFeedback("success", user.activo ? `⏸️ ${user.nombre} desactivado.` : `▶️ ${user.nombre} activado.`);
     } catch (err) {
       console.error("Error toggling user:", err);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // ═══════════════════════════════════════════
+  // ELIMINAR PERMANENTEMENTE
+  // ═══════════════════════════════════════════
+  const openDeleteModal = (user: any) => {
+    setDeleteUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setDeleting(true);
     try {
-      await eliminarUsuario(id);
+      await eliminarUsuario(deleteUser.id);
+      setShowDeleteModal(false);
+      showFeedback("success", `🗑️ Usuario "${deleteUser.nombre}" eliminado permanentemente.`);
       loadUsers();
-    } catch (err) {
-      console.error("Error deleting user:", err);
+    } catch (err: any) {
+      showFeedback("error", err.message || "Error al eliminar usuario.");
+    } finally {
+      setDeleting(false);
     }
   };
 
+  // ═══════════════════════════════════════════
+  // FILTRADO
+  // ═══════════════════════════════════════════
   const filteredUsers = usuarios.filter((u) => {
     const matchSearch = u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        (u.email || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -84,6 +219,10 @@ export default function UsuariosPage() {
     acc[u.rol] = (acc[u.rol] || 0) + 1;
     return acc;
   }, {});
+
+  // ═══════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════
 
   if (loading) {
     return (
@@ -98,7 +237,26 @@ export default function UsuariosPage() {
 
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Header */}
+
+      {/* ── Feedback Toast ── */}
+      {feedback && (
+        <div
+          className="animate-fade-in"
+          style={{
+            position: "fixed", top: 20, right: 20, zIndex: 1000,
+            padding: "14px 20px", borderRadius: 12,
+            background: feedback.type === "success" ? "rgba(74,222,128,0.12)" : "rgba(226,114,91,0.12)",
+            border: `1px solid ${feedback.type === "success" ? "rgba(74,222,128,0.3)" : "rgba(226,114,91,0.3)"}`,
+            color: feedback.type === "success" ? "var(--success)" : "var(--secondary)",
+            fontSize: 13, fontWeight: 500,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+          }}
+        >
+          {feedback.message}
+        </div>
+      )}
+
+      {/* ── Header ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: 24, fontWeight: 400, color: "var(--text)", margin: "0 0 4px" }}>
@@ -106,12 +264,12 @@ export default function UsuariosPage() {
           </h1>
           <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{usuarios.length} usuarios registrados</p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button className="btn btn-primary btn-sm" onClick={() => { setShowCreateModal(true); setCreateError(""); setNewUser({ nombre: "", email: "", rol: "mesero", password: "" }); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Plus size={14} /> Nuevo usuario
         </button>
       </div>
 
-      {/* Role Cards */}
+      {/* ── Role Cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
         {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
           const Icon = cfg.Icon;
@@ -133,13 +291,13 @@ export default function UsuariosPage() {
         })}
       </div>
 
-      {/* Search */}
+      {/* ── Search ── */}
       <div style={{ position: "relative", maxWidth: 400 }}>
         <Search size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
         <input type="text" placeholder="Buscar usuarios..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" style={{ paddingLeft: 36 }} />
       </div>
 
-      {/* Users Table */}
+      {/* ── Users Table ── */}
       <div className="table-container">
         <table>
           <thead>
@@ -177,12 +335,24 @@ export default function UsuariosPage() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => handleToggleActive(user)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {/* Editar */}
+                      <button onClick={() => openEditModal(user)} className="btn btn-ghost btn-sm" title="Editar usuario" style={{ padding: "4px 8px" }}>
+                        <Pencil size={14} color="var(--primary)" />
+                      </button>
+                      {/* Cambiar contraseña */}
+                      {user.auth_id && (
+                        <button onClick={() => openPwdModal(user)} className="btn btn-ghost btn-sm" title="Cambiar contraseña" style={{ padding: "4px 8px" }}>
+                          <Key size={14} color="var(--tertiary)" />
+                        </button>
+                      )}
+                      {/* Toggle activo */}
+                      <button onClick={() => handleToggleActive(user)} className="btn btn-ghost btn-sm" title={user.activo ? "Desactivar" : "Activar"} style={{ padding: "4px 8px" }}>
                         {user.activo ? <ToggleRight size={16} color="var(--success)" /> : <ToggleLeft size={16} color="var(--text-muted)" />}
                       </button>
-                      <button onClick={() => handleDelete(user.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}>
-                        <Trash2 size={14} color="var(--text-muted)" />
+                      {/* Eliminar */}
+                      <button onClick={() => openDeleteModal(user)} className="btn btn-ghost btn-sm" title="Eliminar permanentemente" style={{ padding: "4px 8px" }}>
+                        <Trash2 size={14} color="var(--secondary)" />
                       </button>
                     </div>
                   </td>
@@ -196,23 +366,69 @@ export default function UsuariosPage() {
         </table>
       </div>
 
-      {/* Create Modal */}
-      {showModal && (
+      {/* ═══════════════════════════════════════════
+          MODAL: CREAR USUARIO
+          ═══════════════════════════════════════════ */}
+      {showCreateModal && (
         <>
-          <div className="overlay" onClick={() => setShowModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 420, border: "1px solid var(--border)" }}>
+          <div className="overlay" onClick={() => setShowCreateModal(false)} />
+          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 440, border: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nuevo Usuario</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <Plus size={18} color="var(--primary)" /> Nuevo Usuario
+              </h3>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
             </div>
+
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input className="input" placeholder="Nombre completo" value={newUser.nombre} onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })} />
-              <div style={{ position: "relative" }}>
-                <Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-                <input className="input" placeholder="Email (opcional)" type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} style={{ paddingLeft: 36 }} />
-              </div>
+              {/* Nombre */}
               <div>
-                <p className="label" style={{ marginBottom: 8 }}>Seleccionar rol</p>
+                <p className="label" style={{ marginBottom: 6 }}>Nombre completo *</p>
+                <input className="input" placeholder="Nombre del empleado" value={newUser.nombre} onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })} />
+              </div>
+
+              {/* Email */}
+              <div>
+                <p className="label" style={{ marginBottom: 6 }}>Correo electrónico *</p>
+                <div style={{ position: "relative" }}>
+                  <Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    className="input"
+                    placeholder="usuario@gmail.com"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    style={{ paddingLeft: 36 }}
+                  />
+                </div>
+              </div>
+
+              {/* Contraseña */}
+              <div>
+                <p className="label" style={{ marginBottom: 6 }}>Contraseña * <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 400 }}>(mínimo 6 caracteres)</span></p>
+                <div style={{ position: "relative" }}>
+                  <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    className="input"
+                    placeholder="••••••••"
+                    type={showCreatePwd ? "text" : "password"}
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    style={{ paddingLeft: 36, paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePwd(!showCreatePwd)}
+                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+                  >
+                    {showCreatePwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Rol */}
+              <div>
+                <p className="label" style={{ marginBottom: 8 }}>Seleccionar rol *</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
                     const RoleIcon = cfg.Icon;
@@ -226,10 +442,185 @@ export default function UsuariosPage() {
                   })}
                 </div>
               </div>
+
+              {/* Error */}
+              {createError && (
+                <p className="animate-fade-in" style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+                  {createError}
+                </p>
+              )}
             </div>
+
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={handleCreate} className="btn btn-primary" disabled={saving} style={{ flex: 1, opacity: saving ? 0.6 : 1 }}>{saving ? "Guardando..." : "Crear"}</button>
+              <button onClick={() => setShowCreateModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+              <button onClick={handleCreate} className="btn btn-primary" disabled={saving} style={{ flex: 1, opacity: saving ? 0.6 : 1 }}>
+                {saving ? "Creando..." : "Crear usuario"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          MODAL: EDITAR USUARIO
+          ═══════════════════════════════════════════ */}
+      {showEditModal && editUser && (
+        <>
+          <div className="overlay" onClick={() => setShowEditModal(false)} />
+          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 440, border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <Pencil size={18} color="var(--primary)" /> Editar Usuario
+              </h3>
+              <button onClick={() => setShowEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Nombre */}
+              <div>
+                <p className="label" style={{ marginBottom: 6 }}>Nombre</p>
+                <input className="input" value={editData.nombre} onChange={(e) => setEditData({ ...editData, nombre: e.target.value })} />
+              </div>
+
+              {/* Email */}
+              <div>
+                <p className="label" style={{ marginBottom: 6 }}>Correo electrónico</p>
+                <div style={{ position: "relative" }}>
+                  <Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                  <input className="input" type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} style={{ paddingLeft: 36 }} />
+                </div>
+              </div>
+
+              {/* Rol */}
+              <div>
+                <p className="label" style={{ marginBottom: 8 }}>Rol</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
+                    const RoleIcon = cfg.Icon;
+                    return (
+                      <button key={key} type="button" onClick={() => setEditData({ ...editData, rol: key })}
+                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: editData.rol === key ? `${cfg.color}15` : "var(--surface)", border: editData.rol === key ? `1px solid ${cfg.color}` : "1px solid var(--border)", borderRadius: "var(--radius-md)", cursor: "pointer", transition: "all 0.15s" }}>
+                        <RoleIcon size={16} color={editData.rol === key ? cfg.color : "var(--text-muted)"} />
+                        <span style={{ fontSize: 12, fontWeight: 500, color: editData.rol === key ? cfg.color : "var(--text-secondary)" }}>{cfg.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Error */}
+              {editError && (
+                <p className="animate-fade-in" style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+                  {editError}
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowEditModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+              <button onClick={handleEdit} className="btn btn-primary" disabled={editSaving} style={{ flex: 1, opacity: editSaving ? 0.6 : 1 }}>
+                {editSaving ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          MODAL: CAMBIAR CONTRASEÑA
+          ═══════════════════════════════════════════ */}
+      {showPwdModal && pwdUser && (
+        <>
+          <div className="overlay" onClick={() => setShowPwdModal(false)} />
+          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 400, border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <Key size={18} color="var(--tertiary)" /> Cambiar Contraseña
+              </h3>
+              <button onClick={() => setShowPwdModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
+            </div>
+
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px" }}>
+              Cambiar contraseña de <strong style={{ color: "var(--text)" }}>{pwdUser.nombre}</strong> ({pwdUser.email})
+            </p>
+
+            <div style={{ position: "relative" }}>
+              <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                className="input"
+                placeholder="Nueva contraseña (mín. 6 caracteres)"
+                type={showPwd ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                style={{ paddingLeft: 36, paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(!showPwd)}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+              >
+                {showPwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}
+              </button>
+            </div>
+
+            {pwdError && (
+              <p className="animate-fade-in" style={{ fontSize: 12, color: "var(--secondary)", margin: "12px 0 0", padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+                {pwdError}
+              </p>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowPwdModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+              <button onClick={handleChangePassword} className="btn btn-primary" disabled={pwdSaving} style={{ flex: 1, opacity: pwdSaving ? 0.6 : 1 }}>
+                {pwdSaving ? "Actualizando..." : "Cambiar contraseña"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          MODAL: CONFIRMAR ELIMINACIÓN
+          ═══════════════════════════════════════════ */}
+      {showDeleteModal && deleteUser && (
+        <>
+          <div className="overlay" onClick={() => setShowDeleteModal(false)} />
+          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 420, border: "1px solid var(--border)" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(226,114,91,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <AlertTriangle size={28} color="var(--secondary)" />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: "0 0 8px" }}>¿Eliminar usuario?</h3>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Estás a punto de eliminar <strong style={{ color: "var(--text)" }}>permanentemente</strong> a:
+              </p>
+            </div>
+
+            <div style={{ padding: "14px 16px", background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", marginBottom: 20 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: "0 0 4px" }}>{deleteUser.nombre}</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{deleteUser.email || "Sin email"} · {roleConfig[deleteUser.rol]?.label || deleteUser.rol}</p>
+            </div>
+
+            <p style={{ fontSize: 11, color: "var(--secondary)", margin: "0 0 16px", padding: "8px 12px", background: "rgba(226,114,91,0.06)", borderRadius: 8, border: "1px solid rgba(226,114,91,0.15)", lineHeight: 1.5 }}>
+              ⚠️ Esta acción es <strong>irreversible</strong>. Se eliminará de la base de datos y del sistema de autenticación. No podrá volver a iniciar sesión.
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="btn btn-sm"
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: "12px",
+                  background: "rgba(226,114,91,0.15)", color: "var(--secondary)",
+                  border: "1px solid rgba(226,114,91,0.3)", borderRadius: 12,
+                  fontWeight: 600, cursor: "pointer",
+                  opacity: deleting ? 0.6 : 1,
+                }}
+              >
+                {deleting ? "Eliminando..." : "Sí, eliminar"}
+              </button>
             </div>
           </div>
         </>

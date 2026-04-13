@@ -46,12 +46,19 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { rol, usuario, logout } = useAuth();
+  const { rol, usuario, logout, accessToken, _hasHydrated } = useAuth();
   const { unreadCount } = useNotificaciones();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [time, setTime] = useState("");
   const [showNotifs, setShowNotifs] = useState(false);
   const { items: notifItems, markAllRead } = useNotificaciones();
+
+  // ── Auth Guard: Redirigir al login si no hay sesión ──
+  useEffect(() => {
+    if (_hasHydrated && !accessToken) {
+      router.push("/login");
+    }
+  }, [_hasHydrated, accessToken, router]);
 
   useEffect(() => {
     const update = () => {
@@ -74,6 +81,47 @@ export default function DashboardLayout({
     logout();
     router.push("/login");
   };
+
+  // ── Loading: Esperando hidratación del store ──
+  if (!_hasHydrated) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          height: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--bg)",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, var(--primary), var(--primary-dark))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+              animation: "pulse 1.5s ease-in-out infinite",
+            }}
+          >
+            <Wine size={24} color="var(--text-inverse)" />
+          </div>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            Cargando...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Sin sesión: no renderizar (el useEffect redirigirá) ──
+  if (!accessToken) {
+    return null;
+  }
 
   // Role icon mapping
   const roleIcons: Record<string, React.ReactNode> = {

@@ -1,15 +1,49 @@
 /* ═══════════════════════════════════════════════════════════
    API Client — Comunicación centralizada con el backend Express
    Todas las llamadas al backend pasan por aquí.
+   Incluye auth token en las peticiones automáticamente.
    ═══════════════════════════════════════════════════════════ */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
+/** Obtener el token de sesión actual del store (sin hooks) */
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("el-mijano-auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.state?.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
 async function apiFetch(path: string, options?: RequestInit) {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  };
+
+  // Incluir token de auth si existe
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers,
   });
+
+  // Si el token expiró, limpiar sesión y redirigir al login
+  if (res.status === 401 && token) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("el-mijano-auth");
+      window.location.href = "/login";
+    }
+    throw new Error("Sesión expirada. Inicia sesión nuevamente.");
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -23,15 +57,58 @@ async function apiFetch(path: string, options?: RequestInit) {
   return json.data ?? json;
 }
 
+// ── Auth ──
+
+/** Login con email y contraseña — devuelve token + datos de usuario */
+export const loginAuth = async (email: string, password: string) => {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || "Email o contraseña incorrectos.");
+  }
+
+  const json = await res.json();
+  return json.data;
+};
+
+/** Verificar sesión actual — devuelve datos del usuario */
+export const getAuthMe = () => apiFetch("/auth/me");
+
+/** Crear un nuevo usuario (solo admin) */
+export const crearUsuarioAuth = (data: {
+  email: string;
+  password: string;
+  nombre: string;
+  rol: string;
+  id_restaurante: string;
+}) => apiFetch("/auth/crear-usuario", { method: "POST", body: JSON.stringify(data) });
+
+/** Cambiar contraseña de un usuario (solo admin) */
+export const cambiarPasswordAuth = (user_id: string, new_password: string) =>
+  apiFetch("/auth/cambiar-password", {
+    method: "POST",
+    body: JSON.stringify({ user_id, new_password }),
+  });
+
 // Upload de imágenes (multipart/form-data, no JSON)
 export async function uploadImage(file: File, folder: string = "web"): Promise<string> {
   const formData = new FormData();
   formData.append("imagen", file);
   formData.append("folder", folder);
 
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const res = await fetch(`${API_URL}/upload`, {
     method: "POST",
     body: formData,
+    headers,
   });
 
   if (!res.ok) {

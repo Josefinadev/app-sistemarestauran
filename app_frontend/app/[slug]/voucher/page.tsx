@@ -272,17 +272,9 @@ export default function VoucherPage() {
         </div>
       </div>
 
-      {/* Print Button */}
-      <button
-        onClick={handlePrint}
-        className="btn btn-secondary"
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-      >
-        <Printer size={16} /> Imprimir voucher
-      </button>
-
-      {/* Upload Comprobante */}
+      {/* ── Sección de estado del pago ── */}
       {!isPagado ? (
+        /* PASO 1: Esperando que Caja confirme */
         <div
           style={{
             background: "var(--surface)",
@@ -294,11 +286,11 @@ export default function VoucherPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <AlertCircle size={16} color="var(--warning)" />
             <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>
-              Pago pendiente
+              Paso 1: Pago pendiente
             </h3>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 12px", lineHeight: 1.5 }}>
-            El cajero debe confirmar tu pago primero. Una vez confirmado, podrás subir tu comprobante aquí.
+            Realiza tu pago al cajero. Una vez que el cajero confirme tu pago, podrás subir tu comprobante aquí.
           </p>
           <div
             style={{
@@ -309,12 +301,30 @@ export default function VoucherPage() {
               fontSize: 11,
               color: "var(--warning)",
               textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
             }}
           >
+            <Loader2 size={14} className="spin-icon" />
             Esperando confirmación del cajero...
           </div>
+
+          {/* Botón de imprimir DESHABILITADO */}
+          <button
+            disabled
+            className="btn btn-secondary"
+            style={{ width: "100%", marginTop: 16, opacity: 0.35, cursor: "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <Printer size={16} /> Imprimir voucher
+          </button>
+          <p style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", margin: "8px 0 0" }}>
+            El voucher se habilitará cuando subas tu comprobante de pago.
+          </p>
         </div>
       ) : !uploaded ? (
+        /* PASO 2: Caja confirmó, cliente sube comprobante */
         <div
           style={{
             background: "var(--surface)",
@@ -323,15 +333,20 @@ export default function VoucherPage() {
             padding: "20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <Upload size={16} color="var(--tertiary)" />
             <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>
-              Subir comprobante
+              Paso 2: Subir comprobante
             </h3>
           </div>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 16px", lineHeight: 1.5 }}>
-            Sube la captura de tu pago por {pedido?.metodo_pago || "Yape"}.
+          <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 4px", lineHeight: 1.5 }}>
+            ¡El cajero ya confirmó tu pago! Ahora sube la captura de tu pago por {pedido?.metodo_pago || "Yape"}.
           </p>
+
+          <div style={{ padding: "10px 12px", background: "rgba(74,222,128,0.06)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(74,222,128,0.15)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <CheckCircle2 size={14} color="var(--success)" />
+            <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 500 }}>Pago confirmado por el cajero</span>
+          </div>
 
           {error && (
             <p style={{ fontSize: 11, color: "var(--secondary)", margin: "0 0 12px", padding: "8px 12px", background: "rgba(226,114,91,0.06)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.15)" }}>
@@ -370,25 +385,48 @@ export default function VoucherPage() {
               {uploading ? <><Loader2 size={14} className="spin-icon" /> Subiendo...</> : <><Upload size={14} /> Enviar comprobante</>}
             </button>
           )}
+
+          {/* Botón de imprimir DESHABILITADO */}
+          <button
+            disabled
+            className="btn btn-secondary"
+            style={{ width: "100%", marginTop: 16, opacity: 0.35, cursor: "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <Printer size={16} /> Imprimir voucher
+          </button>
+          <p style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", margin: "8px 0 0" }}>
+            Sube tu comprobante para habilitar la impresión del voucher.
+          </p>
         </div>
       ) : (
-        <div
-          className="animate-fade-in"
-          style={{
-            textAlign: "center",
-            padding: "20px",
-            background: "rgba(74,222,128,0.06)",
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid rgba(74,222,128,0.2)",
-          }}
-        >
-          <FileCheck size={28} color="var(--success)" style={{ marginBottom: 8 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--success)", margin: 0 }}>
-            Comprobante enviado
-          </p>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "4px 0 0" }}>
-            Tu pago ha sido registrado correctamente.
-          </p>
+        /* PASO 3: Comprobante subido — voucher listo para imprimir */
+        <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "20px",
+              background: "rgba(74,222,128,0.06)",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid rgba(74,222,128,0.2)",
+            }}
+          >
+            <FileCheck size={28} color="var(--success)" style={{ marginBottom: 8 }} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--success)", margin: 0 }}>
+              Comprobante enviado — Pago verificado
+            </p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "4px 0 0" }}>
+              Tu pago ha sido registrado correctamente. Ya puedes imprimir tu voucher.
+            </p>
+          </div>
+
+          {/* Botón de imprimir HABILITADO */}
+          <button
+            onClick={handlePrint}
+            className="btn btn-primary"
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px" }}
+          >
+            <Printer size={16} /> Imprimir voucher
+          </button>
         </div>
       )}
 

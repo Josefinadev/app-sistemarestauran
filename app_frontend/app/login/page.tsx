@@ -1,30 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import type { RolUsuario } from "@/lib/database.types";
 import { useAuth } from "@/lib/store";
-import { getRestaurante } from "@/lib/api";
+import { loginAuth } from "@/lib/api";
 import {
-  Crown,
-  Flame,
-  UtensilsCrossed,
-  Wallet,
   Wine,
   Lock,
   LogIn,
   Loader2,
   Monitor,
-  Smartphone,
   Wifi,
+  Crown,
+  Mail,
+  CircleDot,
 } from "lucide-react";
-
-const roles: { key: RolUsuario; label: string; Icon: any; desc: string }[] = [
-  { key: "admin", label: "Admin", Icon: Crown, desc: "Gestión completa" },
-  { key: "cocina", label: "Cocina", Icon: Flame, desc: "Preparación de platos" },
-  { key: "mesero", label: "Mesero", Icon: UtensilsCrossed, desc: "Servicio en sala" },
-  { key: "caja", label: "Cajero", Icon: Wallet, desc: "Cobros y pagos" },
-];
 
 const roleRoutes: Record<RolUsuario, string> = {
   admin: "/dashboard/admin",
@@ -34,23 +25,21 @@ const roleRoutes: Record<RolUsuario, string> = {
   cliente: "/",
 };
 
-// Slug del restaurante — en producción esto vendría de la autenticación
-const RESTAURANT_SLUG = "el-mijano";
-
 export default function LoginPage() {
   const router = useRouter();
-  const { setRol, setRestaurante } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<RolUsuario | null>(null);
+  const { setSession } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const canSubmit = useMemo(() => selectedRole && password.trim().length > 0, [selectedRole, password]);
+  const canSubmit = email.trim().length > 0 && password.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRole) {
-      setError("Selecciona un rol para continuar.");
+
+    if (!email.trim()) {
+      setError("Ingresa tu email.");
       return;
     }
     if (!password.trim()) {
@@ -61,33 +50,26 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // Simulación de login — en producción validar con Supabase Auth
-    await new Promise((r) => setTimeout(r, 800));
-
-    if (password !== "1234") {
-      setError("Contraseña incorrecta. (Usa: 1234)");
-      setIsLoading(false);
-      return;
-    }
-
-    // Cargar datos del restaurante para el store
     try {
-      const restauranteData = await getRestaurante(RESTAURANT_SLUG);
-      if (restauranteData) {
-        setRestaurante(restauranteData);
-      }
-    } catch (err) {
-      console.warn("No se pudo cargar restaurante, usando fallback:", err);
-      // Fallback: usar ID hardcoded que coincide con la DB
-      setRestaurante({
-        id: "a0000000-0000-0000-0000-000000000001",
-        nombre: "El Mijano",
-        slug: RESTAURANT_SLUG,
-      } as any);
-    }
+      // Autenticación real con Supabase Auth via backend
+      const response = await loginAuth(email.trim(), password);
 
-    setRol(selectedRole);
-    router.push(roleRoutes[selectedRole]);
+      // Guardar sesión en el store (persiste en localStorage)
+      setSession({
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        usuario: response.usuario,
+        restaurante: response.restaurante,
+      });
+
+      // Redirigir al dashboard según el rol del usuario
+      const destino = roleRoutes[response.usuario.rol as RolUsuario] || "/dashboard/admin";
+      router.push(destino);
+    } catch (err: any) {
+      setError(err.message || "Error al iniciar sesión. Verifica tus credenciales.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -190,78 +172,28 @@ export default function LoginPage() {
 
             <form
               onSubmit={handleSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: 28 }}
+              style={{ display: "flex", flexDirection: "column", gap: 24 }}
             >
-              {/* Selección de rol */}
+              {/* Email */}
               <div>
-                <p className="label" style={{ marginBottom: 12 }}>
-                  Selecciona tu rol
+                <p className="label" style={{ marginBottom: 8 }}>
+                  Correo electrónico
                 </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 10,
-                  }}
-                >
-                  {roles.map((r) => {
-                    const Icon = r.Icon;
-                    return (
-                      <button
-                        key={r.key}
-                        type="button"
-                        onClick={() => {
-                          setSelectedRole(r.key);
-                          setError("");
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "12px 14px",
-                          background:
-                            selectedRole === r.key
-                              ? "var(--primary-ghost)"
-                              : "var(--surface)",
-                          border:
-                            selectedRole === r.key
-                              ? "1px solid var(--primary)"
-                              : "1px solid var(--border)",
-                          borderRadius: "var(--radius-md)",
-                          cursor: "pointer",
-                          transition: "all var(--duration-fast) var(--ease-out)",
-                          textAlign: "left",
-                        }}
-                      >
-                        <Icon
-                          size={20}
-                          color={selectedRole === r.key ? "var(--primary)" : "var(--text-muted)"}
-                        />
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color:
-                                selectedRole === r.key
-                                  ? "var(--primary)"
-                                  : "var(--text)",
-                            }}
-                          >
-                            {r.label}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {r.desc}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                <div style={{ position: "relative" }}>
+                  <Mail
+                    size={14}
+                    color="var(--text-muted)"
+                    style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
+                  />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    placeholder="tu@email.com"
+                    className="input-underline"
+                    autoComplete="email"
+                    style={{ paddingLeft: 24 }}
+                  />
                 </div>
               </div>
 
@@ -279,7 +211,7 @@ export default function LoginPage() {
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     placeholder="••••••••"
                     className="input-underline"
                     autoComplete="current-password"

@@ -32,6 +32,7 @@ const restauranteRoutes = require('./routes/restaurante');
 const usuariosRoutes = require('./routes/usuarios');
 const webRoutes = require('./routes/web');
 const uploadRoutes = require('./routes/upload');
+const authRoutes = require('./routes/auth');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
@@ -41,6 +42,7 @@ app.use('/api/restaurante', restauranteRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/web', webRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/auth', authRoutes);
 
 // ── Health check ──
 app.get('/', (req, res) => {
