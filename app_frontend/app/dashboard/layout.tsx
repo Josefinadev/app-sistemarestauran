@@ -31,6 +31,9 @@ import {
 
 const allNavItems = [
   { href: "/dashboard/admin", label: "Panel Admin", icon: Crown, rol: "admin" },
+  { href: "/dashboard/admin/reportes", label: "Reportes", icon: BarChart3, rol: "admin" },
+  { href: "/dashboard/admin/usuarios", label: "Usuarios", icon: Users, rol: "admin" },
+  { href: "/dashboard/admin/web", label: "Gestión Web", icon: LayoutDashboard, rol: "admin" },
   { href: "/dashboard/cocina", label: "Cocina", icon: Flame, rol: "cocina" },
   { href: "/dashboard/mesero", label: "Mesero", icon: UtensilsCrossed, rol: "mesero" },
   { href: "/dashboard/caja", label: "Caja", icon: Wallet, rol: "caja" },
@@ -84,14 +87,18 @@ export default function DashboardLayout({
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         background: "var(--bg)",
+        overflow: "hidden",
       }}
     >
       {/* ── Sidebar ── */}
       <aside
         style={{
           width: sidebarCollapsed ? 72 : 240,
+          height: "100vh",
+          position: "sticky",
+          top: 0,
           background: "var(--bg-elevated)",
           borderRight: "1px solid var(--border)",
           display: "flex",
@@ -99,6 +106,7 @@ export default function DashboardLayout({
           justifyContent: "space-between",
           transition: "width var(--duration-normal) var(--ease-out)",
           overflow: "hidden",
+          overflowY: "auto",
           flexShrink: 0,
         }}
       >

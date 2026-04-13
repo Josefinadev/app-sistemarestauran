@@ -1,5 +1,14 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default function HomePage() {
-  redirect("/login");
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+/* Redirige a /login — esta página raíz no se usa directamente */
+export default function Home() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  return null;
 }

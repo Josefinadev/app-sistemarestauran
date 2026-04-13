@@ -65,7 +65,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { id_restaurante, id_categoria, nombre, descripcion, precio, imagen_url, disponible, stock, es_bebida, orden } = req.body;
+    const { id_restaurante, id_categoria, nombre, descripcion, precio, imagen_url, disponible, stock, es_bebida, requiere_preparacion, orden } = req.body;
 
     if (!id_restaurante || !id_categoria || !nombre || precio === undefined) {
       return res.status(400).json({ error: true, message: 'Campos requeridos: id_restaurante, id_categoria, nombre, precio' });
@@ -73,7 +73,12 @@ router.post('/', async (req, res) => {
 
     const { data, error } = await supabase
       .from('producto')
-      .insert({ id_restaurante, id_categoria, nombre, descripcion, precio, imagen_url, disponible, stock, es_bebida, orden })
+      .insert({
+        id_restaurante, id_categoria, nombre, descripcion, precio, imagen_url,
+        disponible, stock, es_bebida,
+        requiere_preparacion: requiere_preparacion !== undefined ? requiere_preparacion : true,
+        orden,
+      })
       .select()
       .single();
 

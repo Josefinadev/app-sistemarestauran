@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import type { RolUsuario } from "@/lib/database.types";
 import { useAuth } from "@/lib/store";
+import { getRestaurante } from "@/lib/api";
 import {
   Crown,
   Flame,
@@ -33,9 +34,12 @@ const roleRoutes: Record<RolUsuario, string> = {
   cliente: "/",
 };
 
+// Slug del restaurante — en producción esto vendría de la autenticación
+const RESTAURANT_SLUG = "el-mijano";
+
 export default function LoginPage() {
   const router = useRouter();
-  const { setRol } = useAuth();
+  const { setRol, setRestaurante } = useAuth();
   const [selectedRole, setSelectedRole] = useState<RolUsuario | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -64,6 +68,22 @@ export default function LoginPage() {
       setError("Contraseña incorrecta. (Usa: 1234)");
       setIsLoading(false);
       return;
+    }
+
+    // Cargar datos del restaurante para el store
+    try {
+      const restauranteData = await getRestaurante(RESTAURANT_SLUG);
+      if (restauranteData) {
+        setRestaurante(restauranteData);
+      }
+    } catch (err) {
+      console.warn("No se pudo cargar restaurante, usando fallback:", err);
+      // Fallback: usar ID hardcoded que coincide con la DB
+      setRestaurante({
+        id: "a0000000-0000-0000-0000-000000000001",
+        nombre: "El Mijano",
+        slug: RESTAURANT_SLUG,
+      } as any);
     }
 
     setRol(selectedRole);

@@ -13,11 +13,34 @@ async function apiFetch(path: string, options?: RequestInit) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `Error ${res.status}`);
+    throw new Error(body.message || body.error || `Error ${res.status}`);
   }
+
+  // Handle 204 No Content (e.g., DELETE responses)
+  if (res.status === 204) return null;
 
   const json = await res.json();
   return json.data ?? json;
+}
+
+// Upload de imágenes (multipart/form-data, no JSON)
+export async function uploadImage(file: File, folder: string = "web"): Promise<string> {
+  const formData = new FormData();
+  formData.append("imagen", file);
+  formData.append("folder", folder);
+
+  const res = await fetch(`${API_URL}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.url;
 }
 
 // ── Restaurante ──
@@ -103,3 +126,28 @@ export const registrarPago = (id: string, metodo_pago: string, comprobante_url?:
     method: "PATCH",
     body: JSON.stringify({ metodo_pago, comprobante_url }),
   });
+
+// ── Usuarios ──
+export const getUsuarios = (idRestaurante: string) =>
+  apiFetch(`/usuarios?id_restaurante=${idRestaurante}`);
+
+export const crearUsuario = (data: { id_restaurante: string; nombre: string; email?: string; rol: string }) =>
+  apiFetch("/usuarios", { method: "POST", body: JSON.stringify(data) });
+
+export const actualizarUsuario = (id: string, data: any) =>
+  apiFetch(`/usuarios/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+export const eliminarUsuario = (id: string) =>
+  apiFetch(`/usuarios/${id}`, { method: "DELETE" });
+
+// ── Web & Marketing ──
+export const getWebConfig = (id_restaurante: string) => apiFetch(`/web/config/${id_restaurante}`);
+export const saveWebConfig = (data: any) => apiFetch("/web/config", { method: "POST", body: JSON.stringify(data) });
+export const getWebCombos = (id_restaurante: string) => apiFetch(`/web/combos/${id_restaurante}`);
+export const crearWebCombo = (data: any) => apiFetch("/web/combos", { method: "POST", body: JSON.stringify(data) });
+export const actualizarWebCombo = (id: string, data: any) => apiFetch(`/web/combos/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const eliminarWebCombo = (id: string) => apiFetch(`/web/combos/${id}`, { method: "DELETE" });
+export const getWebOfertas = (id_restaurante: string) => apiFetch(`/web/ofertas/${id_restaurante}`);
+export const crearWebOferta = (data: any) => apiFetch("/web/ofertas", { method: "POST", body: JSON.stringify(data) });
+export const actualizarWebOferta = (id: string, data: any) => apiFetch(`/web/ofertas/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const eliminarWebOferta = (id: string) => apiFetch(`/web/ofertas/${id}`, { method: "DELETE" });

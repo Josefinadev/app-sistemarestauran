@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
         mesa:id_mesa(id, numero, slug),
         detalle_pedido(
           *,
-          producto:id_producto(id, nombre, precio, es_bebida),
+          producto:id_producto(id, nombre, precio, es_bebida, requiere_preparacion),
           detalle_pedido_agregado(
             *,
             agregado:id_agregado(id, nombre, precio)
@@ -90,16 +90,17 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 1. Obtener precios actuales de productos
+    // 1. Obtener precios actuales de productos (incluye requiere_preparacion)
     const productIds = [...new Set(items.map((i) => i.id_producto))];
     const { data: productos, error: prodError } = await supabase
       .from('producto')
-      .select('id, precio, disponible, stock')
+      .select('id, precio, disponible, stock, requiere_preparacion')
       .in('id', productIds);
 
     if (prodError) throw prodError;
 
     const precioMap = {};
+    const prepMap = {}; // mapeo id_producto → requiere_preparacion
     for (const p of productos) {
       if (!p.disponible || p.stock <= 0) {
         return res.status(400).json({
@@ -108,6 +109,7 @@ router.post('/', async (req, res) => {
         });
       }
       precioMap[p.id] = p.precio;
+      prepMap[p.id] = p.requiere_preparacion !== false; // default true
     }
 
     // 2. Obtener precios de agregados
@@ -139,6 +141,7 @@ router.post('/', async (req, res) => {
         id_producto: item.id_producto,
         precio_unitario: precioProducto,
         notas: item.notas || null,
+        requiere_preparacion: prepMap[item.id_producto],
         agregados: (item.agregados || []).map((a) => ({
           id_agregado: a.id_agregado,
           precio_momento: precioAgregadoMap[a.id_agregado] || 0,
@@ -162,8 +165,12 @@ router.post('/', async (req, res) => {
 
     if (pedError) throw pedError;
 
-    // 5. Crear detalles
+    // 5. Crear detalles (ruteo inteligente según requiere_preparacion)
     for (const det of detalles) {
+      // Si NO requiere preparación → estado = LISTO (va directo al mesero)
+      // Si SÍ requiere preparación → estado = PENDIENTE (pasa por cocina)
+      const estadoInicial = det.requiere_preparacion ? 'PENDIENTE' : 'LISTO';
+
       const { data: detalle, error: detError } = await supabase
         .from('detalle_pedido')
         .insert({
@@ -171,6 +178,7 @@ router.post('/', async (req, res) => {
           id_producto: det.id_producto,
           precio_unitario: det.precio_unitario,
           notas: det.notas,
+          estado: estadoInicial,
         })
         .select()
         .single();
@@ -254,9 +262,12 @@ router.patch('/:id/pago', async (req, res) => {
       return res.status(400).json({ error: true, message: `Método inválido. Válidos: ${validMetodos.join(', ')}` });
     }
 
+    // Al registrar pago, también actualizar estado del pedido a ENTREGADO
+    // para mantener coherencia entre estado y estado_pago
     const { data, error } = await supabase
       .from('pedido')
       .update({
+        estado: 'ENTREGADO',
         estado_pago: 'PAGADO',
         metodo_pago,
         comprobante_url: comprobante_url || null,
@@ -267,6 +278,15 @@ router.patch('/:id/pago', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // También marcar todos los detalles como ENTREGADO si no lo están
+    await supabase
+      .from('detalle_pedido')
+      .update({ estado: 'ENTREGADO' })
+      .eq('id_pedido', req.params.id)
+      .neq('estado', 'ENTREGADO')
+      .neq('estado', 'CANCELADO');
+
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });
@@ -285,10 +305,42 @@ router.patch('/detalle/:id/estado', async (req, res) => {
       .from('detalle_pedido')
       .update({ estado })
       .eq('id', req.params.id)
-      .select()
+      .select('*, id_pedido')
       .single();
 
     if (error) throw error;
+
+    // Auto-sincronizar estado del pedido padre:
+    // Si TODOS los detalles están ENTREGADO → pedido.estado = ENTREGADO
+    // Si al menos uno está EN_PREPARACION → pedido.estado = EN_PREPARACION
+    // Si al menos uno está LISTO → pedido.estado = LISTO
+    if (data.id_pedido) {
+      const { data: allDetalles } = await supabase
+        .from('detalle_pedido')
+        .select('estado')
+        .eq('id_pedido', data.id_pedido);
+
+      if (allDetalles && allDetalles.length > 0) {
+        const estados = allDetalles.map(d => d.estado);
+        let nuevoEstadoPedido;
+
+        if (estados.every(e => e === 'ENTREGADO' || e === 'CANCELADO')) {
+          nuevoEstadoPedido = 'ENTREGADO';
+        } else if (estados.some(e => e === 'LISTO')) {
+          nuevoEstadoPedido = 'LISTO';
+        } else if (estados.some(e => e === 'EN_PREPARACION')) {
+          nuevoEstadoPedido = 'EN_PREPARACION';
+        } else {
+          nuevoEstadoPedido = 'PENDIENTE';
+        }
+
+        await supabase
+          .from('pedido')
+          .update({ estado: nuevoEstadoPedido })
+          .eq('id', data.id_pedido);
+      }
+    }
+
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });

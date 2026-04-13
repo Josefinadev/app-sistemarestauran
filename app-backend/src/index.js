@@ -29,12 +29,18 @@ const pedidosRoutes = require('./routes/pedidos');
 const mesasRoutes = require('./routes/mesas');
 const categoriasRoutes = require('./routes/categorias');
 const restauranteRoutes = require('./routes/restaurante');
+const usuariosRoutes = require('./routes/usuarios');
+const webRoutes = require('./routes/web');
+const uploadRoutes = require('./routes/upload');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/mesas', mesasRoutes);
 app.use('/api/categorias', categoriasRoutes);
 app.use('/api/restaurante', restauranteRoutes);
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/web', webRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ── Health check ──
 app.get('/', (req, res) => {

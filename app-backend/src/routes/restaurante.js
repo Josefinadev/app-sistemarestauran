@@ -3,6 +3,24 @@ const supabase = require('../config/supabase');
 const router = express.Router();
 
 /**
+ * GET /api/restaurante
+ * Lista todos los restaurantes activos (para web pública)
+ */
+router.get('/', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('restaurante')
+      .select('*')
+      .eq('activo', true);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+});
+
+/**
  * GET /api/restaurante/:slug
  * Obtiene datos del restaurante por slug (para validar geolocalización)
  */
