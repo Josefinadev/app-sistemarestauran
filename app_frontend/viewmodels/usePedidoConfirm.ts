@@ -64,6 +64,7 @@ export function usePedidoConfirm() {
         notas: notas || undefined,
         items: items.map((item) => ({
           id_producto: item.producto.id,
+          cantidad: item.cantidad,
           notas: item.notas || undefined,
           agregados: item.agregados_seleccionados.map((a) => ({ id_agregado: a.id })),
         })),

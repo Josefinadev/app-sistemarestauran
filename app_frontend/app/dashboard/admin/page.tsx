@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { formatPrecio } from "@/lib/utils";
 import { useAdminDashboard } from "@/viewmodels/useAdminDashboard";
 import { QRCode } from "react-qrcode-logo";
@@ -21,6 +22,17 @@ const tabs = [
 
 export default function AdminDashboard() {
   const vm = useAdminDashboard();
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const downloadQr = (mesaSlug: string, mesaNum: number) => {
     const canvas = document.querySelector(`#qr-${mesaSlug} canvas`) as HTMLCanvasElement;
@@ -29,6 +41,24 @@ export default function AdminDashboard() {
       link.download = `qr-mesa-${mesaNum}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
+    }
+  };
+
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setSelectedImageFile(file);
+    if (file) {
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setPreviewUrl("");
+    }
+  };
+
+  const handleClearImage = () => {
+    setSelectedImageFile(null);
+    setPreviewUrl("");
+    if (fileRef.current) {
+      fileRef.current.value = "";
     }
   };
 
@@ -162,9 +192,9 @@ export default function AdminDashboard() {
       {/* ── Modals ── */}
       {vm.showProductModal && (
         <>
-          <div className="overlay" onClick={() => vm.setShowProductModal(false)} />
+          <div className="overlay" onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} />
           <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 420, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nuevo Producto</h3><button onClick={() => vm.setShowProductModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nuevo Producto</h3><button onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <input className="input" placeholder="Nombre" value={vm.newProd.nombre} onChange={(e) => vm.setNewProd({ ...vm.newProd, nombre: e.target.value })} />
               <select className="input" value={vm.newProd.id_categoria} onChange={(e) => vm.setNewProd({ ...vm.newProd, id_categoria: e.target.value })} style={{ color: vm.newProd.id_categoria ? "var(--text)" : "var(--text-muted)" }}>
@@ -173,6 +203,31 @@ export default function AdminDashboard() {
               </select>
               <input className="input" placeholder="Precio" type="number" step="0.01" value={vm.newProd.precio} onChange={(e) => vm.setNewProd({ ...vm.newProd, precio: e.target.value })} />
               <input className="input" placeholder="Descripción" value={vm.newProd.descripcion} onChange={(e) => vm.setNewProd({ ...vm.newProd, descripcion: e.target.value })} />
+              <div style={{ display: "grid", gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Imagen del plato</label>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {previewUrl ? (
+                    <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 140, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                      <img src={previewUrl} alt="Vista previa" style={{ width: "100%", height: "140px", objectFit: "cover", display: "block" }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", placeItems: "center", minHeight: 140, background: "var(--surface)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-muted)", fontSize: 12 }}>
+                      Selecciona una imagen para mostrar en la carta
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => fileRef.current?.click()} className="btn btn-secondary btn-sm" style={{ flex: 1, minWidth: 140 }}>
+                      Seleccionar imagen
+                    </button>
+                    {previewUrl && (
+                      <button type="button" onClick={handleClearImage} className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 140 }}>
+                        Quitar imagen
+                      </button>
+                    )}
+                    <input ref={fileRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+                  </div>
+                </div>
+              </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <input className="input" placeholder="Stock" type="number" value={vm.newProd.stock} onChange={(e) => vm.setNewProd({ ...vm.newProd, stock: e.target.value })} style={{ flex: 1 }} />
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)", cursor: "pointer" }}><input type="checkbox" checked={vm.newProd.es_bebida} onChange={(e) => vm.setNewProd({ ...vm.newProd, es_bebida: e.target.checked, requiere_preparacion: e.target.checked ? vm.newProd.requiere_preparacion : true })} />Es bebida</label>
@@ -192,8 +247,11 @@ export default function AdminDashboard() {
               )}
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => vm.setShowProductModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={vm.handleCreateProduct} className="btn btn-primary" disabled={vm.saving} style={{ flex: 1, opacity: vm.saving ? 0.6 : 1 }}>{vm.saving ? "Guardando..." : "Crear"}</button>
+              <button onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+              <button onClick={async () => {
+                const created = await vm.handleCreateProduct(selectedImageFile);
+                if (created) handleClearImage();
+              }} className="btn btn-primary" disabled={vm.saving} style={{ flex: 1, opacity: vm.saving ? 0.6 : 1 }}>{vm.saving ? "Guardando..." : "Crear"}</button>
             </div>
           </div>
         </>

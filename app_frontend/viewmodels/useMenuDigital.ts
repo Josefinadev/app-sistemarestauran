@@ -22,6 +22,7 @@ export function useMenuDigital() {
   const [productDetail, setProductDetail] = useState<any>(null);
   const [notas, setNotas] = useState("");
   const [selectedAgregados, setSelectedAgregados] = useState<Agregado[]>([]);
+  const [cantidad, setCantidad] = useState(1);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export function useMenuDigital() {
     setSelectedProduct(prod);
     setNotas("");
     setSelectedAgregados([]);
+    setCantidad(1);
     setLoadingDetail(true);
     try {
       const detail = await getProductoDetalle(prod.id);
@@ -110,9 +112,13 @@ export function useMenuDigital() {
 
   const handleAddToCart = () => {
     if (!selectedProduct || !canAddToCart) return;
-    addItem(selectedProduct, notas, selectedAgregados);
+    addItem(selectedProduct, cantidad, notas, selectedAgregados);
     setSelectedProduct(null);
     setProductDetail(null);
+  };
+
+  const quickAddProduct = (prod: any) => {
+    addItem(prod, 1, "", []);
   };
 
   const closeDetail = () => {
@@ -134,6 +140,7 @@ export function useMenuDigital() {
     productDetail,
     notas,
     selectedAgregados,
+    cantidad,
     loadingDetail,
     precioConAgregados,
     canAddToCart,
@@ -144,7 +151,9 @@ export function useMenuDigital() {
     setSelectedCat,
     setSearchTerm,
     setNotas,
+    setCantidad,
     openProductDetail,
+    quickAddProduct,
     toggleAgregado,
     handleAddToCart,
     closeDetail,

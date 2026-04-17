@@ -14,6 +14,7 @@ import {
   eliminarProducto,
   crearMesa,
   crearCategoria,
+  uploadImage,
 } from "@/lib/api";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
@@ -33,7 +34,14 @@ export function useAdminDashboard() {
   const [showCatModal, setShowCatModal] = useState(false);
 
   const [newProd, setNewProd] = useState({
-    nombre: "", id_categoria: "", precio: "", descripcion: "", stock: "10", es_bebida: false, requiere_preparacion: true,
+    nombre: "",
+    id_categoria: "",
+    precio: "",
+    descripcion: "",
+    stock: "10",
+    es_bebida: false,
+    requiere_preparacion: true,
+    imagen_url: "",
   });
   const [newMesa, setNewMesa] = useState({ numero: "", capacidad: "4" });
   const [newCat, setNewCat] = useState({ nombre: "", descripcion: "" });
@@ -73,10 +81,15 @@ export function useAdminDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleCreateProduct = async () => {
-    if (!newProd.nombre || !newProd.id_categoria || !newProd.precio) return;
+  const handleCreateProduct = async (imageFile?: File | null) => {
+    if (!newProd.nombre || !newProd.id_categoria || !newProd.precio) return false;
     setSaving(true);
     try {
+      let imagen_url = newProd.imagen_url;
+      if (imageFile) {
+        imagen_url = await uploadImage(imageFile, "productos");
+      }
+
       await crearProducto({
         id_restaurante: ID_RESTAURANTE,
         id_categoria: newProd.id_categoria,
@@ -87,12 +100,15 @@ export function useAdminDashboard() {
         es_bebida: newProd.es_bebida,
         requiere_preparacion: newProd.es_bebida ? newProd.requiere_preparacion : true,
         disponible: true,
+        imagen_url,
       });
       setShowProductModal(false);
-      setNewProd({ nombre: "", id_categoria: "", precio: "", descripcion: "", stock: "10", es_bebida: false, requiere_preparacion: true });
+      setNewProd({ nombre: "", id_categoria: "", precio: "", descripcion: "", stock: "10", es_bebida: false, requiere_preparacion: true, imagen_url: "" });
       loadData();
+      return true;
     } catch (err) {
       console.error("Error creating product:", err);
+      return false;
     } finally {
       setSaving(false);
     }

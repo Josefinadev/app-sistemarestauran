@@ -9,9 +9,10 @@ import { v4 as uuidv4 } from "uuid";
 
 interface CarritoState {
   items: ItemCarrito[];
-  addItem: (producto: Producto, notas: string, agregados: Agregado[]) => void;
+  addItem: (producto: Producto, cantidad: number, notas: string, agregados: Agregado[]) => void;
   removeItem: (itemId: string) => void;
   updateNotas: (itemId: string, notas: string) => void;
+  updateCantidad: (itemId: string, cantidad: number) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -20,16 +21,38 @@ interface CarritoState {
 export const useCarrito = create<CarritoState>((set, get) => ({
   items: [],
 
-  addItem: (producto, notas, agregados) => {
+  addItem: (producto, cantidad, notas, agregados) => {
     const precioAgregados = agregados.reduce((sum, a) => sum + a.precio, 0);
-    const newItem: ItemCarrito = {
-      id: uuidv4(),
-      producto,
-      notas,
-      agregados_seleccionados: agregados,
-      precio_total: producto.precio + precioAgregados,
-    };
-    set((state) => ({ items: [...state.items, newItem] }));
+    const precioTotal = producto.precio + precioAgregados;
+
+    // Check if item already exists (same product, notes, agregados)
+    const existingIndex = get().items.findIndex((item) =>
+      item.producto.id === producto.id &&
+      item.notas === notas &&
+      JSON.stringify(item.agregados_seleccionados.map(a => a.id).sort()) === JSON.stringify(agregados.map(a => a.id).sort())
+    );
+
+    if (existingIndex >= 0) {
+      // Update existing item quantity
+      set((state) => ({
+        items: state.items.map((item, index) =>
+          index === existingIndex
+            ? { ...item, cantidad: item.cantidad + cantidad }
+            : item
+        ),
+      }));
+    } else {
+      // Add new item
+      const newItem: ItemCarrito = {
+        id: uuidv4(),
+        producto,
+        notas,
+        agregados_seleccionados: agregados,
+        precio_total: precioTotal,
+        cantidad,
+      };
+      set((state) => ({ items: [...state.items, newItem] }));
+    }
   },
 
   removeItem: (itemId) => {
@@ -42,11 +65,22 @@ export const useCarrito = create<CarritoState>((set, get) => ({
     }));
   },
 
+  updateCantidad: (itemId, cantidad) => {
+    if (cantidad <= 0) {
+      // Remove item if quantity is 0 or less
+      set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }));
+    } else {
+      set((state) => ({
+        items: state.items.map((i) => (i.id === itemId ? { ...i, cantidad } : i)),
+      }));
+    }
+  },
+
   clearCart: () => set({ items: [] }),
 
-  getTotal: () => get().items.reduce((sum, i) => sum + i.precio_total, 0),
+  getTotal: () => get().items.reduce((sum, i) => sum + (i.precio_total * i.cantidad), 0),
 
-  getItemCount: () => get().items.length,
+  getItemCount: () => get().items.reduce((sum, i) => sum + i.cantidad, 0),
 }));
 
 /* ═══════════════════════════════════════════════════════════

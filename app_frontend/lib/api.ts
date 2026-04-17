@@ -182,7 +182,7 @@ export const crearPedido = (data: {
   id_restaurante: string;
   id_mesa: string;
   notas?: string;
-  items: { id_producto: string; notas?: string; agregados?: { id_agregado: string }[] }[];
+  items: { id_producto: string; cantidad: number; notas?: string; agregados?: { id_agregado: string }[] }[];
 }) =>
   apiFetch("/pedidos", { method: "POST", body: JSON.stringify(data) });
 

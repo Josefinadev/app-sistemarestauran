@@ -17,10 +17,13 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
     async function resolve() {
       try {
         const data = await getMesaPorSlug(slug);
-        if (data?.restaurante) setRestaurante(data.restaurante);
+        if (data?.restaurante) {
+          setRestaurante(data.restaurante);
+        }
         setMesa(data);
-      } catch (err: any) {
-        setError(err.message || "Mesa no encontrada");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message || "Mesa no encontrada");
       } finally {
         setLoading(false);
       }
@@ -47,33 +50,24 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "var(--bg)",
-      maxWidth: 780,
-      margin: "0 auto",
-      padding: "0 20px 80px",
-    }}>
-      {/* Header */}
-      <header style={{
-        padding: "20px 0 16px",
-        borderBottom: "1px solid var(--border)",
-        marginBottom: 24,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-      }}>
-        <Wine size={18} color="var(--primary)" />
-        <span style={{
-          fontFamily: "var(--font-noto-serif), 'Noto Serif', serif",
-          fontStyle: "italic",
-          fontSize: 18,
-          color: "var(--primary)",
-          letterSpacing: "0.06em",
-        }}>
-          El Mijano
-        </span>
+    <main style={{ minHeight: "100vh", background: "var(--bg)", maxWidth: 780, margin: "0 auto", padding: "0 20px 100px" }}>
+      <header style={{ padding: "20px 0 12px", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 14, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "grid", placeItems: "center" }}>
+                <Wine size={18} color="var(--text-inverse)" />
+              </div>
+              <div>
+                <p className="label">Menú del cliente</p>
+                <h1 style={{ fontSize: 24, margin: 0, color: "var(--text)", fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontWeight: 400 }}>
+                  {slug.replace(/-/g, " ")}
+                </h1>
+              </div>
+            </div>
+            <p className="section-note">Usa tu celular para navegar, seleccionar y pagar desde la mesa. Escanear QR debe ser simple y rápido.</p>
+          </div>
+        </div>
       </header>
       {children}
     </main>

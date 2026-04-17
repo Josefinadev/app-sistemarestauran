@@ -130,16 +130,19 @@ router.post('/', async (req, res) => {
     // 3. Calcular totales
     let subtotal = 0;
     const detalles = items.map((item) => {
+      const cantidad = item.cantidad || 1;
       const precioProducto = precioMap[item.id_producto] || 0;
       const precioAgregados = (item.agregados || []).reduce(
         (s, a) => s + (precioAgregadoMap[a.id_agregado] || 0),
         0
       );
-      subtotal += precioProducto + precioAgregados;
+      const precioTotalItem = (precioProducto + precioAgregados) * cantidad;
+      subtotal += precioTotalItem;
 
       return {
         id_producto: item.id_producto,
         precio_unitario: precioProducto,
+        cantidad,
         notas: item.notas || null,
         requiere_preparacion: prepMap[item.id_producto],
         agregados: (item.agregados || []).map((a) => ({

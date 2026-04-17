@@ -174,6 +174,7 @@ export interface ItemCarrito {
   notas: string;
   agregados_seleccionados: Agregado[];
   precio_total: number; // precio producto + suma de agregados
+  cantidad: number;
 }
 
 /** Pedido con todos sus detalles expandidos */
