@@ -9,11 +9,14 @@ import {
   Truck,
   Package,
   PartyPopper,
+  Utensils,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Mesero Dashboard
-   Solo renderizado. Lógica en useMeseroDashboard.
+   Agrupado por Pedido · Items agregados (2× Inca Kola)
    ═══════════════════════════════════════════════════════════ */
 
 export default function MeseroDashboard() {
@@ -53,7 +56,7 @@ export default function MeseroDashboard() {
 
       {/* Layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(240px, 300px)", gap: 24 }}>
-        {/* Items */}
+        {/* Pedidos agrupados */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}>Por servir</h3>
@@ -66,26 +69,145 @@ export default function MeseroDashboard() {
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {vm.itemsFiltrados.map((item) => (
-              <div key={item.id} className="animate-slide-right" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: item.estado === "ENTREGADO" ? "var(--surface)" : "var(--surface-hover)", border: `1px solid ${item.estado === "LISTO" ? "rgba(74,222,128,0.2)" : "var(--border)"}`, borderRadius: "var(--radius-md)", opacity: item.estado === "ENTREGADO" ? 0.5 : 1, transition: "all var(--duration-normal) var(--ease-out)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  {item.esBebida ? <Coffee size={22} color="var(--tertiary)" /> : <UtensilsCrossed size={22} color="var(--primary)" />}
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text)", margin: 0 }}>{item.nombre}</p>
-                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>Mesa {item.mesa} · {formatHora(item.hora)}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {vm.pedidoGroups.map((group) => {
+              const isExpanded = vm.expandedPedidos.has(group.pedidoId);
+
+              return (
+                <div
+                  key={group.pedidoId}
+                  className="card-flat animate-slide-right"
+                  style={{
+                    overflow: "hidden",
+                    border: group.listosCount > 0 ? "1px solid rgba(74,222,128,0.25)" : "1px solid var(--border)",
+                  }}
+                >
+                  {/* Header — clickable */}
+                  <div
+                    onClick={() => vm.togglePedido(group.pedidoId)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 20px",
+                      background: "var(--surface-hover)",
+                      borderBottom: isExpanded ? "1px solid var(--border)" : "none",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 8,
+                        background: "var(--primary-ghost)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Utensils size={18} color="var(--primary)" />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesa {group.mesa}</p>
+                        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                          Pedido #{group.numeroPedido} · {group.listosCount} listo{group.listosCount !== 1 ? "s" : ""} · {formatHora(group.horaPedido)}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {group.listosCount > 0 && (
+                        <span style={{
+                          background: "var(--success)", color: "#fff",
+                          borderRadius: 12, padding: "2px 8px",
+                          fontSize: 11, fontWeight: 600,
+                        }}>
+                          {group.listosCount}
+                        </span>
+                      )}
+                      {isExpanded ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+                    </div>
                   </div>
+
+                  {/* Expandable content */}
+                  {isExpanded && (
+                    <div>
+                      {/* Entregar todo */}
+                      {group.listosCount > 0 && (
+                        <div style={{ padding: "8px 20px", background: "var(--success)", display: "flex", justifyContent: "center" }}>
+                          <button
+                            onClick={() => vm.marcarTodosPedido(group.pedidoId, group.items)}
+                            disabled={vm.updating === "pedido-all"}
+                            style={{
+                              background: "none", border: "none", color: "#fff",
+                              fontSize: 12, fontWeight: 600, cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 4,
+                              opacity: vm.updating === "pedido-all" ? 0.6 : 1,
+                            }}
+                          >
+                            <CheckCircle2 size={14} />
+                            {vm.updating === "pedido-all" ? "..." : "Entregar todo"}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Items agregados — staggered animation */}
+                      {group.aggregated.map((agg, idx) => (
+                        <div
+                          key={agg.key}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "12px 20px",
+                            borderBottom: "1px solid var(--border)",
+                            opacity: agg.estado === "ENTREGADO" ? 0.4 : undefined,
+                            animation: `slideInLeft 250ms var(--ease-out) both`,
+                            animationDelay: `${idx * 70}ms`,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                            {agg.imagen_url ? (
+                              <img
+                                src={agg.imagen_url}
+                                alt={agg.nombre}
+                                style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: 44, height: 44, borderRadius: 8, flexShrink: 0,
+                                background: agg.esBebida ? "rgba(168,85,247,0.1)" : "var(--primary-ghost)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                {agg.esBebida ? <Coffee size={18} color="var(--tertiary)" /> : <UtensilsCrossed size={18} color="var(--primary)" />}
+                              </div>
+                            )}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <p style={{
+                                fontSize: 14, fontWeight: 500, color: "var(--text)", margin: 0,
+                                textDecoration: agg.estado === "ENTREGADO" ? "line-through" : "none",
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              }}>
+                                {agg.nombre}{agg.cantidad > 1 ? ` x${agg.cantidad}` : ""}
+                              </p>
+                              {agg.notas && (
+                                <p style={{ fontSize: 11, color: "var(--tertiary)", margin: "2px 0 0" }}>📝 {agg.notas}</p>
+                              )}
+                              {agg.agregados.length > 0 && (
+                                <p style={{ fontSize: 11, color: "var(--primary)", margin: "2px 0 0" }}>＋ {agg.agregados.join(", ")}</p>
+                              )}
+                              <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "2px 0 0" }}>{formatHora(agg.hora)}</p>
+                            </div>
+                          </div>
+                          {agg.listosIds.length > 0 ? (
+                            <button onClick={() => vm.marcarEntregadoIds(agg.listosIds, agg.key)} className="btn btn-primary btn-sm" disabled={vm.updating === agg.key} style={{ opacity: vm.updating === agg.key ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                              {vm.updating === agg.key ? "..." : <><CheckCircle2 size={14} /> Entregar</>}
+                            </button>
+                          ) : (
+                            <span className="badge badge-delivered" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                              <CheckCircle2 size={10} /> Entregado
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {item.estado === "LISTO" ? (
-                  <button onClick={() => vm.marcarEntregado(item)} className="btn btn-primary btn-sm" disabled={vm.updating === item.id} style={{ opacity: vm.updating === item.id ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4 }}>
-                    {vm.updating === item.id ? "..." : <><CheckCircle2 size={14} /> Entregar</>}
-                  </button>
-                ) : (
-                  <span className="badge badge-delivered" style={{ display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={10} /> Entregado</span>
-                )}
-              </div>
-            ))}
-            {vm.itemsFiltrados.length === 0 && (
+              );
+            })}
+            {vm.pedidoGroups.length === 0 && (
               <div className="card-flat" style={{ padding: 40, textAlign: "center" }}>
                 <PartyPopper size={32} color="var(--text-muted)" style={{ margin: "0 auto 12px", display: "block" }} />
                 <p style={{ color: "var(--text-muted)" }}>Sin platos pendientes</p>

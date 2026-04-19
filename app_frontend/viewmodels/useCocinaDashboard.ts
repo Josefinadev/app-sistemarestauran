@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
 import { usePedidosRealtime, useDetallesRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
+import { playNuevoPedidoSound, playPlatoListoSound, playEntregadoSound } from "@/lib/notification-sound";
 import type { PlatoCocina, ConteoEstados } from "@/models/cocina";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
@@ -20,6 +21,7 @@ export function useCocinaDashboard() {
   const [updating, setUpdating] = useState<string | null>(null);
   const { add: addNotif } = useNotificaciones();
   const prevListosRef = useRef<Set<string>>(new Set());
+  const prevPendientesRef = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
   const loadPlatos = useCallback(async () => {
@@ -67,8 +69,10 @@ export function useCocinaDashboard() {
         const currentListos = new Set(mapped.filter(p => p.estado === "LISTO").map(p => p.id));
         const currentEntregados = new Set(mapped.filter(p => p.estado === "ENTREGADO").map(p => p.id));
 
+        let hadEntregado = false;
         for (const id of prevListosRef.current) {
           if (!currentListos.has(id) && currentEntregados.has(id)) {
+            hadEntregado = true;
             const item = mapped.find(p => p.id === id);
             if (item) {
               addNotif({
@@ -79,10 +83,25 @@ export function useCocinaDashboard() {
             }
           }
         }
+        // 🔊 Sonar cuando el mesero entrega un plato
+        if (hadEntregado) {
+          playEntregadoSound();
+        }
+
+        // 🔊 Detectar nuevos pedidos (items PENDIENTE nuevos)
+        const currentPendientes = new Set(mapped.filter(p => p.estado === "PENDIENTE").map(p => p.id));
+        for (const id of currentPendientes) {
+          if (!prevPendientesRef.current.has(id)) {
+            playNuevoPedidoSound();
+            break; // Un solo sonido por batch
+          }
+        }
+        prevPendientesRef.current = currentPendientes;
         prevListosRef.current = currentListos;
       } else {
         // Primera carga: solo guardar referencia, sin notificar
         prevListosRef.current = new Set(mapped.filter(p => p.estado === "LISTO").map(p => p.id));
+        prevPendientesRef.current = new Set(mapped.filter(p => p.estado === "PENDIENTE").map(p => p.id));
         isFirstLoad.current = false;
       }
 
@@ -115,8 +134,9 @@ export function useCocinaDashboard() {
         prev.map((p) => (p.id === plato.id ? { ...p, estado: nuevoEstado as any } : p))
       );
 
-      // 🔔 Notificar que el plato está LISTO
+      // 🔔 Notificar que el plato está LISTO + 🔊 sonido
       if (nuevoEstado === "LISTO") {
+        playPlatoListoSound();
         addNotif({
           tipo: "info",
           titulo: `🍽️ ¡Plato listo! — Mesa ${plato.mesa}`,
