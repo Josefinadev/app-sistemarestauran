@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
         mesa:id_mesa(id, numero, slug),
         detalle_pedido(
           *,
-          producto:id_producto(id, nombre, precio, es_bebida, requiere_preparacion),
+          producto:id_producto(id, nombre, precio, imagen_url, es_bebida, requiere_preparacion),
           detalle_pedido_agregado(
             *,
             agregado:id_agregado(id, nombre, precio)

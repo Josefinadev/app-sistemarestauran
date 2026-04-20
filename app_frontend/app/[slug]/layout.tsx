@@ -65,7 +65,7 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
                 </h1>
               </div>
             </div>
-            <p className="section-note">Usa tu celular para navegar, seleccionar y pagar desde la mesa. Escanear QR debe ser simple y rápido.</p>
+            <p className="section-note">Usa tu celular para navegar y seleccionar desde la mesa. Escanear QR debe ser simple y rápido.</p>
           </div>
         </div>
       </header>

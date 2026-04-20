@@ -3,6 +3,7 @@ import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
 import { agruparDetalles, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { usePedidosRealtime, useDetallesRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
+
 import type { ConteoEstados, MesaCocina, PedidoRecienteCocina, PlatoCocina } from "@/models/cocina";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
@@ -14,6 +15,7 @@ export function useCocinaDashboard() {
   const [updating, setUpdating] = useState<string | null>(null);
   const { add: addNotif } = useNotificaciones();
   const prevListosRef = useRef<Set<string>>(new Set());
+  const prevPendientesRef = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
   const loadMesasCocina = useCallback(async () => {
@@ -101,9 +103,11 @@ export function useCocinaDashboard() {
         const currentListos = new Set(allLineas.filter((p) => p.estado === "LISTO").flatMap((p) => p.detalleIds));
         const currentEntregados = new Set(allLineas.filter((p) => p.estado === "ENTREGADO").flatMap((p) => p.detalleIds));
 
+        let hadEntregado = false;
         for (const id of prevListosRef.current) {
           if (!currentListos.has(id) && currentEntregados.has(id)) {
             const item = allLineas.find((p) => p.detalleIds.includes(id));
+
             if (item) {
               addNotif({
                 tipo: "success",
@@ -113,9 +117,25 @@ export function useCocinaDashboard() {
             }
           }
         }
+        // 🔊 Sonar cuando el mesero entrega un plato
+        if (hadEntregado) {
+          playEntregadoSound();
+        }
+
+        // 🔊 Detectar nuevos pedidos (items PENDIENTE nuevos)
+        const currentPendientes = new Set(mapped.filter(p => p.estado === "PENDIENTE").map(p => p.id));
+        for (const id of currentPendientes) {
+          if (!prevPendientesRef.current.has(id)) {
+            playNuevoPedidoSound();
+            break; // Un solo sonido por batch
+          }
+        }
+        prevPendientesRef.current = currentPendientes;
         prevListosRef.current = currentListos;
       } else {
+
         prevListosRef.current = new Set(allLineas.filter((p) => p.estado === "LISTO").flatMap((p) => p.detalleIds));
+
         isFirstLoad.current = false;
       }
 
@@ -157,11 +177,13 @@ export function useCocinaDashboard() {
       await Promise.all(plato.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "LISTO")));
       await loadMesasCocina();
 
+
       addNotif({
         tipo: "info",
         titulo: `Plato listo - Mesa ${plato.mesa}`,
         mensaje: `${plato.cantidad} ${plato.nombre} esta${plato.cantidad > 1 ? "n" : ""} listo${plato.cantidad > 1 ? "s" : ""} para recoger y servir al cliente.`,
       });
+
     } catch (err) {
       console.error("Error marking plato ready:", err);
     } finally {

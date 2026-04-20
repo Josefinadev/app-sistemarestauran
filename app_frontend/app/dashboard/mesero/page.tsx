@@ -52,7 +52,6 @@ export default function MeseroDashboard() {
           </div>
         ))}
       </div>
-
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesas por servir</h3>

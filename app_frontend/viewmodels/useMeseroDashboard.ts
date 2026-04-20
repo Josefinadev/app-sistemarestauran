@@ -1,19 +1,65 @@
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+
 import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
 import { agruparDetalles, getDetalleCantidad, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { useDetallesRealtime, usePedidosRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
 import type { ItemServir, MesaEstado, PedidoMesero } from "@/models/mesero";
 
+
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
+
+// Función para agregar items duplicados
+function aggregateItems(rawItems: ItemServir[]): AggregatedItem[] {
+  const map = new Map<string, AggregatedItem>();
+  for (const item of rawItems) {
+    const key = `${item.nombre}|${item.notas || ""}|${item.agregados.join(",")}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.cantidad++;
+      existing.itemIds.push(item.id);
+      if (item.estado === "LISTO") existing.listosIds.push(item.id);
+      if (existing.estado !== item.estado) existing.estado = "MIXED";
+    } else {
+      map.set(key, {
+        key,
+        nombre: item.nombre,
+        cantidad: 1,
+        itemIds: [item.id],
+        mesa: item.mesa,
+        hora: item.hora,
+        estado: item.estado,
+        esBebida: item.esBebida,
+        notas: item.notas,
+        imagen_url: item.imagen_url,
+        agregados: item.agregados,
+        listosIds: item.estado === "LISTO" ? [item.id] : [],
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    (a.listosIds.length > 0 ? -1 : 1) - (b.listosIds.length > 0 ? -1 : 1)
+  );
+}
 
 export function useMeseroDashboard() {
   const [mesas, setMesas] = useState<MesaEstado[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"todos" | "platos" | "bebidas">("todos");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [expandedPedidos, setExpandedPedidos] = useState<Set<string>>(new Set());
   const { add: addNotif } = useNotificaciones();
   const prevListosRef = useRef<Set<string>>(new Set());
+
+  const togglePedido = (pedidoId: string) => {
+    setExpandedPedidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(pedidoId)) next.delete(pedidoId);
+      else next.add(pedidoId);
+      return next;
+    });
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -34,12 +80,14 @@ export function useMeseroDashboard() {
             totalBebidas: 0,
             pedidos: [],
           });
+
         }
 
         const mesa = mesaMap.get(mesaNum)!;
         const detallesServibles: RawDetallePedido[] = [];
 
         for (const det of pedido.detalle_pedido || []) {
+
           const cantidad = getDetalleCantidad(det);
           const esBebida = Boolean(det.producto?.es_bebida);
 
@@ -95,6 +143,7 @@ export function useMeseroDashboard() {
           }
         }
       }
+      if (hasNewListo) playPlatoListoSound();
       prevListosRef.current = currentListos;
 
       const mapped = Array.from(mesaMap.values())
@@ -119,17 +168,21 @@ export function useMeseroDashboard() {
   usePedidosRealtime(ID_RESTAURANTE, handleRealtimeChange, handleRealtimeChange);
   useDetallesRealtime(handleRealtimeChange, handleRealtimeChange);
 
-  const marcarEntregado = async (item: ItemServir) => {
-    setUpdating(item.id);
+  // Marcar uno o varios items (aggregated)
+  const marcarEntregadoIds = async (ids: string[], groupKey?: string) => {
+    setUpdating(groupKey || ids[0]);
     try {
+
       await Promise.all(item.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "ENTREGADO")));
       await loadData();
+
     } catch (err) {
       console.error("Error updating item:", err);
     } finally {
       setUpdating(null);
     }
   };
+
 
   const mesasFiltradas = useMemo(() => {
     return mesas
@@ -141,6 +194,7 @@ export function useMeseroDashboard() {
               if (filtro === "bebidas") return item.esBebida;
               return true;
             });
+
 
             return { ...pedido, items };
           })
@@ -174,6 +228,7 @@ export function useMeseroDashboard() {
     bebidasCount,
     mesasActivasCount,
     setFiltro,
-    marcarEntregado,
+    marcarEntregadoIds
+
   };
 }

@@ -19,8 +19,22 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (!vm.selectedProduct) return;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    sheetRef.current?.focus();
+    requestAnimationFrame(() => {
+      if (!sheetRef.current) return;
+      sheetRef.current.scrollTo({ top: 0, behavior: "auto" });
+      sheetRef.current.focus();
+    });
+  }, [vm.selectedProduct]);
+
+  useEffect(() => {
+    if (!vm.selectedProduct) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [vm.selectedProduct]);
 
   if (vm.loading) {
@@ -146,16 +160,30 @@ export default function MenuPage() {
       {vm.selectedProduct && (
         <>
           <div className="overlay" onClick={vm.closeDetail} />
-          <div className="bottom-sheet">
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 20px" }} />
+          <div
+            ref={sheetRef}
+            className="bottom-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Opciones de ${vm.selectedProduct.nombre}`}
+            tabIndex={-1}
+          >
+            <div style={{ position: "sticky", top: 0, zIndex: 2, margin: "-20px -20px 16px", padding: "16px 20px 14px", background: "linear-gradient(180deg, rgba(26, 26, 28, 0.995), rgba(26, 26, 28, 0.94))", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 16px" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>{vm.selectedProduct.nombre}</h3>
+                  <p style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)", margin: 0 }}>{formatPrecio(Number(vm.selectedProduct.precio))}</p>
+                </div>
+                <button onClick={vm.closeDetail} style={{ background: "var(--surface)", border: "none", borderRadius: 10, padding: 10, cursor: "pointer", flexShrink: 0 }}>
+                  <X size={18} color="var(--text-muted)" />
+                </button>
+              </div>
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div style={{ minWidth: 0 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>{vm.selectedProduct.nombre}</h3>
-                <p style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)", margin: 0 }}>{formatPrecio(Number(vm.selectedProduct.precio))}</p>
+                <p className="label" style={{ margin: 0 }}>Personaliza tu pedido</p>
               </div>
-              <button onClick={vm.closeDetail} style={{ background: "var(--surface)", border: "none", borderRadius: 10, padding: 10, cursor: "pointer" }}>
-                <X size={18} color="var(--text-muted)" />
-              </button>
             </div>
             {vm.selectedProduct.descripcion && (
               <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "0 0 20px", lineHeight: 1.7 }}>{vm.selectedProduct.descripcion}</p>
