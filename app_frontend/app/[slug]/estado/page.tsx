@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getEstadoTexto } from "@/lib/utils";
 import { getPedido } from "@/lib/api";
 import { useDetallesPedidoRealtime, usePedidoRealtime } from "@/lib/realtime";
+import { useAuth } from "@/lib/store";
 import {
   Clock,
   ChefHat,
@@ -14,7 +15,7 @@ import {
   Plus,
   Receipt,
   Search,
-  ArrowRight,
+  ArrowLeft,
   Check,
 } from "lucide-react";
 
@@ -49,7 +50,8 @@ export default function EstadoPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params?.slug as string;
-  const pedidoId = searchParams?.get("pedido") || null;
+  const { activePedidoId, setActivePedido, clearActivePedido } = useAuth();
+  const pedidoId = searchParams?.get("pedido") || activePedidoId || null;
 
   const [pedido, setPedido] = useState<any>(null);
   const [detalles, setDetalles] = useState<any[]>([]);
@@ -71,6 +73,11 @@ export default function EstadoPage() {
         setPedido(data);
         setDetalles(data.detalle_pedido || []);
         setNumeroPedido(`PED-${String(data.numero_pedido).padStart(3, "0")}`);
+        if (["ENTREGADO", "CANCELADO"].includes(data.estado)) {
+          clearActivePedido();
+        } else {
+          setActivePedido(data.id, data.estado);
+        }
       } catch (err: any) {
         setError(err.message || "No se pudo cargar el pedido.");
       } finally {
@@ -79,11 +86,17 @@ export default function EstadoPage() {
     }
 
     load();
-  }, [pedidoId]);
+  }, [pedidoId, clearActivePedido, setActivePedido]);
 
   const handlePedidoUpdate = useCallback((updated: any) => {
     setPedido((prev: any) => (prev ? { ...prev, ...updated } : updated));
-  }, []);
+    if (!updated?.id || !updated?.estado) return;
+    if (["ENTREGADO", "CANCELADO"].includes(updated.estado)) {
+      clearActivePedido();
+      return;
+    }
+    setActivePedido(updated.id, updated.estado);
+  }, [clearActivePedido, setActivePedido]);
   usePedidoRealtime(pedidoId, handlePedidoUpdate);
 
   const handleDetalleUpdate = useCallback((updated: any) => {
@@ -235,15 +248,28 @@ export default function EstadoPage() {
       </div>
 
       {/* Actions */}
-      {todosListos && (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
-          onClick={() => router.push(`/${slug}/voucher?pedido=${pedidoId}`)}
-          className="btn btn-primary btn-lg animate-fade-in-up"
+          onClick={() => router.push(`/${slug}/menu`)}
+          className="btn btn-secondary"
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          <Receipt size={16} /> Ver voucher
+          <ArrowLeft size={16} /> Volver al menu y anadir mas
         </button>
-      )}
+        <p style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", margin: 0 }}>
+          Si agregas mas platos, bebidas o guarniciones, se enviaran como un nuevo pedido para esta mesa.
+        </p>
+
+        {todosListos && (
+          <button
+            onClick={() => router.push(`/${slug}/voucher?pedido=${pedidoId}`)}
+            className="btn btn-primary btn-lg animate-fade-in-up"
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <Receipt size={16} /> Ver voucher
+          </button>
+        )}
+      </div>
     </div>
   );
 }

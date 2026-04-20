@@ -1,12 +1,7 @@
-/* ═══════════════════════════════════════════════════════════
-   VIEWMODEL — useCajaDashboard
-   Lógica completa: cuadre de caja, monitoreo cocina/mesero,
-   voucher, y notificación al mesero al marcar LISTO.
-   ═══════════════════════════════════════════════════════════ */
-
 import { useState, useEffect, useCallback } from "react";
 import { formatPrecio } from "@/lib/utils";
 import { getPedidos, registrarPago, actualizarEstadoPedido } from "@/lib/api";
+import { agruparDetalles, getDetalleCantidad, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { usePedidosRealtime, useDetallesRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
 import type { PedidoCaja } from "@/models/caja";
@@ -23,9 +18,24 @@ export interface MonitorItem {
   platosEntregados: number;
 }
 
+interface RawPedidoCaja {
+  id: string;
+  numero_pedido: number;
+  total: number | string;
+  estado: string;
+  estado_pago: "PENDIENTE" | "PAGADO" | "ANULADO";
+  metodo_pago: string | null;
+  created_at: string;
+  comprobante_url: string | null;
+  mesa?: {
+    numero?: number | null;
+  } | null;
+  detalle_pedido?: RawDetallePedido[];
+}
+
 export function useCajaDashboard() {
   const [pedidos, setPedidos] = useState<PedidoCaja[]>([]);
-  const [rawPedidos, setRawPedidos] = useState<any[]>([]);
+  const [rawPedidos, setRawPedidos] = useState<RawPedidoCaja[]>([]);
   const [selectedPedido, setSelectedPedido] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"TODOS" | "PENDIENTE" | "PAGADO">("TODOS");
   const [activeTab, setActiveTab] = useState<"pedidos" | "cuadre" | "monitor">("pedidos");
@@ -37,23 +47,30 @@ export function useCajaDashboard() {
   const loadPedidos = useCallback(async () => {
     try {
       const data = await getPedidos({ id_restaurante: ID_RESTAURANTE });
-      setRawPedidos(data || []);
-      const mapped: PedidoCaja[] = (data || []).map((p: any) => ({
-        id: p.id,
-        numeroPedido: `PED-${String(p.numero_pedido).padStart(3, "0")}`,
-        mesa: p.mesa?.numero || 0,
-        items: (p.detalle_pedido || []).map((d: any) => ({
-          nombre: d.producto?.nombre || "Plato",
-          precio: Number(d.precio_unitario),
-          estado: d.estado,
-        })),
-        total: Number(p.total),
-        estadoPago: p.estado_pago,
-        metodoPago: p.metodo_pago,
-        hora: p.created_at,
-        comprobanteUrl: p.comprobante_url,
-        estadoPedido: p.estado,
-      }));
+      const rawData = (data || []) as RawPedidoCaja[];
+      setRawPedidos(rawData);
+      const mapped: PedidoCaja[] = rawData.map((p) => {
+        const items = agruparDetalles((p.detalle_pedido || []) as RawDetallePedido[], { includeEstado: false }).map((d) => ({
+          nombre: d.nombre,
+          cantidad: d.cantidad,
+          precio: d.precioTotal,
+          precioUnitario: d.precioUnitario,
+          estado: d.estados.length === 1 ? d.estado : "MIXTO",
+        }));
+
+        return {
+          id: p.id,
+          numeroPedido: `PED-${String(p.numero_pedido).padStart(3, "0")}`,
+          mesa: p.mesa?.numero || 0,
+          items,
+          total: Number(p.total),
+          estadoPago: p.estado_pago,
+          metodoPago: p.metodo_pago,
+          hora: p.created_at,
+          comprobanteUrl: p.comprobante_url,
+          estadoPedido: p.estado,
+        };
+      });
       setPedidos(mapped);
     } catch (err) {
       console.error("Error loading caja data:", err);
@@ -79,11 +96,10 @@ export function useCajaDashboard() {
       );
       const ped = pedidos.find((p) => p.id === id);
 
-      // Notificación al mesero que el pago fue registrado
       addNotif({
         tipo: "success",
-        titulo: `Pago registrado — ${ped?.numeroPedido}`,
-        mensaje: `Mesa ${ped?.mesa} pagó ${formatPrecio(ped?.total || 0)} vía ${metodo}.`,
+        titulo: `Pago registrado - ${ped?.numeroPedido}`,
+        mensaje: `Mesa ${ped?.mesa} pago ${formatPrecio(ped?.total || 0)} via ${metodo}.`,
       });
       setSelectedPedido(null);
     } catch (err) {
@@ -99,11 +115,10 @@ export function useCajaDashboard() {
       await actualizarEstadoPedido(id, "LISTO");
       const ped = pedidos.find((p) => p.id === id);
 
-      // 🔔 Notificación al MESERO
       addNotif({
         tipo: "info",
-        titulo: `🍽️ Pedido listo — Mesa ${ped?.mesa}`,
-        mensaje: `${ped?.numeroPedido} está listo para recoger y llevar al cliente.`,
+        titulo: `Pedido listo - Mesa ${ped?.mesa}`,
+        mensaje: `${ped?.numeroPedido} esta listo para recoger y llevar al cliente.`,
       });
       loadPedidos();
     } catch (err) {
@@ -113,7 +128,6 @@ export function useCajaDashboard() {
     }
   };
 
-  // ── Datos derivados ──
   const pendientes = pedidos.filter((p) => p.estadoPago === "PENDIENTE");
   const pagados = pedidos.filter((p) => p.estadoPago === "PAGADO");
   const totalDia = pagados.reduce((s, p) => s + p.total, 0);
@@ -122,12 +136,11 @@ export function useCajaDashboard() {
   );
   const pedidoSeleccionado = pedidos.find((p) => p.id === selectedPedido);
 
-  // ── Cuadre de caja ──
   const cuadre = {
     totalVentas: totalDia,
     cantidadPedidos: pagados.length,
     porMetodo: pagados.reduce<Record<string, { cantidad: number; total: number }>>((acc, p) => {
-      const m = p.metodoPago || "SIN MÉTODO";
+      const m = p.metodoPago || "SIN METODO";
       if (!acc[m]) acc[m] = { cantidad: 0, total: 0 };
       acc[m].cantidad++;
       acc[m].total += p.total;
@@ -138,7 +151,6 @@ export function useCajaDashboard() {
     cantidadPendientes: pendientes.length,
   };
 
-  // ── Monitor cocina/mesero ──
   const monitorData: MonitorItem[] = (() => {
     const mesaMap: Record<number, MonitorItem> = {};
     for (const p of rawPedidos) {
@@ -151,22 +163,37 @@ export function useCajaDashboard() {
         };
       }
       for (const det of p.detalle_pedido || []) {
-        mesaMap[mesaNum].platosTotal++;
-        if (det.estado === "PENDIENTE") mesaMap[mesaNum].platosPendientes++;
-        if (det.estado === "EN_PREPARACION") mesaMap[mesaNum].platosPreparando++;
-        if (det.estado === "LISTO") mesaMap[mesaNum].platosListos++;
-        if (det.estado === "ENTREGADO") mesaMap[mesaNum].platosEntregados++;
+        const cantidad = getDetalleCantidad(det);
+        mesaMap[mesaNum].platosTotal += cantidad;
+        if (det.estado === "PENDIENTE") mesaMap[mesaNum].platosPendientes += cantidad;
+        if (det.estado === "EN_PREPARACION") mesaMap[mesaNum].platosPreparando += cantidad;
+        if (det.estado === "LISTO") mesaMap[mesaNum].platosListos += cantidad;
+        if (det.estado === "ENTREGADO") mesaMap[mesaNum].platosEntregados += cantidad;
       }
     }
     return Object.values(mesaMap).sort((a, b) => a.mesa - b.mesa);
   })();
 
   return {
-    pedidos, pedidosFiltrados, pedidoSeleccionado,
-    selectedPedido, filtro, loading, procesando,
-    showComprobante, activeTab, cuadre, monitorData,
-    pendientes, pagados, totalDia,
-    setFiltro, setSelectedPedido, setShowComprobante,
-    setActiveTab, confirmarPago, marcarPedidoListo,
+    pedidos,
+    pedidosFiltrados,
+    pedidoSeleccionado,
+    selectedPedido,
+    filtro,
+    loading,
+    procesando,
+    showComprobante,
+    activeTab,
+    cuadre,
+    monitorData,
+    pendientes,
+    pagados,
+    totalDia,
+    setFiltro,
+    setSelectedPedido,
+    setShowComprobante,
+    setActiveTab,
+    confirmarPago,
+    marcarPedidoListo,
   };
 }

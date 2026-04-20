@@ -31,6 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      data-scroll-behavior="smooth"
       className={`${notoSerif.variable} ${manrope.variable} h-full antialiased`}
     >
       <body>{children}</body>

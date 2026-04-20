@@ -174,33 +174,35 @@ router.post('/', async (req, res) => {
       // Si SÍ requiere preparación → estado = PENDIENTE (pasa por cocina)
       const estadoInicial = det.requiere_preparacion ? 'PENDIENTE' : 'LISTO';
 
-      const { data: detalle, error: detError } = await supabase
-        .from('detalle_pedido')
-        .insert({
-          id_pedido: pedido.id,
-          id_producto: det.id_producto,
-          precio_unitario: det.precio_unitario,
-          notas: det.notas,
-          estado: estadoInicial,
-        })
-        .select()
-        .single();
+      for (let i = 0; i < det.cantidad; i += 1) {
+        const { data: detalle, error: detError } = await supabase
+          .from('detalle_pedido')
+          .insert({
+            id_pedido: pedido.id,
+            id_producto: det.id_producto,
+            precio_unitario: det.precio_unitario,
+            notas: det.notas,
+            estado: estadoInicial,
+          })
+          .select()
+          .single();
 
-      if (detError) throw detError;
+        if (detError) throw detError;
 
-      // 6. Crear agregados del detalle
-      if (det.agregados.length > 0) {
-        const { error: agrDetError } = await supabase
-          .from('detalle_pedido_agregado')
-          .insert(
-            det.agregados.map((a) => ({
-              id_detalle_pedido: detalle.id,
-              id_agregado: a.id_agregado,
-              precio_momento: a.precio_momento,
-            }))
-          );
+        // 6. Crear agregados del detalle
+        if (det.agregados.length > 0) {
+          const { error: agrDetError } = await supabase
+            .from('detalle_pedido_agregado')
+            .insert(
+              det.agregados.map((a) => ({
+                id_detalle_pedido: detalle.id,
+                id_agregado: a.id_agregado,
+                precio_momento: a.precio_momento,
+              }))
+            );
 
-        if (agrDetError) throw agrDetError;
+          if (agrDetError) throw agrDetError;
+        }
       }
     }
 

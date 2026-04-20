@@ -1,19 +1,14 @@
-/* ═══════════════════════════════════════════════════════════
-   VIEWMODEL — useMeseroDashboard
-   Lógica del mesero con notificación al recibir platos listos.
-   ═══════════════════════════════════════════════════════════ */
-
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
+import { agruparDetalles, getDetalleCantidad, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { useDetallesRealtime, usePedidosRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
-import type { ItemServir, MesaEstado } from "@/models/mesero";
+import type { ItemServir, MesaEstado, PedidoMesero } from "@/models/mesero";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
 
 export function useMeseroDashboard() {
-  const [items, setItems] = useState<ItemServir[]>([]);
-  const [mesasEstado, setMesasEstado] = useState<MesaEstado[]>([]);
+  const [mesas, setMesas] = useState<MesaEstado[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"todos" | "platos" | "bebidas">("todos");
   const [updating, setUpdating] = useState<string | null>(null);
@@ -23,57 +18,94 @@ export function useMeseroDashboard() {
   const loadData = useCallback(async () => {
     try {
       const data = await getPedidos({ id_restaurante: ID_RESTAURANTE });
-      const newItems: ItemServir[] = [];
-      const mesaMap: Record<number, MesaEstado> = {};
+      const mesaMap = new Map<number, MesaEstado>();
+      const allItems: ItemServir[] = [];
 
       for (const pedido of data || []) {
         const mesaNum = pedido.mesa?.numero || 0;
 
-        if (!mesaMap[mesaNum]) {
-          mesaMap[mesaNum] = { numero: mesaNum, pedidoActivo: false, platosListos: 0, totalPlatos: 0 };
+        if (!mesaMap.has(mesaNum)) {
+          mesaMap.set(mesaNum, {
+            numero: mesaNum,
+            pedidoActivo: false,
+            platosListos: 0,
+            bebidasListas: 0,
+            totalPlatos: 0,
+            totalBebidas: 0,
+            pedidos: [],
+          });
         }
 
+        const mesa = mesaMap.get(mesaNum)!;
+        const detallesServibles: RawDetallePedido[] = [];
+
         for (const det of pedido.detalle_pedido || []) {
-          mesaMap[mesaNum].totalPlatos++;
+          const cantidad = getDetalleCantidad(det);
+          const esBebida = Boolean(det.producto?.es_bebida);
+
+          if (esBebida) mesa.totalBebidas += cantidad;
+          else mesa.totalPlatos += cantidad;
 
           if (det.estado === "LISTO" || det.estado === "ENTREGADO") {
-            mesaMap[mesaNum].pedidoActivo = true;
+            mesa.pedidoActivo = true;
 
             if (det.estado === "LISTO") {
-              mesaMap[mesaNum].platosListos++;
+              if (esBebida) mesa.bebidasListas += cantidad;
+              else mesa.platosListos += cantidad;
             }
 
-            newItems.push({
-              id: det.id,
-              nombre: det.producto?.nombre || "Plato",
-              mesa: mesaNum,
-              hora: det.created_at || pedido.created_at,
-              estado: det.estado,
-              esBebida: det.producto?.es_bebida || false,
-              pedidoId: pedido.id,
-            });
+            detallesServibles.push(det);
           }
+        }
+
+        const itemsPedido = agruparDetalles(detallesServibles, { includeEstado: true }).map<ItemServir>((grupo) => ({
+          id: `${pedido.id}::${grupo.key}`,
+          nombre: grupo.nombre,
+          cantidad: grupo.cantidad,
+          mesa: mesaNum,
+          hora: grupo.hora || pedido.created_at,
+          estado: grupo.estado as ItemServir["estado"],
+          esBebida: grupo.esBebida,
+          pedidoId: pedido.id,
+          detalleIds: grupo.detalleIds,
+        }));
+
+        if (itemsPedido.length > 0) {
+          const pedidoMesa: PedidoMesero = {
+            id: pedido.id,
+            numeroPedido: `PED-${String(pedido.numero_pedido).padStart(3, "0")}`,
+            hora: pedido.created_at,
+            items: itemsPedido.sort((a, b) => b.hora.localeCompare(a.hora)),
+          };
+          mesa.pedidos.push(pedidoMesa);
+          allItems.push(...itemsPedido);
         }
       }
 
-      // 🔔 Detectar platos que pasaron a LISTO y notificar al mesero
-      const currentListos = new Set(newItems.filter(i => i.estado === "LISTO").map(i => i.id));
+      const currentListos = new Set(allItems.filter((i) => i.estado === "LISTO").flatMap((i) => i.detalleIds));
       for (const id of currentListos) {
         if (!prevListosRef.current.has(id)) {
-          const item = newItems.find(i => i.id === id);
+          const item = allItems.find((i) => i.detalleIds.includes(id));
           if (item) {
             addNotif({
               tipo: "info",
-              titulo: `🍽️ ¡Plato listo! — Mesa ${item.mesa}`,
-              mensaje: `${item.nombre} está listo para servir.`,
+              titulo: `${item.esBebida ? "Bebida" : "Plato"} listo - Mesa ${item.mesa}`,
+              mensaje: `${item.cantidad} ${item.nombre} esta${item.cantidad > 1 ? "n" : ""} listo${item.cantidad > 1 ? "s" : ""} para servir.`,
             });
           }
         }
       }
       prevListosRef.current = currentListos;
 
-      setItems(newItems);
-      setMesasEstado(Object.values(mesaMap).filter(m => m.totalPlatos > 0).sort((a, b) => a.numero - b.numero));
+      const mapped = Array.from(mesaMap.values())
+        .filter((mesa) => mesa.totalPlatos > 0 || mesa.totalBebidas > 0)
+        .map((mesa) => ({
+          ...mesa,
+          pedidos: mesa.pedidos.sort((a, b) => b.hora.localeCompare(a.hora)),
+        }))
+        .sort((a, b) => a.numero - b.numero);
+
+      setMesas(mapped);
     } catch (err) {
       console.error("Error loading mesero data:", err);
     } finally {
@@ -90,11 +122,8 @@ export function useMeseroDashboard() {
   const marcarEntregado = async (item: ItemServir) => {
     setUpdating(item.id);
     try {
-      await actualizarEstadoDetalle(item.id, "ENTREGADO");
-      setItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, estado: "ENTREGADO" as const } : i))
-      );
-      // No notificamos aquí — cocina recibe la notificación vía realtime
+      await Promise.all(item.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "ENTREGADO")));
+      await loadData();
     } catch (err) {
       console.error("Error updating item:", err);
     } finally {
@@ -102,20 +131,49 @@ export function useMeseroDashboard() {
     }
   };
 
-  const itemsFiltrados = items.filter((i) => {
-    if (filtro === "platos") return !i.esBebida;
-    if (filtro === "bebidas") return i.esBebida;
-    return true;
-  }).sort((a, b) => (a.estado === "LISTO" ? -1 : 1) - (b.estado === "LISTO" ? -1 : 1));
+  const mesasFiltradas = useMemo(() => {
+    return mesas
+      .map((mesa) => {
+        const pedidos = mesa.pedidos
+          .map((pedido) => {
+            const items = pedido.items.filter((item) => {
+              if (filtro === "platos") return !item.esBebida;
+              if (filtro === "bebidas") return item.esBebida;
+              return true;
+            });
 
-  const listosCount = items.filter((i) => i.estado === "LISTO").length;
-  const bebidasCount = items.filter((i) => i.esBebida && i.estado === "LISTO").length;
-  const mesasActivasCount = mesasEstado.filter((m) => m.pedidoActivo).length;
+            return { ...pedido, items };
+          })
+          .filter((pedido) => pedido.items.length > 0);
+
+        const platosListos = pedidos.flatMap((p) => p.items).filter((i) => !i.esBebida && i.estado === "LISTO").reduce((sum, i) => sum + i.cantidad, 0);
+        const bebidasListas = pedidos.flatMap((p) => p.items).filter((i) => i.esBebida && i.estado === "LISTO").reduce((sum, i) => sum + i.cantidad, 0);
+
+        return {
+          ...mesa,
+          pedidos,
+          platosListos,
+          bebidasListas,
+        };
+      })
+      .filter((mesa) => mesa.pedidos.length > 0);
+  }, [mesas, filtro]);
+
+  const items = mesas.flatMap((mesa) => mesa.pedidos.flatMap((pedido) => pedido.items));
+  const listosCount = items.filter((i) => i.estado === "LISTO").reduce((sum, i) => sum + i.cantidad, 0);
+  const bebidasCount = items.filter((i) => i.esBebida && i.estado === "LISTO").reduce((sum, i) => sum + i.cantidad, 0);
+  const mesasActivasCount = mesas.filter((m) => m.pedidoActivo).length;
 
   return {
-    items, itemsFiltrados, mesasEstado,
-    loading, filtro, updating,
-    listosCount, bebidasCount, mesasActivasCount,
-    setFiltro, marcarEntregado,
+    mesas,
+    mesasFiltradas,
+    loading,
+    filtro,
+    updating,
+    listosCount,
+    bebidasCount,
+    mesasActivasCount,
+    setFiltro,
+    marcarEntregado,
   };
 }

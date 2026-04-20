@@ -7,7 +7,7 @@ import { useMenuDigital } from "@/viewmodels/useMenuDigital";
 import type { Agregado } from "@/lib/database.types";
 import {
   Search, ShoppingBag, Plus, X, StickyNote, CheckCircle2,
-  Flame, Coffee, ArrowRight, AlertCircle, Info,
+  Flame, Coffee, AlertCircle, Info,
 } from "lucide-react";
 
 export default function MenuPage() {
@@ -54,9 +54,15 @@ export default function MenuPage() {
             <span className="menu-pill" style={{ color: "var(--primary)" }}>
               {vm.mesa ? "QR activo" : "Mesa pendiente"}
             </span>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => router.push(`/${slug}/estado`)}>
-              Ver estado del pedido
-            </button>
+            {vm.hasActivePedido && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => router.push(`/${slug}/estado?pedido=${vm.activePedidoId}`)}
+              >
+                Ver estado del pedido
+              </button>
+            )}
           </div>
         </div>
       </section>

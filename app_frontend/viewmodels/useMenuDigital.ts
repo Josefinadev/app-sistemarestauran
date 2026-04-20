@@ -10,7 +10,7 @@ import { useAuth, useCarrito } from "@/lib/store";
 import type { Agregado } from "@/lib/database.types";
 
 export function useMenuDigital() {
-  const { restaurante, mesa } = useAuth();
+  const { restaurante, mesa, activePedidoId, activePedidoEstado } = useAuth();
   const { addItem, getItemCount, getTotal } = useCarrito();
 
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -148,6 +148,9 @@ export function useMenuDigital() {
     cartTotal: getTotal(),
     restaurante,
     mesa,
+    activePedidoId,
+    activePedidoEstado,
+    hasActivePedido: Boolean(activePedidoId) && !["ENTREGADO", "CANCELADO"].includes(activePedidoEstado || ""),
     setSelectedCat,
     setSearchTerm,
     setNotas,

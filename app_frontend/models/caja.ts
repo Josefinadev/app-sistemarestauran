@@ -4,7 +4,9 @@
 
 export interface PedidoCajaItem {
   nombre: string;
+  cantidad: number;
   precio: number;
+  precioUnitario: number;
   estado?: string;
 }
 

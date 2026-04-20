@@ -14,7 +14,7 @@ export function usePedidoConfirm() {
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
-  const { restaurante, mesa } = useAuth();
+  const { restaurante, mesa, setActivePedido } = useAuth();
   const { items, removeItem, clearCart, getTotal } = useCarrito();
 
   const [notas, setNotas] = useState("");
@@ -71,6 +71,7 @@ export function usePedidoConfirm() {
       };
 
       const result = await crearPedido(pedidoData);
+      setActivePedido(result.id, result.estado || "PENDIENTE");
       clearCart();
       router.push(`/${slug}/estado?pedido=${result.id}`);
     } catch (err: any) {

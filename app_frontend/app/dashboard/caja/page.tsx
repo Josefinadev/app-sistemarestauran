@@ -5,9 +5,10 @@ import { useCajaDashboard } from "@/viewmodels/useCajaDashboard";
 import {
   CreditCard, CheckCircle2, Clock, Receipt, DollarSign, Eye,
   X, Smartphone, Banknote, Wallet, Image as ImageIcon,
-  AlertCircle, ShoppingBag, BarChart3, Monitor, ChefHat,
+  ShoppingBag, BarChart3, Monitor, ChefHat,
   Truck, Bell, Printer,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Caja Dashboard
@@ -15,7 +16,7 @@ import {
    Incluye voucher visible y notificaciones mesero.
    ═══════════════════════════════════════════════════════════ */
 
-const metodoIcons: Record<string, any> = {
+const metodoIcons: Record<string, LucideIcon> = {
   YAPE: Smartphone, EFECTIVO: Banknote, PLIN: Smartphone, TARJETA: CreditCard,
 };
 
@@ -100,7 +101,7 @@ export default function CajaDashboard() {
                     <tr key={p.id} onClick={() => vm.setSelectedPedido(p.id === vm.selectedPedido ? null : p.id)} style={{ cursor: "pointer", background: vm.selectedPedido === p.id ? "var(--primary-ghost)" : undefined }}>
                       <td style={{ fontWeight: 600, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{p.numeroPedido}</td>
                       <td>Mesa {p.mesa}</td>
-                      <td>{p.items.length} platos</td>
+                      <td>{p.items.reduce((sum, item) => sum + item.cantidad, 0)} platos</td>
                       <td style={{ fontWeight: 600, color: "var(--primary)", fontVariantNumeric: "tabular-nums" }}>{formatPrecio(p.total)}</td>
                       <td><span className={`badge ${p.estadoPago === "PENDIENTE" ? "badge-pending" : "badge-ready"}`} style={{ display: "flex", alignItems: "center", gap: 4, width: "fit-content" }}>{p.estadoPago === "PENDIENTE" ? <Clock size={10} /> : <CheckCircle2 size={10} />}{p.estadoPago}</span></td>
                       <td style={{ color: "var(--text-muted)" }}>{p.metodoPago || "—"}</td>
@@ -140,17 +141,20 @@ export default function CajaDashboard() {
 
               {/* Items detail */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                {vm.pedidoSeleccionado.items.map((item: any, i: number) => (
+                {vm.pedidoSeleccionado.items.map((item, i: number) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border-subtle)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{item.nombre}</span>
+                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{item.cantidad} {item.nombre}</span>
                       {item.estado && (
                         <span className={`badge ${item.estado === "PENDIENTE" ? "badge-pending" : item.estado === "EN_PREPARACION" ? "badge-preparing" : item.estado === "LISTO" ? "badge-ready" : "badge-delivered"}`} style={{ fontSize: 8, padding: "2px 6px" }}>
                           {item.estado}
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{formatPrecio(item.precio)}</span>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{formatPrecio(item.precio)}</span>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{formatPrecio(item.precioUnitario)} c/u</span>
+                    </div>
                   </div>
                 ))}
               </div>

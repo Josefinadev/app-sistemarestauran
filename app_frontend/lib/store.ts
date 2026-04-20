@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ItemCarrito, Producto, Agregado, RolUsuario, Restaurante, Mesa } from "@/lib/database.types";
+import type { ItemCarrito, Producto, Agregado, RolUsuario, Restaurante, Mesa, EstadoPedido } from "@/lib/database.types";
 import { v4 as uuidv4 } from "uuid";
 
 /* ═══════════════════════════════════════════════════════════
@@ -110,10 +110,14 @@ interface AuthState {
   usuario: AuthUsuario | null;
   restaurante: Restaurante | null;
   mesa: Mesa | null;
+  activePedidoId: string | null;
+  activePedidoEstado: EstadoPedido | null;
   _hasHydrated: boolean;
   setSession: (data: LoginSessionData) => void;
   setRestaurante: (restaurante: Restaurante) => void;
   setMesa: (mesa: Mesa) => void;
+  setActivePedido: (pedidoId: string, estado: EstadoPedido) => void;
+  clearActivePedido: () => void;
   logout: () => void;
   setHasHydrated: (val: boolean) => void;
 }
@@ -127,6 +131,8 @@ export const useAuth = create<AuthState>()(
       usuario: null,
       restaurante: null,
       mesa: null,
+      activePedidoId: null,
+      activePedidoEstado: null,
       _hasHydrated: false,
 
       setSession: ({ accessToken, refreshToken, usuario, restaurante }) =>
@@ -140,6 +146,16 @@ export const useAuth = create<AuthState>()(
 
       setRestaurante: (restaurante) => set({ restaurante }),
       setMesa: (mesa) => set({ mesa }),
+      setActivePedido: (pedidoId, estado) =>
+        set({
+          activePedidoId: pedidoId,
+          activePedidoEstado: estado,
+        }),
+      clearActivePedido: () =>
+        set({
+          activePedidoId: null,
+          activePedidoEstado: null,
+        }),
 
       logout: () =>
         set({
@@ -149,6 +165,8 @@ export const useAuth = create<AuthState>()(
           usuario: null,
           restaurante: null,
           mesa: null,
+          activePedidoId: null,
+          activePedidoEstado: null,
         }),
 
       setHasHydrated: (val) => set({ _hasHydrated: val }),

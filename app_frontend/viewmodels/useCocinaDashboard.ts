@@ -1,20 +1,14 @@
-/* ═══════════════════════════════════════════════════════════
-   VIEWMODEL — useCocinaDashboard
-   Lógica de cocina con flujo:
-   PENDIENTE → EN_PREPARACION → LISTO (cocina termina aquí)
-   LISTO → ENTREGADO (responsabilidad del mesero, cocina recibe notificación)
-   ═══════════════════════════════════════════════════════════ */
-
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
+import { agruparDetalles, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { usePedidosRealtime, useDetallesRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
-import type { PlatoCocina, ConteoEstados } from "@/models/cocina";
+import type { ConteoEstados, MesaCocina, PedidoRecienteCocina, PlatoCocina } from "@/models/cocina";
 
 const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
 
 export function useCocinaDashboard() {
-  const [platos, setPlatos] = useState<PlatoCocina[]>([]);
+  const [mesas, setMesas] = useState<MesaCocina[]>([]);
   const [filtro, setFiltro] = useState<"TODOS" | "PENDIENTE" | "EN_PREPARACION" | "LISTO" | "ENTREGADO">("TODOS");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -22,71 +16,110 @@ export function useCocinaDashboard() {
   const prevListosRef = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
 
-  const loadPlatos = useCallback(async () => {
+  const loadMesasCocina = useCallback(async () => {
     try {
       const data = await getPedidos({ id_restaurante: ID_RESTAURANTE });
-      const mapped: PlatoCocina[] = [];
-
-      // Calcular hace 24h para limitar entregados recientes
+      const mesaMap = new Map<number, MesaCocina>();
+      const allLineas: PlatoCocina[] = [];
       const hace24h = new Date();
       hace24h.setHours(hace24h.getHours() - 24);
 
       for (const pedido of data || []) {
-        for (const det of pedido.detalle_pedido || []) {
-          // Excluir cancelados siempre
-          if (det.estado === "CANCELADO") continue;
+        const mesaNum = pedido.mesa?.numero || 0;
+        const detallesPedido: RawDetallePedido[] = [];
 
-          // ⚡ Items que NO requieren preparación van directo al mesero
-          // Cocina nunca los ve (ej: Inca Kola, Coca-Cola)
+        for (const det of pedido.detalle_pedido || []) {
+          if (det.estado === "CANCELADO") continue;
           if (det.producto?.requiere_preparacion === false) continue;
 
-          // Para ENTREGADO, solo mostrar las últimas 24h
           if (det.estado === "ENTREGADO") {
             const updatedAt = new Date(det.updated_at || det.created_at);
             if (updatedAt < hace24h) continue;
           }
 
-          mapped.push({
-            id: det.id,
-            nombre: det.producto?.nombre || "Plato",
-            notas: det.notas || "",
-            estado: det.estado,
-            mesa: pedido.mesa?.numero || 0,
-            hora: det.created_at || pedido.created_at,
-            agregados: (det.detalle_pedido_agregado || []).map(
-              (a: any) => a.agregado?.nombre || "Extra"
-            ),
-            pedidoId: pedido.id,
-          });
+          detallesPedido.push(det);
         }
+
+        const lineas = agruparDetalles(detallesPedido, { includeEstado: true }).map<PlatoCocina>((grupo) => ({
+          id: `${pedido.id}::${grupo.key}`,
+          nombre: grupo.nombre,
+          cantidad: grupo.cantidad,
+          notas: grupo.notas,
+          estado: grupo.estado as PlatoCocina["estado"],
+          mesa: mesaNum,
+          hora: grupo.hora || pedido.created_at,
+          agregados: grupo.agregados,
+          pedidoId: pedido.id,
+          detalleIds: grupo.detalleIds,
+        }));
+
+        if (lineas.length === 0) continue;
+
+        const pedidoReciente: PedidoRecienteCocina = {
+          id: pedido.id,
+          numeroPedido: `PED-${String(pedido.numero_pedido).padStart(3, "0")}`,
+          hora: pedido.created_at,
+          cantidadPlatos: lineas.reduce((sum, linea) => sum + linea.cantidad, 0),
+          lineas,
+        };
+
+        const mesaActual = mesaMap.get(mesaNum);
+        if (!mesaActual) {
+          mesaMap.set(mesaNum, {
+            id: `mesa-${mesaNum}`,
+            mesa: mesaNum,
+            hora: pedido.created_at,
+            cantidadPlatos: pedidoReciente.cantidadPlatos,
+            cantidadPedidos: 1,
+            pendientesCount: lineas.filter((linea) => linea.estado === "PENDIENTE").length,
+            pedidosRecientes: [pedidoReciente],
+            lineas: [...lineas],
+          });
+        } else {
+          mesaActual.pedidosRecientes.push(pedidoReciente);
+          mesaActual.lineas.push(...lineas);
+          mesaActual.cantidadPlatos += pedidoReciente.cantidadPlatos;
+          mesaActual.cantidadPedidos += 1;
+          mesaActual.pendientesCount += lineas.filter((linea) => linea.estado === "PENDIENTE").length;
+          if (pedido.created_at > mesaActual.hora) {
+            mesaActual.hora = pedido.created_at;
+          }
+        }
+
+        allLineas.push(...lineas);
       }
 
-      // 🔔 Detectar items que pasaron de LISTO → ENTREGADO (mesero los entregó)
-      // Solo después de la primera carga para evitar notificaciones falsas
+      const mapped = Array.from(mesaMap.values())
+        .map((mesa) => ({
+          ...mesa,
+          pedidosRecientes: mesa.pedidosRecientes.sort((a, b) => b.hora.localeCompare(a.hora)),
+          lineas: mesa.lineas.sort((a, b) => b.hora.localeCompare(a.hora)),
+        }))
+        .sort((a, b) => b.hora.localeCompare(a.hora));
+
       if (!isFirstLoad.current) {
-        const currentListos = new Set(mapped.filter(p => p.estado === "LISTO").map(p => p.id));
-        const currentEntregados = new Set(mapped.filter(p => p.estado === "ENTREGADO").map(p => p.id));
+        const currentListos = new Set(allLineas.filter((p) => p.estado === "LISTO").flatMap((p) => p.detalleIds));
+        const currentEntregados = new Set(allLineas.filter((p) => p.estado === "ENTREGADO").flatMap((p) => p.detalleIds));
 
         for (const id of prevListosRef.current) {
           if (!currentListos.has(id) && currentEntregados.has(id)) {
-            const item = mapped.find(p => p.id === id);
+            const item = allLineas.find((p) => p.detalleIds.includes(id));
             if (item) {
               addNotif({
                 tipo: "success",
-                titulo: `✅ Entregado — Mesa ${item.mesa}`,
-                mensaje: `${item.nombre} fue entregado al cliente por el mesero.`,
+                titulo: `Entregado - Mesa ${item.mesa}`,
+                mensaje: `${item.cantidad} ${item.nombre} fue${item.cantidad > 1 ? "ron" : ""} entregado${item.cantidad > 1 ? "s" : ""} al cliente por el mesero.`,
               });
             }
           }
         }
         prevListosRef.current = currentListos;
       } else {
-        // Primera carga: solo guardar referencia, sin notificar
-        prevListosRef.current = new Set(mapped.filter(p => p.estado === "LISTO").map(p => p.id));
+        prevListosRef.current = new Set(allLineas.filter((p) => p.estado === "LISTO").flatMap((p) => p.detalleIds));
         isFirstLoad.current = false;
       }
 
-      setPlatos(mapped);
+      setMesas(mapped);
     } catch (err) {
       console.error("Error loading cocina data:", err);
     } finally {
@@ -94,60 +127,99 @@ export function useCocinaDashboard() {
     }
   }, [addNotif]);
 
-  useEffect(() => { loadPlatos(); }, [loadPlatos]);
+  useEffect(() => { loadMesasCocina(); }, [loadMesasCocina]);
 
-  const handleRealtimeChange = useCallback(() => { loadPlatos(); }, [loadPlatos]);
+  const handleRealtimeChange = useCallback(() => { loadMesasCocina(); }, [loadMesasCocina]);
   usePedidosRealtime(ID_RESTAURANTE, handleRealtimeChange, handleRealtimeChange);
   useDetallesRealtime(handleRealtimeChange, handleRealtimeChange);
 
-  const avanzarEstado = async (plato: PlatoCocina) => {
-    // Cocina solo maneja: PENDIENTE → EN_PREPARACION → LISTO
-    // La transición LISTO → ENTREGADO es responsabilidad del MESERO
-    let nuevoEstado: string;
-    if (plato.estado === "PENDIENTE") nuevoEstado = "EN_PREPARACION";
-    else if (plato.estado === "EN_PREPARACION") nuevoEstado = "LISTO";
-    else return; // LISTO y ENTREGADO no se tocan desde cocina
+  const empezarPreparacionMesa = async (mesa: MesaCocina) => {
+    const pendientes = mesa.lineas.filter((linea) => linea.estado === "PENDIENTE");
+    if (pendientes.length === 0) return;
+
+    setUpdating(mesa.id);
+    try {
+      const detalleIds = pendientes.flatMap((linea) => linea.detalleIds);
+      await Promise.all(detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "EN_PREPARACION")));
+      await loadMesasCocina();
+    } catch (err) {
+      console.error("Error starting mesa prep:", err);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const marcarPlatoListo = async (plato: PlatoCocina) => {
+    if (plato.estado !== "EN_PREPARACION") return;
 
     setUpdating(plato.id);
     try {
-      await actualizarEstadoDetalle(plato.id, nuevoEstado);
-      setPlatos((prev) =>
-        prev.map((p) => (p.id === plato.id ? { ...p, estado: nuevoEstado as any } : p))
-      );
+      await Promise.all(plato.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "LISTO")));
+      await loadMesasCocina();
 
-      // 🔔 Notificar que el plato está LISTO
-      if (nuevoEstado === "LISTO") {
-        addNotif({
-          tipo: "info",
-          titulo: `🍽️ ¡Plato listo! — Mesa ${plato.mesa}`,
-          mensaje: `${plato.nombre} está listo para recoger y servir al cliente.`,
-        });
-      }
+      addNotif({
+        tipo: "info",
+        titulo: `Plato listo - Mesa ${plato.mesa}`,
+        mensaje: `${plato.cantidad} ${plato.nombre} esta${plato.cantidad > 1 ? "n" : ""} listo${plato.cantidad > 1 ? "s" : ""} para recoger y servir al cliente.`,
+      });
     } catch (err) {
-      console.error("Error updating estado:", err);
+      console.error("Error marking plato ready:", err);
     } finally {
       setUpdating(null);
     }
   };
 
   const conteo = useMemo<ConteoEstados>(() => ({
-    PENDIENTE: platos.filter((p) => p.estado === "PENDIENTE").length,
-    EN_PREPARACION: platos.filter((p) => p.estado === "EN_PREPARACION").length,
-    LISTO: platos.filter((p) => p.estado === "LISTO").length,
-  }), [platos]);
+    PENDIENTE: mesas.flatMap((m) => m.lineas).filter((p) => p.estado === "PENDIENTE").reduce((sum, p) => sum + p.cantidad, 0),
+    EN_PREPARACION: mesas.flatMap((m) => m.lineas).filter((p) => p.estado === "EN_PREPARACION").reduce((sum, p) => sum + p.cantidad, 0),
+    LISTO: mesas.flatMap((m) => m.lineas).filter((p) => p.estado === "LISTO").reduce((sum, p) => sum + p.cantidad, 0),
+  }), [mesas]);
 
   const entregadosCount = useMemo(() =>
-    platos.filter((p) => p.estado === "ENTREGADO").length
-  , [platos]);
+    mesas.flatMap((m) => m.lineas).filter((p) => p.estado === "ENTREGADO").reduce((sum, p) => sum + p.cantidad, 0)
+  , [mesas]);
 
-  const platosFiltrados = useMemo(() => {
-    if (filtro === "TODOS") return platos.filter((p) => p.estado !== "ENTREGADO");
-    return platos.filter((p) => p.estado === filtro);
-  }, [platos, filtro]);
+  const mesasFiltradas = useMemo(() => {
+    return mesas
+      .map((mesa) => {
+        const pedidosRecientes = mesa.pedidosRecientes
+          .map((pedido) => {
+            const lineas = filtro === "TODOS"
+              ? pedido.lineas.filter((p) => p.estado !== "ENTREGADO")
+              : pedido.lineas.filter((p) => p.estado === filtro);
+
+            return {
+              ...pedido,
+              lineas,
+              cantidadPlatos: lineas.reduce((sum, p) => sum + p.cantidad, 0),
+            };
+          })
+          .filter((pedido) => pedido.lineas.length > 0);
+
+        const lineas = pedidosRecientes.flatMap((pedido) => pedido.lineas);
+
+        return {
+          ...mesa,
+          pedidosRecientes,
+          lineas,
+          cantidadPlatos: lineas.reduce((sum, p) => sum + p.cantidad, 0),
+          cantidadPedidos: pedidosRecientes.length,
+          pendientesCount: lineas.filter((linea) => linea.estado === "PENDIENTE").length,
+        };
+      })
+      .filter((mesa) => mesa.lineas.length > 0);
+  }, [mesas, filtro]);
 
   return {
-    platos, platosFiltrados, conteo, entregadosCount,
-    filtro, loading, updating,
-    setFiltro, avanzarEstado,
+    mesas,
+    mesasFiltradas,
+    conteo,
+    entregadosCount,
+    filtro,
+    loading,
+    updating,
+    setFiltro,
+    empezarPreparacionMesa,
+    marcarPlatoListo,
   };
 }
