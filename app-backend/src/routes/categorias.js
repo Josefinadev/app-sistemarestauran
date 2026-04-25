@@ -1,21 +1,21 @@
 const express = require('express');
 const supabase = require('../config/supabase');
 const router = express.Router();
+const { authenticate, restrictToTenant } = require('../middleware/auth');
 
 /**
  * GET /api/categorias
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante } = req.query;
-
     let query = supabase
       .from('categoria')
       .select('*, producto(count)')
       .eq('activo', true)
       .order('orden', { ascending: true });
 
-    if (id_restaurante) query = query.eq('id_restaurante', id_restaurante);
+    // Aplicar restricción de Tenant automática
+    query = restrictToTenant(query, req);
 
     const { data, error } = await query;
     if (error) throw error;

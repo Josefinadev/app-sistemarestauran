@@ -16,10 +16,12 @@ import {
   crearCategoria,
   uploadImage,
 } from "@/lib/api";
-
-const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
+import { useAuth } from "@/lib/store";
 
 export function useAdminDashboard() {
+  const { restaurante } = useAuth();
+  const idRestaurante = restaurante?.id;
+
   const [activeTab, setActiveTab] = useState("productos");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,13 +50,14 @@ export function useAdminDashboard() {
   const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
+    if (!idRestaurante) return;
     try {
       setLoading(true);
       const [prods, cats, mesasData, pedidosData] = await Promise.all([
-        getProductosTodos(ID_RESTAURANTE),
-        getCategorias(ID_RESTAURANTE),
-        getMesas(ID_RESTAURANTE),
-        getPedidos({ id_restaurante: ID_RESTAURANTE }),
+        getProductosTodos(idRestaurante),
+        getCategorias(idRestaurante),
+        getMesas(idRestaurante),
+        getPedidos({ id_restaurante: idRestaurante }),
       ]);
 
       setProductos(prods || []);
@@ -91,7 +94,7 @@ export function useAdminDashboard() {
       }
 
       await crearProducto({
-        id_restaurante: ID_RESTAURANTE,
+        id_restaurante: idRestaurante,
         id_categoria: newProd.id_categoria,
         nombre: newProd.nombre,
         descripcion: newProd.descripcion,
@@ -139,7 +142,7 @@ export function useAdminDashboard() {
     setSaving(true);
     try {
       await crearMesa({
-        id_restaurante: ID_RESTAURANTE,
+        id_restaurante: idRestaurante,
         numero: parseInt(newMesa.numero),
         capacidad: parseInt(newMesa.capacidad) || 4,
       });
@@ -158,7 +161,7 @@ export function useAdminDashboard() {
     setSaving(true);
     try {
       await crearCategoria({
-        id_restaurante: ID_RESTAURANTE,
+        id_restaurante: idRestaurante,
         nombre: newCat.nombre,
         descripcion: newCat.descripcion,
         orden: categorias.length + 1,
@@ -175,7 +178,8 @@ export function useAdminDashboard() {
 
   const getQrUrl = (mesaSlug: string) => {
     const base = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-    return `${base}/${mesaSlug}/menu`;
+    if (!restaurante?.slug) return `${base}/m/${mesaSlug}`;
+    return `${base}/${restaurante.slug}/m/${mesaSlug}`;
   };
 
   // ── Filtrado por búsqueda ──

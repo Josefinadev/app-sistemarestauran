@@ -3,20 +3,24 @@ const supabase = require('../config/supabase');
 const supabaseAdmin = require('../config/supabase-admin');
 const router = express.Router();
 
+const { authenticate, restrictToTenant } = require('../middleware/auth');
+
 /**
  * GET /api/usuarios
- * Lista usuarios por restaurante
+ * Lista usuarios por restaurante (Filtrado por tenant)
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante, rol } = req.query;
+    const { rol } = req.query;
 
     let query = supabaseAdmin
       .from('usuario')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (id_restaurante) query = query.eq('id_restaurante', id_restaurante);
+    // Aplicar restricción de Tenant automática
+    query = restrictToTenant(query, req);
+
     if (rol) query = query.eq('rol', rol);
 
     const { data, error } = await query;

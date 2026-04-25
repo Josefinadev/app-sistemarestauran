@@ -6,9 +6,12 @@ import { useNotificaciones } from "@/lib/store";
 
 import type { ConteoEstados, MesaCocina, PedidoRecienteCocina, PlatoCocina } from "@/models/cocina";
 
-const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
+import { useAuth } from "@/lib/store";
 
 export function useCocinaDashboard() {
+  const { restaurante } = useAuth();
+  const idRestaurante = restaurante?.id;
+
   const [mesas, setMesas] = useState<MesaCocina[]>([]);
   const [filtro, setFiltro] = useState<"TODOS" | "PENDIENTE" | "EN_PREPARACION" | "LISTO" | "ENTREGADO">("TODOS");
   const [loading, setLoading] = useState(true);
@@ -19,8 +22,9 @@ export function useCocinaDashboard() {
   const isFirstLoad = useRef(true);
 
   const loadMesasCocina = useCallback(async () => {
+    if (!idRestaurante) return;
     try {
-      const data = await getPedidos({ id_restaurante: ID_RESTAURANTE });
+      const data = await getPedidos({ id_restaurante: idRestaurante });
       const mesaMap = new Map<number, MesaCocina>();
       const allLineas: PlatoCocina[] = [];
       const hace24h = new Date();
@@ -119,14 +123,14 @@ export function useCocinaDashboard() {
         }
         // 🔊 Sonar cuando el mesero entrega un plato
         if (hadEntregado) {
-          playEntregadoSound();
+          // playEntregadoSound();
         }
 
         // 🔊 Detectar nuevos pedidos (items PENDIENTE nuevos)
-        const currentPendientes = new Set(mapped.filter(p => p.estado === "PENDIENTE").map(p => p.id));
+        const currentPendientes = new Set(allLineas.filter(p => p.estado === "PENDIENTE").map(p => p.id));
         for (const id of currentPendientes) {
           if (!prevPendientesRef.current.has(id)) {
-            playNuevoPedidoSound();
+            // playNuevoPedidoSound();
             break; // Un solo sonido por batch
           }
         }
@@ -150,7 +154,7 @@ export function useCocinaDashboard() {
   useEffect(() => { loadMesasCocina(); }, [loadMesasCocina]);
 
   const handleRealtimeChange = useCallback(() => { loadMesasCocina(); }, [loadMesasCocina]);
-  usePedidosRealtime(ID_RESTAURANTE, handleRealtimeChange, handleRealtimeChange);
+  usePedidosRealtime(idRestaurante || "", handleRealtimeChange, handleRealtimeChange);
   useDetallesRealtime(handleRealtimeChange, handleRealtimeChange);
 
   const empezarPreparacionMesa = async (mesa: MesaCocina) => {

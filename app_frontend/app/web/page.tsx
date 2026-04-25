@@ -281,7 +281,7 @@ export default function WebPublica() {
           </div>
         </div>
         <div style={{ maxWidth: 1100, margin: "40px auto 0", paddingTop: 24, borderTop: "1px solid var(--border)", textAlign: "center" }}>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em" }}>© 2026 El Mijano — Trujillo, Perú. Todos los derechos reservados.</p>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em" }}>© 2026 Restaurante — Trujillo, Perú. Todos los derechos reservados.</p>
         </div>
       </footer>
 

@@ -459,9 +459,9 @@ body {
 .hero-card {
   position: relative;
   overflow: hidden;
-  border-color: rgba(197, 160, 89, 0.22);
+  border-color: var(--primary-glow);
   background:
-    radial-gradient(circle at top right, rgba(197, 160, 89, 0.18), transparent 32%),
+    radial-gradient(circle at top right, var(--primary-ghost), transparent 32%),
     linear-gradient(180deg, rgba(26, 26, 28, 0.98), rgba(18, 18, 18, 0.96));
   box-shadow: var(--shadow-md);
 }
@@ -498,7 +498,7 @@ body {
 }
 
 .menu-pill:hover {
-  border-color: rgba(197, 160, 89, 0.4);
+  border-color: var(--primary-light);
   color: var(--text);
   background: var(--surface-hover);
 }
@@ -507,7 +507,7 @@ body {
   border-color: var(--primary);
   background: var(--primary-ghost);
   color: var(--primary-light);
-  box-shadow: inset 0 0 0 1px rgba(197, 160, 89, 0.14);
+  box-shadow: inset 0 0 0 1px var(--primary-glow);
 }
 
 .menu-grid {
@@ -532,7 +532,7 @@ body {
 
 .menu-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 160, 89, 0.32);
+  border-color: var(--primary-light);
   box-shadow: var(--shadow-glow);
 }
 

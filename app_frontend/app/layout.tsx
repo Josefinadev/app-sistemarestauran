@@ -17,10 +17,10 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "El Mijano — Sistema de Restaurante",
+  title: "Restaurant Platform — Gestión Integral",
   description:
     "Plataforma SaaS para gestión integral de restaurantes. Pedidos en tiempo real, menú digital, dashboards por rol.",
-  keywords: ["restaurante", "SaaS", "pedidos", "menú digital", "El Mijano"],
+  keywords: ["restaurante", "SaaS", "pedidos", "menú digital", "gastronomía"],
 };
 
 export default function RootLayout({

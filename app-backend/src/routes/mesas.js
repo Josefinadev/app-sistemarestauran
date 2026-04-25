@@ -1,21 +1,25 @@
 const express = require('express');
 const supabase = require('../config/supabase');
 const router = express.Router();
+const { authenticate, restrictToTenant } = require('../middleware/auth');
 
 /**
  * GET /api/mesas
- * Lista mesas por restaurante
+ * Lista mesas por restaurante (Filtrado obligatorio)
  */
 router.get('/', async (req, res) => {
   try {
     const { id_restaurante } = req.query;
 
+    if (!id_restaurante) {
+      return res.status(400).json({ error: true, message: 'id_restaurante es requerido' });
+    }
+
     let query = supabase
       .from('mesa')
       .select('*')
+      .eq('id_restaurante', id_restaurante)
       .order('numero', { ascending: true });
-
-    if (id_restaurante) query = query.eq('id_restaurante', id_restaurante);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -28,15 +32,12 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/mesas/slug/:slug
- * Obtiene una mesa por su slug (para QR)
- * Si es slug de restaurante, devuelve la primera mesa disponible
- * Si es slug de mesa, devuelve esa mesa
+ * Obtiene una mesa por su slug (para QR) - Publico
  */
 router.get('/slug/:slug', async (req, res) => {
   try {
     const slug = req.params.slug;
 
-    // Primero intentar buscar por slug de mesa
     let { data: mesa, error: mesaError } = await supabase
       .from('mesa')
       .select('*, restaurante:id_restaurante(id, nombre, slug, latitud, longitud, radio_permitido_metros)')
@@ -44,31 +45,8 @@ router.get('/slug/:slug', async (req, res) => {
       .eq('activa', true)
       .single();
 
-    // Si no encuentra mesa, intentar por slug de restaurante
     if (!mesa || mesaError) {
-      const { data: restaurante, error: restError } = await supabase
-        .from('restaurante')
-        .select('id')
-        .eq('slug', slug)
-        .single();
-
-      if (!restaurante || restError) {
-        return res.status(404).json({ error: true, message: 'Mesa o restaurante no encontrado' });
-      }
-
-      // Obtener la primera mesa disponible del restaurante
-      const { data: mesas, error: mesasError } = await supabase
-        .from('mesa')
-        .select('*, restaurante:id_restaurante(id, nombre, slug, latitud, longitud, radio_permitido_metros)')
-        .eq('id_restaurante', restaurante.id)
-        .eq('activa', true)
-        .limit(1);
-
-      if (mesasError || !mesas || mesas.length === 0) {
-        return res.status(404).json({ error: true, message: 'No hay mesas disponibles' });
-      }
-
-      mesa = mesas[0];
+      return res.status(404).json({ error: true, message: 'Mesa no encontrada con ese código QR' });
     }
 
     res.json({ data: mesa });
@@ -79,14 +57,15 @@ router.get('/slug/:slug', async (req, res) => {
 
 /**
  * POST /api/mesas
- * Crea una nueva mesa
+ * Crea una nueva mesa (Admin)
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante, numero, capacidad } = req.body;
+    const { numero, capacidad } = req.body;
+    const id_restaurante = req.user.id_restaurante;
 
-    if (!id_restaurante || !numero) {
-      return res.status(400).json({ error: true, message: 'Campos requeridos: id_restaurante, numero' });
+    if (!numero) {
+      return res.status(400).json({ error: true, message: 'El número de mesa es requerido' });
     }
 
     const { data, error } = await supabase
@@ -105,8 +84,14 @@ router.post('/', async (req, res) => {
 /**
  * PATCH /api/mesas/:id
  */
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authenticate, async (req, res) => {
   try {
+    // Validar tenant
+    const { data: current } = await supabase.from('mesa').select('id_restaurante').eq('id', req.params.id).single();
+    if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
+      return res.status(403).json({ error: true, message: 'No tienes permiso' });
+    }
+
     const { data, error } = await supabase
       .from('mesa')
       .update(req.body)

@@ -50,7 +50,6 @@ async function apiFetch(path: string, options?: RequestInit) {
     throw new Error(body.message || body.error || `Error ${res.status}`);
   }
 
-  // Handle 204 No Content (e.g., DELETE responses)
   if (res.status === 204) return null;
 
   const json = await res.json();
@@ -76,6 +75,14 @@ export const loginAuth = async (email: string, password: string) => {
   return json.data;
 };
 
+/** Registro de cliente (comensal) */
+export const registrarCliente = (data: {
+  email: string;
+  password: string;
+  nombre: string;
+  id_restaurante: string;
+}) => apiFetch("/auth/registrar-cliente", { method: "POST", body: JSON.stringify(data) });
+
 /** Verificar sesión actual — devuelve datos del usuario */
 export const getAuthMe = () => apiFetch("/auth/me");
 
@@ -95,7 +102,7 @@ export const cambiarPasswordAuth = (user_id: string, new_password: string) =>
     body: JSON.stringify({ user_id, new_password }),
   });
 
-// Upload de imágenes (multipart/form-data, no JSON)
+// Upload de imágenes
 export async function uploadImage(file: File, folder: string = "web"): Promise<string> {
   const formData = new FormData();
   formData.append("imagen", file);
@@ -129,6 +136,20 @@ export const validarUbicacion = (slug: string, latitud: number, longitud: number
     method: "POST",
     body: JSON.stringify({ latitud, longitud }),
   });
+
+/** Crear un nuevo restaurante (solo SuperAdmin) */
+export const crearRestaurante = (data: {
+  nombre: string;
+  slug: string;
+  propietario_nombre: string;
+  propietario_email: string;
+  propietario_password: string;
+  color_primario?: string;
+  color_secundario?: string;
+  latitud?: number;
+  longitud?: number;
+  radio_permitido_metros?: number;
+}) => apiFetch("/restaurante", { method: "POST", body: JSON.stringify(data) });
 
 // ── Categorías ──
 export const getCategorias = (idRestaurante: string) =>
@@ -217,7 +238,7 @@ export const actualizarUsuario = (id: string, data: any) =>
 export const eliminarUsuario = (id: string) =>
   apiFetch(`/usuarios/${id}`, { method: "DELETE" });
 
-// ── Web & Marketing ──
+// ── Web ──
 export const getWebConfig = (id_restaurante: string) => apiFetch(`/web/config/${id_restaurante}`);
 export const saveWebConfig = (data: any) => apiFetch("/web/config", { method: "POST", body: JSON.stringify(data) });
 export const getWebCombos = (id_restaurante: string) => apiFetch(`/web/combos/${id_restaurante}`);

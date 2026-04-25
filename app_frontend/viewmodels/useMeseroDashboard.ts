@@ -8,42 +8,12 @@ import { useNotificaciones } from "@/lib/store";
 import type { ItemServir, MesaEstado, PedidoMesero } from "@/models/mesero";
 
 
-const ID_RESTAURANTE = "a0000000-0000-0000-0000-000000000001";
-
-// Función para agregar items duplicados
-function aggregateItems(rawItems: ItemServir[]): AggregatedItem[] {
-  const map = new Map<string, AggregatedItem>();
-  for (const item of rawItems) {
-    const key = `${item.nombre}|${item.notas || ""}|${item.agregados.join(",")}`;
-    const existing = map.get(key);
-    if (existing) {
-      existing.cantidad++;
-      existing.itemIds.push(item.id);
-      if (item.estado === "LISTO") existing.listosIds.push(item.id);
-      if (existing.estado !== item.estado) existing.estado = "MIXED";
-    } else {
-      map.set(key, {
-        key,
-        nombre: item.nombre,
-        cantidad: 1,
-        itemIds: [item.id],
-        mesa: item.mesa,
-        hora: item.hora,
-        estado: item.estado,
-        esBebida: item.esBebida,
-        notas: item.notas,
-        imagen_url: item.imagen_url,
-        agregados: item.agregados,
-        listosIds: item.estado === "LISTO" ? [item.id] : [],
-      });
-    }
-  }
-  return Array.from(map.values()).sort((a, b) =>
-    (a.listosIds.length > 0 ? -1 : 1) - (b.listosIds.length > 0 ? -1 : 1)
-  );
-}
+import { useAuth } from "@/lib/store";
 
 export function useMeseroDashboard() {
+  const { restaurante } = useAuth();
+  const idRestaurante = restaurante?.id;
+
   const [mesas, setMesas] = useState<MesaEstado[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"todos" | "platos" | "bebidas">("todos");
@@ -62,8 +32,9 @@ export function useMeseroDashboard() {
   };
 
   const loadData = useCallback(async () => {
+    if (!idRestaurante) return;
     try {
-      const data = await getPedidos({ id_restaurante: ID_RESTAURANTE });
+      const data = await getPedidos({ id_restaurante: idRestaurante });
       const mesaMap = new Map<number, MesaEstado>();
       const allItems: ItemServir[] = [];
 
@@ -131,8 +102,10 @@ export function useMeseroDashboard() {
       }
 
       const currentListos = new Set(allItems.filter((i) => i.estado === "LISTO").flatMap((i) => i.detalleIds));
+      let hasNewListo = false;
       for (const id of currentListos) {
         if (!prevListosRef.current.has(id)) {
+          hasNewListo = true;
           const item = allItems.find((i) => i.detalleIds.includes(id));
           if (item) {
             addNotif({
@@ -143,7 +116,9 @@ export function useMeseroDashboard() {
           }
         }
       }
-      if (hasNewListo) playPlatoListoSound();
+      if (hasNewListo) {
+        // playPlatoListoSound();
+      }
       prevListosRef.current = currentListos;
 
       const mapped = Array.from(mesaMap.values())
@@ -165,17 +140,15 @@ export function useMeseroDashboard() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleRealtimeChange = useCallback(() => { loadData(); }, [loadData]);
-  usePedidosRealtime(ID_RESTAURANTE, handleRealtimeChange, handleRealtimeChange);
+  usePedidosRealtime(idRestaurante || "", handleRealtimeChange, handleRealtimeChange);
   useDetallesRealtime(handleRealtimeChange, handleRealtimeChange);
 
   // Marcar uno o varios items (aggregated)
-  const marcarEntregadoIds = async (ids: string[], groupKey?: string) => {
-    setUpdating(groupKey || ids[0]);
+  const marcarEntregado = async (item: ItemServir) => {
+    setUpdating(item.id);
     try {
-
       await Promise.all(item.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "ENTREGADO")));
       await loadData();
-
     } catch (err) {
       console.error("Error updating item:", err);
     } finally {
@@ -228,7 +201,7 @@ export function useMeseroDashboard() {
     bebidasCount,
     mesasActivasCount,
     setFiltro,
-    marcarEntregadoIds
+    marcarEntregado
 
   };
 }

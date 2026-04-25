@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { RolUsuario } from "@/lib/database.types";
 import { useAuth } from "@/lib/store";
 import { loginAuth } from "@/lib/api";
@@ -23,6 +23,8 @@ const roleRoutes: Record<RolUsuario, string> = {
   mesero: "/dashboard/mesero",
   caja: "/dashboard/caja",
   cliente: "/",
+  propietario: "/dashboard/admin",
+  admin_saas: "/superadmin"
 };
 
 export default function LoginPage() {
@@ -32,6 +34,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const canSubmit = email.trim().length > 0 && password.trim().length > 0;
 
@@ -133,7 +140,7 @@ export default function LoginPage() {
                 color: "var(--primary)",
               }}
             >
-              El Mijano
+              Restaurant OS
             </span>
           </div>
 
@@ -170,10 +177,11 @@ export default function LoginPage() {
               />
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: 24 }}
-            >
+            {isClient ? (
+              <form
+                onSubmit={handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 24 }}
+              >
               {/* Email */}
               <div>
                 <p className="label" style={{ marginBottom: 8 }}>
@@ -263,6 +271,11 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            ) : (
+              <div style={{ minHeight: 250, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Loader2 className="spin-icon" size={24} color="var(--text-muted)" />
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -443,16 +456,14 @@ export default function LoginPage() {
       </div>
 
       {/* Spinner keyframe */}
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
+          to { transform: rotate(360deg); }
         }
-        :global(.spin-icon) {
+        .spin-icon {
           animation: spin 0.8s linear infinite;
         }
-      `}</style>
+      `}} />
     </main>
   );
 }

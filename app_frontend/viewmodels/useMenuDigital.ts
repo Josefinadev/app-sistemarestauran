@@ -5,12 +5,12 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { useState, useEffect, useMemo } from "react";
-import { getCategorias, getProductos, getProductoDetalle } from "@/lib/api";
+import { getCategorias, getProductos, getProductoDetalle, getMesas } from "@/lib/api";
 import { useAuth, useCarrito } from "@/lib/store";
 import type { Agregado } from "@/lib/database.types";
 
 export function useMenuDigital() {
-  const { restaurante, mesa, activePedidoId, activePedidoEstado } = useAuth();
+  const { restaurante, usuario, mesa, activePedidoId, activePedidoEstado, setMesa } = useAuth();
   const { addItem, getItemCount, getTotal } = useCarrito();
 
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -71,40 +71,28 @@ export function useMenuDigital() {
   const toggleAgregado = (ag: Agregado, grupoId?: string) => {
     setSelectedAgregados((prev) => {
       const already = prev.find((a) => a.id === ag.id);
-      if (already) {
-        return prev.filter((a) => a.id !== ag.id);
-      }
+      if (already) return prev.filter((a) => a.id !== ag.id);
 
-      // Check max_seleccion for the group
       if (grupoId && productDetail?.producto_grupo) {
         const pg = productDetail.producto_grupo.find((p: any) => p.grupo?.id === grupoId);
         if (pg) {
           const max = pg.grupo.max_seleccion || 99;
-          const currentInGroup = prev.filter((a) =>
-            pg.grupo.agregado?.some((ga: Agregado) => ga.id === a.id)
-          ).length;
+          const currentInGroup = prev.filter((a) => pg.grupo.agregado?.some((ga: Agregado) => ga.id === a.id)).length;
           if (currentInGroup >= max) return prev;
         }
       }
-
       return [...prev, ag];
     });
   };
 
-  // ── Validación min_seleccion por grupo ──
   const canAddToCart = useMemo(() => {
     if (!productDetail?.producto_grupo?.length) return true;
-
     for (const pg of productDetail.producto_grupo) {
       const grupo = pg.grupo;
       if (!grupo) continue;
       const min = grupo.min_seleccion || 0;
       if (min === 0) continue;
-
-      const selectedInGroup = selectedAgregados.filter((a) =>
-        grupo.agregado?.some((ga: Agregado) => ga.id === a.id)
-      ).length;
-
+      const selectedInGroup = selectedAgregados.filter((a) => grupo.agregado?.some((ga: Agregado) => ga.id === a.id)).length;
       if (selectedInGroup < min) return false;
     }
     return true;
@@ -119,6 +107,20 @@ export function useMenuDigital() {
 
   const quickAddProduct = (prod: any) => {
     addItem(prod, 1, "", []);
+  };
+
+  const usarMesaPrueba = async () => {
+    if (!restaurante?.id) return;
+    try {
+      const mesas = await getMesas(restaurante.id);
+      if (mesas && mesas.length > 0) {
+        setMesa(mesas[0]);
+      } else {
+        alert("El restaurante no tiene mesas configuradas.");
+      }
+    } catch (err) {
+      console.error("Error al obtener mesa de prueba:", err);
+    }
   };
 
   const closeDetail = () => {
@@ -147,6 +149,7 @@ export function useMenuDigital() {
     itemCount: getItemCount(),
     cartTotal: getTotal(),
     restaurante,
+    usuario,
     mesa,
     activePedidoId,
     activePedidoEstado,
@@ -160,5 +163,6 @@ export function useMenuDigital() {
     toggleAgregado,
     handleAddToCart,
     closeDetail,
+    usarMesaPrueba,
   };
 }

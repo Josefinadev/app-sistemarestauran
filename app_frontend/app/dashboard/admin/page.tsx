@@ -6,7 +6,7 @@ import { useAdminDashboard } from "@/viewmodels/useAdminDashboard";
 import { QRCode } from "react-qrcode-logo";
 import {
   Package, Tag, Armchair, Receipt, DollarSign, Plus, Pause, Play,
-  Trash2, Search, QrCode, X, Download, Copy,
+  Trash2, Search, QrCode as QrIcon, X, Download, Copy,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -17,7 +17,7 @@ import {
 const tabs = [
   { key: "productos", label: "Productos", Icon: Package },
   { key: "categorias", label: "Categorías", Icon: Tag },
-  { key: "mesas", label: "Mesas & QR", Icon: QrCode },
+  { key: "mesas", label: "Mesas & QR", Icon: QrIcon },
 ];
 
 export default function AdminDashboard() {
@@ -175,7 +175,6 @@ export default function AdminDashboard() {
               </div>
               <p style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 4px" }}>Mesa {m.numero}</p>
               <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 8px" }}>Cap. {m.capacidad} · {m.activa ? "Activa" : "Inactiva"}</p>
-              <p style={{ fontSize: 9, color: "var(--text-muted)", margin: "0 0 12px", wordBreak: "break-all", fontFamily: "monospace", padding: "4px 8px", background: "var(--surface)", borderRadius: 4 }}>/{m.slug}/menu</p>
               <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                 <button onClick={() => downloadQr(m.slug, m.numero)} className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}><Download size={12} /> Descargar QR</button>
                 <button onClick={() => navigator.clipboard.writeText(vm.getQrUrl(m.slug))} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}><Copy size={14} /></button>

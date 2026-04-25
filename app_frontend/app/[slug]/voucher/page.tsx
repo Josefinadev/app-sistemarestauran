@@ -144,7 +144,7 @@ export default function VoucherPage() {
   }
 
   const detalles = pedido?.detalle_pedido || [];
-  const restNombre = restaurante?.nombre || "El Mijano";
+  const restNombre = restaurante?.nombre || "Restaurante";
   const mesaNum = pedido?.mesa?.numero || mesa?.numero || "—";
   const numeroPedido = `PED-${String(pedido?.numero_pedido).padStart(3, "0")}`;
   const isPagado = pedido?.estado_pago === "PAGADO";

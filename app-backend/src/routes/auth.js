@@ -16,13 +16,14 @@ router.post('/login', async (req, res) => {
     }
 
     // 1. Autenticar con Supabase Auth
+    console.log(`[Auth Login] Intentando login para: ${email}`);
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
 
     if (authError) {
-      console.error('[Auth Login] Supabase error:', authError.message);
+      console.error('[Auth Login] Supabase error:', authError.message, 'Code:', authError.status);
       return res.status(401).json({ error: true, message: 'Email o contraseña incorrectos.' });
     }
 
@@ -216,6 +217,57 @@ router.post('/cambiar-password', async (req, res) => {
   } catch (err) {
     console.error('[Auth Cambiar Password Error]', err);
     res.status(500).json({ error: true, message: err.message || 'Error cambiando contraseña.' });
+  }
+});
+
+/**
+ * POST /api/auth/registrar-cliente
+ * Registro público para comensales (clientes)
+ */
+router.post('/registrar-cliente', async (req, res) => {
+  try {
+    const { email, password, nombre, id_restaurante } = req.body;
+
+    if (!email || !password || !nombre || !id_restaurante) {
+      return res.status(400).json({ error: true, message: 'Faltan campos obligatorios.' });
+    }
+
+    // 1. Crear usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      if (authError.message?.includes('already')) {
+        return res.status(409).json({ error: true, message: 'El email ya está registrado.' });
+      }
+      throw authError;
+    }
+
+    // 2. Insertar en tabla usuario con rol 'cliente' forzado
+    const { data: usuario, error: userError } = await supabaseAdmin
+      .from('usuario')
+      .insert({
+        auth_id: authData.user.id,
+        email: email.trim().toLowerCase(),
+        nombre,
+        rol: 'cliente',
+        id_restaurante,
+      })
+      .select()
+      .single();
+
+    if (userError) {
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      throw userError;
+    }
+
+    res.status(201).json({ data: usuario });
+  } catch (err) {
+    console.error('[Auth Registrar Cliente Error]', err);
+    res.status(500).json({ error: true, message: err.message || 'Error en el registro.' });
   }
 });
 

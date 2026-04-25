@@ -2,74 +2,87 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMesaPorSlug } from "@/lib/api";
+import { getRestaurante } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import { Wine, Loader2 } from "lucide-react";
 
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT DEL RESTAURANTE (Público/Cliente)
+   Maneja la resolución del restaurante por slug y el branding.
+   ═══════════════════════════════════════════════════════════ */
+
 export default function SlugLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
-  const slug = params?.slug as string;
-  const { setRestaurante, setMesa } = useAuth();
+  const resSlug = params?.slug as string;
+  const { setRestaurante, restaurante } = useAuth();
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // 1. Resolver Restaurante
   useEffect(() => {
     async function resolve() {
+      if (!resSlug) return;
       try {
-        const data = await getMesaPorSlug(slug);
-        if (data?.restaurante) {
-          setRestaurante(data.restaurante);
+        const data = await getRestaurante(resSlug);
+        if (data) {
+          setRestaurante(data);
         }
-        setMesa(data);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setError(message || "Mesa no encontrada");
+        setError(message || "Restaurante no encontrado");
       } finally {
         setLoading(false);
       }
     }
-    if (slug) resolve();
-  }, [slug, setRestaurante, setMesa]);
+    resolve();
+  }, [resSlug, setRestaurante]);
+
+  // 2. Inyectar Branding Dinámico (Heredado por todos los hijos: Menu, Pedido, Estado, etc.)
+  useEffect(() => {
+    if (!restaurante) return;
+    const root = document.documentElement;
+    const primaryStr = restaurante.color_primario || "#C5A059";
+    const secondaryStr = restaurante.color_secundario || "#E2725B";
+
+    if (primaryStr.startsWith("#")) {
+      root.style.setProperty("--primary", primaryStr);
+      root.style.setProperty("--primary-light", `${primaryStr}dd`);
+      root.style.setProperty("--primary-dark", `${primaryStr}aa`);
+      root.style.setProperty("--primary-ghost", `${primaryStr}15`);
+      root.style.setProperty("--primary-glow", `${primaryStr}25`);
+    } else {
+      root.style.setProperty("--primary", "#C5A059");
+    }
+    
+    if (secondaryStr.startsWith("#")) {
+      root.style.setProperty("--secondary", secondaryStr);
+    } else {
+      root.style.setProperty("--secondary", "#E2725B");
+    }
+  }, [restaurante]);
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg)" }}>
-        <Loader2 size={32} color="var(--primary)" className="spin-icon" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0C0B0E" }}>
+        <Loader2 size={32} color="#C5A059" className="spin-icon" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16, background: "var(--bg)", padding: 24, textAlign: "center" }}>
-        <Wine size={48} color="var(--text-muted)" />
-        <h2 style={{ fontSize: 18, color: "var(--text)", margin: 0 }}>Mesa no encontrada</h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>{error}</p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16, background: "#0C0B0E", padding: 24, textAlign: "center" }}>
+        <Wine size={48} color="#5A4E38" />
+        <h2 style={{ fontSize: 18, color: "#F0E6D0", margin: 0 }}>Restaurante no encontrado</h2>
+        <p style={{ fontSize: 13, color: "#B8A98C", margin: 0 }}>{error}</p>
       </div>
     );
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)", maxWidth: 780, margin: "0 auto", padding: "0 20px 100px" }}>
-      <header style={{ padding: "20px 0 12px", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 14, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "grid", placeItems: "center" }}>
-                <Wine size={18} color="var(--text-inverse)" />
-              </div>
-              <div>
-                <p className="label">Menú del cliente</p>
-                <h1 style={{ fontSize: 24, margin: 0, color: "var(--text)", fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontWeight: 400 }}>
-                  {slug.replace(/-/g, " ")}
-                </h1>
-              </div>
-            </div>
-            <p className="section-note">Usa tu celular para navegar y seleccionar desde la mesa. Escanear QR debe ser simple y rápido.</p>
-          </div>
-        </div>
-      </header>
+    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
       {children}
-    </main>
+    </div>
   );
 }

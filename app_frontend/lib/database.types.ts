@@ -6,7 +6,7 @@
 export type EstadoPedido = "PENDIENTE" | "EN_PREPARACION" | "LISTO" | "ENTREGADO" | "CANCELADO";
 export type EstadoPago = "PENDIENTE" | "PAGADO" | "ANULADO";
 export type MetodoPago = "EFECTIVO" | "YAPE" | "PLIN" | "TARJETA" | "OTRO";
-export type RolUsuario = "admin" | "cocina" | "mesero" | "caja" | "cliente";
+export type RolUsuario = "admin" | "cocina" | "mesero" | "caja" | "cliente" | "propietario" | "admin_saas";
 
 export interface Restaurante {
   id: string;
@@ -20,6 +20,8 @@ export interface Restaurante {
   radio_permitido_metros: number;
   moneda: string;
   activo: boolean;
+  color_primario: string | null;
+  color_secundario: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -157,6 +159,41 @@ export interface Promocion {
   created_at: string;
 }
 
+export interface SuscripcionPlan {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  precio_mensual: number;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface SuscripcionModulo {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface SuscripcionPlanModulo {
+  id_plan: string;
+  id_modulo: string;
+}
+
+export interface RestauranteSuscripcion {
+  id: string;
+  id_restaurante: string;
+  id_plan: string;
+  estado: "activa" | "vencida" | "cancelada";
+  fecha_inicio: string;
+  fecha_fin_periodo: string | null;
+  created_at: string;
+  updated_at: string;
+  plan?: SuscripcionPlan;
+}
+
 /* ═══════════════════════════════════════════════════════════
    Tipos auxiliares para la UI
    ═══════════════════════════════════════════════════════════ */
@@ -202,6 +239,10 @@ export type Database = {
       detalle_pedido: { Row: DetallePedido; Insert: Partial<DetallePedido>; Update: Partial<DetallePedido> };
       detalle_pedido_agregado: { Row: DetallePedidoAgregado; Insert: Partial<DetallePedidoAgregado>; Update: Partial<DetallePedidoAgregado> };
       promocion: { Row: Promocion; Insert: Partial<Promocion>; Update: Partial<Promocion> };
+      suscripcion_plan: { Row: SuscripcionPlan; Insert: Partial<SuscripcionPlan>; Update: Partial<SuscripcionPlan> };
+      suscripcion_modulo: { Row: SuscripcionModulo; Insert: Partial<SuscripcionModulo>; Update: Partial<SuscripcionModulo> };
+      suscripcion_plan_modulo: { Row: SuscripcionPlanModulo; Insert: Partial<SuscripcionPlanModulo>; Update: Partial<SuscripcionPlanModulo> };
+      restaurante_suscripcion: { Row: RestauranteSuscripcion; Insert: Partial<RestauranteSuscripcion>; Update: Partial<RestauranteSuscripcion> };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

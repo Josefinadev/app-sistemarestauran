@@ -1,14 +1,15 @@
 const express = require('express');
 const supabase = require('../config/supabase');
 const router = express.Router();
+const { authenticate, restrictToTenant } = require('../middleware/auth');
 
 /**
  * GET /api/pedidos
- * Lista pedidos con filtros
+ * Lista pedidos con filtros (Filtrado por tenant)
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante, id_mesa, estado, estado_pago, limit: lim } = req.query;
+    const { id_mesa, estado, estado_pago, limit: lim } = req.query;
 
     let query = supabase
       .from('pedido')
@@ -27,7 +28,9 @@ router.get('/', async (req, res) => {
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (id_restaurante) query = query.eq('id_restaurante', id_restaurante);
+    // Aplicar restricción de Tenant automática
+    query = restrictToTenant(query, req);
+
     if (id_mesa) query = query.eq('id_mesa', id_mesa);
     if (estado) query = query.eq('estado', estado);
     if (estado_pago) query = query.eq('estado_pago', estado_pago);
