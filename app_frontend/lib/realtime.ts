@@ -6,6 +6,8 @@
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+// Nota: estos hooks solo se ejecutan en cliente.
+
 /**
  * Escucha nuevos pedidos y cambios de estado para un restaurante.
  * Útil para dashboards de cocina, mesero y caja.
@@ -137,4 +139,66 @@ export function useDetallesPedidoRealtime(
       supabase.removeChannel(channel);
     };
   }, [pedidoId, onUpdate]);
+}
+
+/**
+ * Escucha cambios de branding/colores del restaurante.
+ * Útil para aplicar paleta en tiempo real en todos los módulos.
+ */
+export function useRestauranteRealtime(
+  idRestaurante: string | null,
+  onUpdate?: (restaurante: any) => void
+) {
+  useEffect(() => {
+    if (!idRestaurante) return;
+
+    const channel = supabase
+      .channel(`restaurante-${idRestaurante}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "restaurante",
+          filter: `id=eq.${idRestaurante}`,
+        },
+        (payload) => onUpdate?.(payload.new)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [idRestaurante, onUpdate]);
+}
+
+/**
+ * Escucha cambios en productos para un restaurante.
+ * En UI normalmente solo se usa para hacer refetch rápido.
+ */
+export function useProductosRealtime(
+  idRestaurante: string | null,
+  onChange?: () => void
+) {
+  useEffect(() => {
+    if (!idRestaurante) return;
+
+    const channel = supabase
+      .channel(`productos-${idRestaurante}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "producto",
+          filter: `id_restaurante=eq.${idRestaurante}`,
+        },
+        () => onChange?.()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [idRestaurante, onChange]);
 }

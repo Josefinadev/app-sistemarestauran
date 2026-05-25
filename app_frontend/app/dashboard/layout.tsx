@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useNotificaciones } from "@/lib/store";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { applyRestauranteBranding } from "@/lib/branding";
+import { useRestauranteRealtime } from "@/lib/realtime";
 import {
   Crown,
   Flame,
@@ -57,6 +59,30 @@ export default function DashboardLayout({
     }
   }, [_hasHydrated, accessToken, router]);
 
+  // ── Role Guard: evitar navegación por URL a módulos no permitidos ──
+  useEffect(() => {
+    if (!_hasHydrated || !accessToken || !rol) return;
+
+     const allowedPrefixesByRole: Record<string, string[]> = {
+       admin: ["/dashboard/admin"],
+       propietario: ["/dashboard/admin"],
+       cocina: ["/dashboard/cocina"],
+       caja: ["/dashboard/caja"],
+       mesero: ["/dashboard/mesero"],
+       // Superadmin can access the SaaS panel and the tenant admin dashboard.
+       // This prevents surprising redirects to /superadmin when a superadmin refreshes
+       // a tenant dashboard URL (common while configuring a newly created tenant).
+       admin_saas: ["/superadmin", "/dashboard/admin"],
+       cliente: ["/"],
+     };
+
+    const allowed = allowedPrefixesByRole[rol] || ["/dashboard/admin"];
+    const isAllowed = allowed.some((p) => pathname?.startsWith(p));
+    if (!isAllowed) {
+      router.replace(allowed[0] || "/dashboard/admin");
+    }
+  }, [_hasHydrated, accessToken, rol, pathname, router]);
+
   useEffect(() => {
     const update = () => {
       const now = new Date();
@@ -104,34 +130,37 @@ export default function DashboardLayout({
     }
   }, [restaurante?.id, accessToken]);
 
+  // Refrescar restaurante (branding) desde DB para no depender del snapshot del login.
+  useEffect(() => {
+    async function refreshRestaurante() {
+      if (!accessToken || !restaurante?.id) return;
+      const { data, error } = await (supabase.from("restaurante") as any)
+        .select("*")
+        .eq("id", restaurante.id)
+        .maybeSingle();
+      if (!error && data) {
+        // Evita perder datos existentes si la fila no trae algún campo.
+        useAuth.getState().setRestaurante({ ...useAuth.getState().restaurante, ...data });
+      }
+    }
+    refreshRestaurante();
+  }, [accessToken, restaurante?.id]);
+
+  // Branding en tiempo real
+  useRestauranteRealtime(restaurante?.id || null, (r) => {
+    // Mantener el objeto local en sync para que el resto de UI use lo último.
+    useAuth.getState().setRestaurante({ ...useAuth.getState().restaurante, ...r });
+  });
+
   // ── Dynamic Theming: Inject CSS Variables ──
   useEffect(() => {
-    const root = document.documentElement;
-    
-    if (restaurante?.color_primario && typeof restaurante.color_primario === "string" && restaurante.color_primario.startsWith("#")) {
-      root.style.setProperty("--primary", restaurante.color_primario);
-      root.style.setProperty("--primary-light", `${restaurante.color_primario}dd`);
-      root.style.setProperty("--primary-dark", `${restaurante.color_primario}aa`);
-      root.style.setProperty("--primary-ghost", `${restaurante.color_primario}15`);
-      root.style.setProperty("--primary-glow", `${restaurante.color_primario}25`);
-    } else {
-      root.style.setProperty("--primary", "#C5A059");
-      root.style.setProperty("--primary-light", "#D4B474");
-      root.style.setProperty("--primary-dark", "#A8863D");
-      root.style.setProperty("--primary-ghost", "rgba(197, 160, 89, 0.08)");
-      root.style.setProperty("--primary-glow", "rgba(197, 160, 89, 0.15)");
-    }
-
-    if (restaurante?.color_secundario && typeof restaurante.color_secundario === "string" && restaurante.color_secundario.startsWith("#")) {
-      root.style.setProperty("--secondary", restaurante.color_secundario);
-    } else {
-      root.style.setProperty("--secondary", "#E2725B");
-    }
+    applyRestauranteBranding(restaurante);
   }, [restaurante?.color_primario, restaurante?.color_secundario]);
 
   // Filter nav items by role and active modules
   const navItems = allNavItems.filter((item) => {
-    if (rol !== "admin" && item.rol !== "admin" && item.rol !== rol) return false;
+    const isAdminLike = rol === "admin" || rol === "admin_saas" || rol === "propietario";
+    if (!isAdminLike && item.rol !== rol) return false;
     if (item.modulo && modulosActivos.length > 0 && !modulosActivos.includes(item.modulo)) return false;
     return true;
   });

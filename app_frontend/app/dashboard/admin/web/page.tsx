@@ -5,8 +5,9 @@ import { useAuth } from "@/lib/store";
 import {
   getWebConfig, saveWebConfig, getWebCombos, crearWebCombo, actualizarWebCombo,
   eliminarWebCombo, getWebOfertas, crearWebOferta, actualizarWebOferta, eliminarWebOferta,
-  uploadImage,
+  uploadImage, actualizarRestauranteBranding,
 } from "@/lib/api";
+import { ImageUploadInput } from "@/components/ImageUploadInput";
 import {
   Globe, Gift, Calendar, Plus, X, Trash2, Pencil,
   Save, ExternalLink, CheckCircle2, Star, Sparkles,
@@ -26,16 +27,23 @@ const tabs = [
 ] as const;
 
 export default function GestionWebPage() {
-  const { restaurante } = useAuth();
+  const { restaurante, setRestaurante } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("combos");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingVisual, setSavingVisual] = useState(false);
 
   // Data
   const [combos, setCombos] = useState<any[]>([]);
   const [ofertas, setOfertas] = useState<any[]>([]);
   const [webConfig, setWebConfig] = useState({
     whatsapp: "", telefono: "", direccion: "", horario_semana: "", horario_finde: "",
+  });
+  const [visualConfig, setVisualConfig] = useState({
+    color_primario: "#C5A059",
+    color_secundario: "#E2725B",
+    logo_url: "",
+    hero_banner_url: "",
   });
 
   // Modals
@@ -57,6 +65,16 @@ export default function GestionWebPage() {
     if (id_restaurante) loadData();
     else setLoading(false);
   }, [id_restaurante]);
+
+  useEffect(() => {
+    if (!restaurante) return;
+    setVisualConfig({
+      color_primario: restaurante.color_primario || "#C5A059",
+      color_secundario: restaurante.color_secundario || "#E2725B",
+      logo_url: restaurante.logo_url || "",
+      hero_banner_url: restaurante.hero_banner_url || "",
+    });
+  }, [restaurante?.id, restaurante?.color_primario, restaurante?.color_secundario, restaurante?.logo_url, restaurante?.hero_banner_url]);
 
   const loadData = async () => {
     if (!id_restaurante) return;
@@ -105,8 +123,24 @@ export default function GestionWebPage() {
     try {
       await saveWebConfig({ id_restaurante, ...webConfig });
       alert("Configuración guardada ✅");
-    } catch { alert("Error al guardar"); }
+    } catch (err: any) {
+      alert(err?.message || "Error al guardar");
+    }
     finally { setSaving(false); }
+  };
+
+  const handleSaveVisual = async () => {
+    if (!id_restaurante) return;
+    setSavingVisual(true);
+    try {
+      const updated = await actualizarRestauranteBranding(id_restaurante, visualConfig);
+      setRestaurante({ ...restaurante, ...updated } as any);
+      alert("Identidad visual guardada ✅");
+    } catch (err: any) {
+      alert(err?.message || "Error al guardar identidad visual");
+    } finally {
+      setSavingVisual(false);
+    }
   };
 
   // ── Combos ──
@@ -426,6 +460,20 @@ export default function GestionWebPage() {
       {/* ═══ CONFIG ═══ */}
       {activeTab === "config" && (
         <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div className="card-flat" style={{ padding: 24, gridColumn: "1 / -1" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px", display: "flex", alignItems: "center", gap: 8 }}>
+              <ImagePlus size={18} color="var(--primary)" /> Identidad visual
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+              <div><p className="label" style={{ marginBottom: 6 }}>Color principal</p><input type="color" className="input" value={visualConfig.color_primario} onChange={(e) => setVisualConfig({ ...visualConfig, color_primario: e.target.value })} style={{ height: 48, padding: 5 }} /></div>
+              <div><p className="label" style={{ marginBottom: 6 }}>Color secundario</p><input type="color" className="input" value={visualConfig.color_secundario} onChange={(e) => setVisualConfig({ ...visualConfig, color_secundario: e.target.value })} style={{ height: 48, padding: 5 }} /></div>
+              <ImageUploadInput label="Logo" value={visualConfig.logo_url} onChange={(url) => setVisualConfig({ ...visualConfig, logo_url: url })} height={150} />
+              <ImageUploadInput label="Hero banner" value={visualConfig.hero_banner_url} onChange={(url) => setVisualConfig({ ...visualConfig, hero_banner_url: url })} height={150} hint="Imagen amplia para web pública y menú" />
+            </div>
+            <button onClick={handleSaveVisual} disabled={savingVisual} className="btn btn-primary" style={{ width: "100%", marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              {savingVisual ? <Loader2 className="spin-icon" size={14} /> : <Save size={14} />} Guardar identidad visual
+            </button>
+          </div>
           <div className="card-flat" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px", display: "flex", alignItems: "center", gap: 8 }}>
               <MessageCircle size={18} color="var(--success)" /> Contacto

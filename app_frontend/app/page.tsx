@@ -5,20 +5,29 @@ import { useRouter } from "next/navigation";
 import { 
   Wine, Zap, Shield, Smartphone, Globe, 
   ArrowRight, Check, Loader2, Star,
-  Utensils, LayoutDashboard, QrCode
+  Utensils, LayoutDashboard, QrCode, Eye, EyeOff
 } from "lucide-react";
 import { crearRestaurante } from "@/lib/api";
+import { ImageUploadInput } from "@/components/ImageUploadInput";
 
 export default function SaaSLandingPage() {
   const router = useRouter();
   const [showRegModal, setShowRegModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     slug: "",
     propietario_nombre: "",
     propietario_email: "",
-    propietario_password: ""
+    propietario_password: "",
+    color_primario: "#C5A059",
+    color_secundario: "#E2725B",
+    logo_url: "",
+    hero_banner_url: "",
+    latitud: -12.046374,
+    longitud: -77.042793,
+    radio_permitido_metros: 100
   });
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -156,18 +165,53 @@ export default function SaaSLandingPage() {
       {/* REGISTRATION MODAL */}
       {showRegModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div className="animate-fade-in-up" style={{ background: "#151419", width: "100%", maxWidth: 500, borderRadius: 32, padding: 40, border: "1px solid rgba(255,255,255,0.1)", position: "relative" }}>
+          <div className="animate-fade-in-up" style={{ background: "#151419", width: "100%", maxWidth: 760, maxHeight: "92vh", overflowY: "auto", borderRadius: 32, padding: 40, border: "1px solid rgba(255,255,255,0.1)", position: "relative" }}>
             <button onClick={() => setShowRegModal(false)} style={{ position: "absolute", top: 24, right: 24, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer" }}>✕</button>
             <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Empezar ahora</h2>
             <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32 }}>Crea tu restaurante y empieza a recibir pedidos en minutos.</p>
             
             <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <input required style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Nombre del Restaurante" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
-              <input required style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Slug (ej: mi-nuevo-local)" value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+                <input required style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Nombre del Restaurante" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                <input required style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Slug (ej: mi-nuevo-local)" value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+                <div>
+                  <p className="label" style={{ marginBottom: 8 }}>Color principal</p>
+                  <input type="color" style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", padding: 6 }} value={formData.color_primario} onChange={e => setFormData({...formData, color_primario: e.target.value})} />
+                </div>
+                <div>
+                  <p className="label" style={{ marginBottom: 8 }}>Color secundario</p>
+                  <input type="color" style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", padding: 6 }} value={formData.color_secundario} onChange={e => setFormData({...formData, color_secundario: e.target.value})} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+                <ImageUploadInput label="Logo del restaurante" value={formData.logo_url} onChange={(url) => setFormData({...formData, logo_url: url})} height={150} />
+                <ImageUploadInput label="Hero banner" value={formData.hero_banner_url} onChange={(url) => setFormData({...formData, hero_banner_url: url})} height={150} hint="Imagen amplia para portada y menú" />
+              </div>
+              
+              <div style={{ background: "rgba(0,0,0,0.2)", padding: 20, borderRadius: 16, border: "1px solid rgba(255,255,255,0.1)", marginTop: 8 }}>
+                <p className="label" style={{ marginBottom: 12, color: "rgba(255,255,255,0.6)" }}>Configuración Geográfica y Radio de Pedidos</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  <div><label className="label" style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>LATITUD</label><input required type="number" step="any" style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} value={Number.isNaN(formData.latitud) ? "" : formData.latitud} onChange={e => setFormData({...formData, latitud: parseFloat(e.target.value)})} /></div>
+                  <div><label className="label" style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>LONGITUD</label><input required type="number" step="any" style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} value={Number.isNaN(formData.longitud) ? "" : formData.longitud} onChange={e => setFormData({...formData, longitud: parseFloat(e.target.value)})} /></div>
+                  <div><label className="label" style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>RADIO (MT)</label><input required type="number" min="10" style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} value={Number.isNaN(formData.radio_permitido_metros) ? "" : formData.radio_permitido_metros} onChange={e => setFormData({...formData, radio_permitido_metros: parseInt(e.target.value)})} /></div>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", margin: 0, lineHeight: 1.5 }}>
+                    Solo los clientes dentro del perímetro (radio en metros) respecto a las coordenadas especificadas podrán realizar pedidos, previniendo así comandas falsas.
+                  </p>
+                </div>
+              </div>
               <hr style={{ border: "0", borderTop: "1px solid rgba(255,255,255,0.05)", margin: "8px 0" }} />
               <input required style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Nombre del Dueño" value={formData.propietario_nombre} onChange={e => setFormData({...formData, propietario_nombre: e.target.value})} />
               <input required type="email" style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Email de acceso" value={formData.propietario_email} onChange={e => setFormData({...formData, propietario_email: e.target.value})} />
-              <input required type="password" style={{ height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 20px" }} placeholder="Contraseña segura" value={formData.propietario_password} onChange={e => setFormData({...formData, propietario_password: e.target.value})} />
+              <div style={{ position: "relative" }}>
+                <input required type={showPassword ? "text" : "password"} style={{ width: "100%", height: 54, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "0 52px 0 20px" }} placeholder="Contraseña segura" value={formData.propietario_password} onChange={e => setFormData({...formData, propietario_password: e.target.value})} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "rgba(255,255,255,0.55)", cursor: "pointer", display: "grid", placeItems: "center" }}>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               
               <button disabled={loading} type="submit" className="btn btn-primary" style={{ height: 60, borderRadius: 16, marginTop: 16, width: "100%" }}>
                 {loading ? <Loader2 className="spin-icon" size={20} /> : "Registrar mi Restaurante"}

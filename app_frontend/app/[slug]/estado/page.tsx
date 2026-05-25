@@ -108,25 +108,29 @@ export default function EstadoPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 0" }}>
-        <div className="skeleton" style={{ width: "60%", height: 28, margin: "0 auto" }} />
-        <div className="skeleton" style={{ width: "100%", height: 60 }} />
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="skeleton" style={{ width: "100%", height: 72 }} />
-        ))}
-      </div>
+      <main className="order-page">
+        <div className="order-panel" style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 0" }}>
+          <div className="skeleton" style={{ width: "60%", height: 28, margin: "0 auto" }} />
+          <div className="skeleton" style={{ width: "100%", height: 60 }} />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton" style={{ width: "100%", height: 72 }} />
+          ))}
+        </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 16, textAlign: "center", padding: "0 20px" }}>
-        <Search size={48} color="var(--text-muted)" />
-        <h2 style={{ fontSize: 18, fontWeight: 500, color: "var(--text)", margin: 0 }}>{error}</h2>
-        <button onClick={() => router.push(`/${slug}/menu`)} className="btn btn-primary">
-          Volver al menú
-        </button>
-      </div>
+      <main className="order-page">
+        <div className="order-panel animate-fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: 16, textAlign: "center" }}>
+          <Search size={48} color="var(--text-muted)" />
+          <h2 style={{ fontSize: 18, fontWeight: 500, color: "var(--text)", margin: 0 }}>{error}</h2>
+          <button onClick={() => router.push(`/${slug}/menu`)} className="order-back-button" style={{ maxWidth: 240 }}>
+            <ArrowLeft size={16} /> Volver al menú
+          </button>
+        </div>
+      </main>
     );
   }
 
@@ -136,7 +140,8 @@ export default function EstadoPage() {
   const progressPercent = maxProgress > 0 ? Math.round((currentProgress / maxProgress) * 100) : 0;
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <main className="order-page animate-fade-in">
+      <div className="order-panel" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Header */}
       <div style={{ textAlign: "center" }}>
         <h1 style={{ fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontSize: 22, fontWeight: 400, color: "var(--text)", margin: "0 0 4px" }}>
@@ -251,25 +256,26 @@ export default function EstadoPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
           onClick={() => router.push(`/${slug}/menu`)}
-          className="btn btn-secondary"
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          className="order-back-button"
+          style={{ width: "100%" }}
         >
-          <ArrowLeft size={16} /> Volver al menu y anadir mas
+          <ArrowLeft size={16} /> Volver al menú y añadir más
         </button>
         <p style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", margin: 0 }}>
-          Si agregas mas platos, bebidas o guarniciones, se enviaran como un nuevo pedido para esta mesa.
+          Si agregas más platos, bebidas o guarniciones, se enviarán como un nuevo pedido para esta mesa.
         </p>
 
         {todosListos && (
           <button
             onClick={() => router.push(`/${slug}/voucher?pedido=${pedidoId}`)}
-            className="btn btn-primary btn-lg animate-fade-in-up"
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            className="order-confirm-button animate-fade-in-up"
+            style={{ width: "100%" }}
           >
             <Receipt size={16} /> Ver voucher
           </button>
         )}
       </div>
-    </div>
+      </div>
+    </main>
   );
 }

@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { getRestaurante } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import { Wine, Loader2 } from "lucide-react";
+import { applyRestauranteBranding } from "@/lib/branding";
+import { useRestauranteRealtime } from "@/lib/realtime";
 
 /* ═══════════════════════════════════════════════════════════
    LAYOUT DEL RESTAURANTE (Público/Cliente)
@@ -40,27 +42,13 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
 
   // 2. Inyectar Branding Dinámico (Heredado por todos los hijos: Menu, Pedido, Estado, etc.)
   useEffect(() => {
-    if (!restaurante) return;
-    const root = document.documentElement;
-    const primaryStr = restaurante.color_primario || "#C5A059";
-    const secondaryStr = restaurante.color_secundario || "#E2725B";
+    applyRestauranteBranding(restaurante);
+  }, [restaurante?.color_primario, restaurante?.color_secundario]);
 
-    if (primaryStr.startsWith("#")) {
-      root.style.setProperty("--primary", primaryStr);
-      root.style.setProperty("--primary-light", `${primaryStr}dd`);
-      root.style.setProperty("--primary-dark", `${primaryStr}aa`);
-      root.style.setProperty("--primary-ghost", `${primaryStr}15`);
-      root.style.setProperty("--primary-glow", `${primaryStr}25`);
-    } else {
-      root.style.setProperty("--primary", "#C5A059");
-    }
-    
-    if (secondaryStr.startsWith("#")) {
-      root.style.setProperty("--secondary", secondaryStr);
-    } else {
-      root.style.setProperty("--secondary", "#E2725B");
-    }
-  }, [restaurante]);
+  // Branding en tiempo real para vistas públicas (si el admin cambia colores, el cliente lo ve al instante)
+  useRestauranteRealtime(restaurante?.id || null, (r) => {
+    useAuth.getState().setRestaurante({ ...useAuth.getState().restaurante, ...r });
+  });
 
   if (loading) {
     return (
@@ -71,10 +59,11 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
   }
 
   if (error) {
+    const wasDeleted = error.toLowerCase().includes("eliminado");
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16, background: "#0C0B0E", padding: 24, textAlign: "center" }}>
         <Wine size={48} color="#5A4E38" />
-        <h2 style={{ fontSize: 18, color: "#F0E6D0", margin: 0 }}>Restaurante no encontrado</h2>
+        <h2 style={{ fontSize: 18, color: "#F0E6D0", margin: 0 }}>{wasDeleted ? "Restaurante eliminado" : "Restaurante no encontrado"}</h2>
         <p style={{ fontSize: 13, color: "#B8A98C", margin: 0 }}>{error}</p>
       </div>
     );

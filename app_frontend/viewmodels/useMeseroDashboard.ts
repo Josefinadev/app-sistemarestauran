@@ -135,7 +135,7 @@ export function useMeseroDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [addNotif]);
+  }, [idRestaurante, addNotif]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

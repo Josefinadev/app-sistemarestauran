@@ -4,10 +4,11 @@
    Incluye validación min/max de agregados por grupo.
    ═══════════════════════════════════════════════════════════ */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCategorias, getProductos, getProductoDetalle, getMesas } from "@/lib/api";
 import { useAuth, useCarrito } from "@/lib/store";
 import type { Agregado } from "@/lib/database.types";
+import { useProductosRealtime } from "@/lib/realtime";
 
 export function useMenuDigital() {
   const { restaurante, usuario, mesa, activePedidoId, activePedidoEstado, setMesa } = useAuth();
@@ -25,24 +26,34 @@ export function useMenuDigital() {
   const [cantidad, setCantidad] = useState(1);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      if (!restaurante?.id) return;
-      try {
-        const [cats, prods] = await Promise.all([
-          getCategorias(restaurante.id),
-          getProductos(restaurante.id),
-        ]);
-        setCategorias(cats || []);
-        setProductos(prods || []);
-      } catch (err) {
-        console.error("Error loading menu:", err);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    if (!restaurante?.id) return;
+    try {
+      setLoading(true);
+      const [cats, prods] = await Promise.all([
+        getCategorias(restaurante.id),
+        getProductos(restaurante.id),
+      ]);
+      setCategorias(cats || []);
+      setProductos(prods || []);
+    } catch (err) {
+      console.error("Error loading menu:", err);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, [restaurante?.id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Sync en tiempo real: si el admin crea/edita productos, el cliente ve el cambio sin recargar.
+  const handleProductosChange = useCallback(() => {
+    // Refetch simple; suficiente para mantener consistencia.
+    load();
+  }, [load]);
+
+  useProductosRealtime(restaurante?.id || null, handleProductosChange);
 
   const productosFiltrados = useMemo(() => {
     return productos.filter((p: any) => {

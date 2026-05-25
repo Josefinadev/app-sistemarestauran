@@ -6,16 +6,19 @@ const { authenticate, restrictToTenant } = require('../middleware/auth');
 /**
  * GET /api/categorias
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
+    const { id_restaurante } = req.query;
+    if (!id_restaurante) {
+      return res.status(400).json({ error: true, message: 'id_restaurante es requerido' });
+    }
+
     let query = supabase
       .from('categoria')
       .select('*, producto(count)')
       .eq('activo', true)
+      .eq('id_restaurante', id_restaurante)
       .order('orden', { ascending: true });
-
-    // Aplicar restricción de Tenant automática
-    query = restrictToTenant(query, req);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -29,9 +32,16 @@ router.get('/', authenticate, async (req, res) => {
 /**
  * POST /api/categorias
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante, nombre, descripcion, imagen_url, orden } = req.body;
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede crear categorías.' });
+    }
+    const { nombre, descripcion, imagen_url, orden } = req.body;
+    // Superadmin puede especificar el restaurante destino desde el body
+    const id_restaurante = req.isSuperAdmin
+      ? (req.body.id_restaurante || req.user.id_restaurante)
+      : req.user.id_restaurante;
 
     if (!id_restaurante || !nombre) {
       return res.status(400).json({ error: true, message: 'Campos requeridos: id_restaurante, nombre' });
@@ -53,8 +63,18 @@ router.post('/', async (req, res) => {
 /**
  * PATCH /api/categorias/:id
  */
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede editar categorías.' });
+    }
+
+    // Validar tenant
+    const { data: current } = await supabase.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
+    if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
+      return res.status(403).json({ error: true, message: 'No tienes permiso para editar esta categoría.' });
+    }
+
     const { data, error } = await supabase
       .from('categoria')
       .update(req.body)

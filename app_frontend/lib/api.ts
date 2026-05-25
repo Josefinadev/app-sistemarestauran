@@ -31,10 +31,25 @@ async function apiFetch(path: string, options?: RequestInit) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  // Prevent infinite "Guardando..." states if the backend hangs.
+  const controller = new AbortController();
+  const timeoutMs = 20000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error(`Tiempo de espera agotado (${timeoutMs / 1000}s). Verifica que el backend esté corriendo en ${API_URL}.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // Si el token expiró, limpiar sesión y redirigir al login
   if (res.status === 401 && token) {
@@ -60,11 +75,25 @@ async function apiFetch(path: string, options?: RequestInit) {
 
 /** Login con email y contraseña — devuelve token + datos de usuario */
 export const loginAuth = async (email: string, password: string) => {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const controller = new AbortController();
+  const timeoutMs = 20000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
-  });
+    signal: controller.signal,
+    });
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error(`Tiempo de espera agotado (${timeoutMs / 1000}s). Verifica que el backend esté corriendo en ${API_URL}.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -146,10 +175,35 @@ export const crearRestaurante = (data: {
   propietario_password: string;
   color_primario?: string;
   color_secundario?: string;
+  logo_url?: string;
+  hero_banner_url?: string;
   latitud?: number;
   longitud?: number;
   radio_permitido_metros?: number;
 }) => apiFetch("/restaurante", { method: "POST", body: JSON.stringify(data) });
+
+export const actualizarRestauranteBranding = (id: string, data: {
+  color_primario?: string;
+  color_secundario?: string;
+  logo_url?: string | null;
+  hero_banner_url?: string | null;
+}) => apiFetch(`/restaurante/${id}/branding`, { method: "PATCH", body: JSON.stringify(data) });
+
+/** Actualizar restaurante completo (solo SuperAdmin) */
+export const actualizarRestaurante = (id: string, data: {
+  nombre?: string;
+  slug?: string;
+  color_primario?: string;
+  color_secundario?: string;
+  logo_url?: string | null;
+  hero_banner_url?: string | null;
+  latitud?: number;
+  longitud?: number;
+  radio_permitido_metros?: number;
+}) => apiFetch(`/restaurante/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+export const eliminarRestaurante = (id: string) =>
+  apiFetch(`/restaurante/${id}`, { method: "DELETE" });
 
 // ── Categorías ──
 export const getCategorias = (idRestaurante: string) =>

@@ -15,6 +15,8 @@ import {
   Crown,
   Mail,
   CircleDot,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const roleRoutes: Record<RolUsuario, string> = {
@@ -32,6 +34,7 @@ export default function LoginPage() {
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -217,14 +220,22 @@ export default function LoginPage() {
                     style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
                   />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     placeholder="••••••••"
                     className="input-underline"
                     autoComplete="current-password"
-                    style={{ paddingLeft: 24 }}
+                    style={{ paddingLeft: 24, paddingRight: 38 }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "var(--text-muted)", cursor: "pointer", padding: 4, display: "grid", placeItems: "center" }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
 

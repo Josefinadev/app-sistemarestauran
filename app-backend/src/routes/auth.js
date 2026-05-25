@@ -1,7 +1,45 @@
 const express = require('express');
 const supabase = require('../config/supabase');
 const supabaseAdmin = require('../config/supabase-admin');
+const crypto = require('crypto');
 const router = express.Router();
+
+const DELETED_RESTAURANT_MESSAGE = 'Tu restaurante ha sido eliminado. Contacta al Superadmin si crees que se trata de un error.';
+
+function emailHash(email) {
+  return crypto.createHash('sha256').update(String(email || '').trim().toLowerCase()).digest('hex');
+}
+
+async function isDeletedRestaurantEmail(email) {
+  if (!email) return false;
+  const { data, error } = await supabaseAdmin
+    .from('restaurante_eliminado_acceso')
+    .select('email_hash')
+    .eq('email_hash', emailHash(email))
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[Auth Login] No se pudo validar marcador de restaurante eliminado:', error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
+async function getActiveUserByEmail(email) {
+  if (!email) return null;
+  const { data, error } = await supabaseAdmin
+    .from('usuario')
+    .select('id, rol, auth_id, activo')
+    .eq('email', String(email).trim().toLowerCase())
+    .eq('activo', true)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[Auth Login] No se pudo validar usuario por email:', error.message);
+    return null;
+  }
+  return data || null;
+}
 
 /**
  * POST /api/auth/login
@@ -24,6 +62,13 @@ router.post('/login', async (req, res) => {
 
     if (authError) {
       console.error('[Auth Login] Supabase error:', authError.message, 'Code:', authError.status);
+      const profileByEmail = await getActiveUserByEmail(email);
+      if (profileByEmail?.rol === 'admin_saas') {
+        return res.status(401).json({ error: true, message: 'No se pudo autenticar la cuenta Superadmin. Verifica la contraseña o restaura su usuario en Supabase Auth.' });
+      }
+      if (await isDeletedRestaurantEmail(email)) {
+        return res.status(410).json({ error: true, code: 'RESTAURANTE_ELIMINADO', message: DELETED_RESTAURANT_MESSAGE });
+      }
       return res.status(401).json({ error: true, message: 'Email o contraseña incorrectos.' });
     }
 
@@ -37,10 +82,17 @@ router.post('/login', async (req, res) => {
 
     if (userError || !usuario) {
       console.error('[Auth Login] Usuario no encontrado para auth_id:', authData.user.id);
+      if (await isDeletedRestaurantEmail(authData.user.email || email)) {
+        return res.status(410).json({ error: true, code: 'RESTAURANTE_ELIMINADO', message: DELETED_RESTAURANT_MESSAGE });
+      }
       return res.status(403).json({
         error: true,
         message: 'Tu cuenta no tiene acceso al sistema. Contacta al administrador.',
       });
+    }
+
+    if (usuario.rol !== 'admin_saas' && (!usuario.restaurante || usuario.restaurante.activo === false)) {
+      return res.status(410).json({ error: true, code: 'RESTAURANTE_ELIMINADO', message: DELETED_RESTAURANT_MESSAGE });
     }
 
     // 3. Respuesta exitosa con token + datos del usuario
@@ -157,7 +209,14 @@ router.get('/me', async (req, res) => {
       .single();
 
     if (userError || !usuario) {
+      if (await isDeletedRestaurantEmail(authData.user.email)) {
+        return res.status(410).json({ error: true, code: 'RESTAURANTE_ELIMINADO', message: DELETED_RESTAURANT_MESSAGE });
+      }
       return res.status(403).json({ error: true, message: 'Usuario no encontrado o desactivado.' });
+    }
+
+    if (usuario.rol !== 'admin_saas' && (!usuario.restaurante || usuario.restaurante.activo === false)) {
+      return res.status(410).json({ error: true, code: 'RESTAURANTE_ELIMINADO', message: DELETED_RESTAURANT_MESSAGE });
     }
 
     res.json({

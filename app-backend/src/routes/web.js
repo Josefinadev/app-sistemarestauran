@@ -6,27 +6,35 @@ const supabase = require('../config/supabase');
 
 // Obtener configuración del restaurante
 router.get('/config/:id_restaurante', async (req, res) => {
-  const { data, error } = await supabase
-    .from('web_config')
-    .select('*')
-    .eq('id_restaurante', req.params.id_restaurante)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('web_config')
+      .select('*')
+      .eq('id_restaurante', req.params.id_restaurante)
+      .single();
 
-  if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message });
-  res.json(data || {});
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message });
+    res.json(data || {});
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message || 'Error obteniendo configuración web.' });
+  }
 });
 
 // Guardar/Actualizar configuración
 router.post('/config', async (req, res) => {
-  const { id_restaurante, ...config } = req.body;
-  const { data, error } = await supabase
-    .from('web_config')
-    .upsert({ id_restaurante, ...config, updated_at: new Date() })
-    .select()
-    .single();
+  try {
+    const { id_restaurante, ...config } = req.body;
+    const { data, error } = await supabase
+      .from('web_config')
+      .upsert({ id_restaurante, ...config, updated_at: new Date().toISOString() })
+      .select()
+      .single();
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+    if (error) return res.status(500).json({ error: true, message: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message || 'Error guardando configuración web.' });
+  }
 });
 
 // ── COMBOS ──

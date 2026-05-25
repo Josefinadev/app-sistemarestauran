@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { formatPrecio } from "@/lib/utils";
 import { getRestaurante, getWebConfig, getWebCombos, getWebOfertas } from "@/lib/api";
+import { useAuth } from "@/lib/store";
+import { applyRestauranteBranding } from "@/lib/branding";
 import {
   Wine, Phone, Clock, Star,
   MessageCircle, CheckCircle2,
@@ -10,12 +12,14 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   PÁGINA WEB PÚBLICA — El Mijano (CONEXIÓN REAL VIVA)
+   PÁGINA WEB PÚBLICA — Personalizada por restaurante
    Auto-refresca cada 30s para reflejar cambios del admin
    ═══════════════════════════════════════════════════════════ */
 
 export default function WebPublica() {
+  const { restaurante: authRestaurante } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [restaurante, setRestaurante] = useState<any>(null);
   const [config, setConfig] = useState<any>(null);
   const [combos, setCombos] = useState<any[]>([]);
   const [ofertas, setOfertas] = useState<any[]>([]);
@@ -27,7 +31,24 @@ export default function WebPublica() {
 
   const loadPublicData = useCallback(async () => {
     try {
-      const restauranteData = await getRestaurante("el-mijano");
+      // Use the restaurant from auth session, fallback to slug or first available
+      let restauranteData: any = null;
+      
+      if (authRestaurante?.slug) {
+        restauranteData = await getRestaurante(authRestaurante.slug);
+      }
+      
+      if (!restauranteData && authRestaurante) {
+        restauranteData = authRestaurante;
+      }
+
+      if (!restauranteData) {
+        // No authenticated restaurant — try to show a generic message
+        setLoading(false);
+        return;
+      }
+
+      setRestaurante(restauranteData);
       const restaurantId = restauranteData?.id;
 
       if (restaurantId) {
@@ -45,7 +66,7 @@ export default function WebPublica() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authRestaurante?.slug, authRestaurante?.id]);
 
   useEffect(() => {
     loadPublicData();
@@ -53,9 +74,13 @@ export default function WebPublica() {
     return () => clearInterval(interval);
   }, [loadPublicData]);
 
+  useEffect(() => {
+    applyRestauranteBranding(restaurante);
+  }, [restaurante?.color_primario, restaurante?.color_secundario]);
+
   const enviarReserva = () => {
     if (!reservaData.nombre || !reservaData.telefono || !reservaData.fecha || !config?.whatsapp) return;
-    const msg = `🍷 *Reserva El Mijano*\n\n👤 ${reservaData.nombre}\n📞 ${reservaData.telefono}\n📅 ${reservaData.fecha} a las ${reservaData.hora}\n👥 ${reservaData.personas} personas\n📝 ${reservaData.notas || "Sin notas"}\n\n¡Gracias por reservar!`;
+    const msg = `🍷 *Reserva ${restaurante?.nombre || "Restaurante"}*\n\n👤 ${reservaData.nombre}\n📞 ${reservaData.telefono}\n📅 ${reservaData.fecha} a las ${reservaData.hora}\n👥 ${reservaData.personas} personas\n📝 ${reservaData.notas || "Sin notas"}\n\n¡Gracias por reservar!`;
     window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
     setReservaEnviada(true);
     setTimeout(() => { setShowReserva(false); setReservaEnviada(false); }, 3000);
@@ -73,6 +98,26 @@ export default function WebPublica() {
     </div>
   );
 
+  // No restaurant found — show a friendly message
+  if (!restaurante) return (
+    <div style={{ background: "var(--bg)", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
+      <Wine size={48} color="var(--text-muted)" />
+      <h2 style={{ fontFamily: "var(--font-noto-serif), serif", color: "var(--text)", margin: 0 }}>No se encontró restaurante</h2>
+      <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Inicia sesión para ver tu página web personalizada.</p>
+      <a href="/login" className="btn btn-primary">Iniciar sesión</a>
+    </div>
+  );
+
+  const restaurantName = restaurante?.nombre || "Restaurante";
+  const heroImage = restaurante?.hero_banner_url || null;
+  const logoUrl = restaurante?.logo_url || null;
+
+  // Check if there is any content to show
+  const hasOfertas = ofertas.length > 0;
+  const hasCombos = combos.length > 0;
+  const hasContactInfo = config?.whatsapp || config?.telefono;
+  const hasHorarios = config?.horario_semana || config?.horario_finde;
+
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", minHeight: "100vh" }}>
       {/* NAV */}
@@ -83,51 +128,84 @@ export default function WebPublica() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Wine size={14} color="var(--text-inverse)" />
-          </div>
-          <span style={{ fontFamily: "var(--font-noto-serif), serif", fontStyle: "italic", fontSize: 18, color: "var(--primary)", letterSpacing: "0.04em" }}>El Mijano</span>
+          {logoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={logoUrl} alt={restaurantName} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
+          ) : (
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Wine size={14} color="var(--text-inverse)" />
+            </div>
+          )}
+          <span style={{ fontFamily: "var(--font-noto-serif), serif", fontStyle: "italic", fontSize: 18, color: "var(--primary)", letterSpacing: "0.04em" }}>{restaurantName}</span>
         </div>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          {ofertas.length > 0 && <a href="#ofertas" style={{ fontSize: 12, color: "var(--text-secondary)", textDecoration: "none" }}>Ofertas</a>}
-          {combos.length > 0 && <a href="#combos" style={{ fontSize: 12, color: "var(--text-secondary)", textDecoration: "none" }}>Combos</a>}
-          <button onClick={() => setShowReserva(true)} className="btn btn-primary btn-sm">Reservar</button>
+          {hasOfertas && <a href="#ofertas" style={{ fontSize: 12, color: "var(--text-secondary)", textDecoration: "none" }}>Ofertas</a>}
+          {hasCombos && <a href="#combos" style={{ fontSize: 12, color: "var(--text-secondary)", textDecoration: "none" }}>Combos</a>}
+          {config?.whatsapp && (
+            <button onClick={() => setShowReserva(true)} className="btn btn-primary btn-sm">Reservar</button>
+          )}
         </div>
       </nav>
 
-      {/* ═══ HERO con imagen de fondo ═══ */}
+      {/* ═══ HERO ═══ */}
       <section style={{
         minHeight: "92vh",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         textAlign: "center", padding: "120px 24px", position: "relative",
-        backgroundImage: "url('/assets/placeholder-dish.png')",
-        backgroundSize: "cover", backgroundPosition: "center",
+        ...(heroImage ? {
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+        } : {
+          background: "radial-gradient(circle at 50% 30%, var(--primary-ghost), transparent 50%), var(--bg)",
+        }),
       }}>
         {/* Dark gradient overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, rgba(12,11,14,0.82) 0%, rgba(12,11,14,0.55) 45%, rgba(12,11,14,0.85) 100%)",
+          background: heroImage
+            ? "linear-gradient(180deg, rgba(12,11,14,0.82) 0%, rgba(12,11,14,0.55) 45%, rgba(12,11,14,0.85) 100%)"
+            : "transparent",
         }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
+          {logoUrl && (
+            <div style={{ marginBottom: 24 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={restaurantName}
+                style={{
+                  width: 80, height: 80, borderRadius: 20, objectFit: "cover",
+                  border: "2px solid var(--primary-glow)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+                }}
+              />
+            </div>
+          )}
           <p style={{ fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 20, opacity: 0.9 }}>
-            Restaurante Premium — Trujillo
+            {restaurantName}
           </p>
           <h1 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: "clamp(40px, 8vw, 72px)", fontWeight: 400, margin: "0 0 20px", textShadow: "0 2px 40px rgba(0,0,0,0.5)" }}>
             Sabor que inspira,<br /><em style={{ color: "var(--primary)" }}>momentos que perduran</em>
           </h1>
           <p style={{ fontSize: 18, color: "var(--text-secondary)", maxWidth: 600, margin: "0 auto 40px", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
-            Descubre una experiencia culinaria única. Lo más premium de Trujillo ahora a tu alcance.
+            Descubre una experiencia culinaria única en {restaurantName}.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-            <button onClick={() => setShowReserva(true)} className="btn btn-primary btn-lg">Reservar Mesa</button>
-            <a href="#combos" className="btn btn-secondary btn-lg" style={{ textDecoration: "none" }}>Ver Ofertas</a>
+            {config?.whatsapp && (
+              <button onClick={() => setShowReserva(true)} className="btn btn-primary btn-lg">Reservar Mesa</button>
+            )}
+            {(hasCombos || hasOfertas) && (
+              <a href={hasOfertas ? "#ofertas" : "#combos"} className="btn btn-secondary btn-lg" style={{ textDecoration: "none" }}>
+                {hasOfertas ? "Ver Ofertas" : "Ver Combos"}
+              </a>
+            )}
           </div>
         </div>
       </section>
 
       {/* ═══ OFERTAS DINÁMICAS CON IMÁGENES ═══ */}
-      {ofertas.length > 0 && (
+      {hasOfertas && (
         <section id="ofertas" style={{ padding: "80px 24px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 60 }}>
@@ -188,19 +266,17 @@ export default function WebPublica() {
       )}
 
       {/* ═══ COMBOS DINÁMICOS CON IMÁGENES ═══ */}
-      <section id="combos" style={{ padding: "80px 24px", background: "var(--bg-elevated)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <p style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 12 }}>Lo mejor para ti</p>
-            <h2 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: "clamp(28px, 5vw, 40px)", margin: 0 }}>
-              Combos y <em style={{ color: "var(--primary)" }}>Paquetes</em>
-            </h2>
-            <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: 15 }}>Las mejores ofertas para compartir</p>
-          </div>
+      {hasCombos && (
+        <section id="combos" style={{ padding: "80px 24px", background: "var(--bg-elevated)" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 60 }}>
+              <p style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 12 }}>Lo mejor para ti</p>
+              <h2 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: "clamp(28px, 5vw, 40px)", margin: 0 }}>
+                Combos y <em style={{ color: "var(--primary)" }}>Paquetes</em>
+              </h2>
+              <p style={{ color: "var(--text-muted)", marginTop: 8, fontSize: 15 }}>Las mejores ofertas para compartir</p>
+            </div>
 
-          {combos.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Pronto tendremos nuevos combos disponibles.</p>
-          ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
               {combos.map((combo) => (
                 <div key={combo.id} style={{
@@ -241,47 +317,58 @@ export default function WebPublica() {
                         )}
                         <span style={{ fontSize: 26, fontWeight: 700, color: "var(--primary)" }}>{formatPrecio(combo.precio)}</span>
                       </div>
-                      <button onClick={() => enviarComboWhatsapp(combo)} className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <MessageCircle size={14} /> Consultar
-                      </button>
+                      {config?.whatsapp && (
+                        <button onClick={() => enviarComboWhatsapp(combo)} className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <MessageCircle size={14} /> Consultar
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ═══ FOOTER ═══ */}
       <footer style={{ padding: "60px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Wine size={12} color="var(--text-inverse)" />
+              {logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={logoUrl} alt={restaurantName} style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Wine size={12} color="var(--text-inverse)" />
+                </div>
+              )}
+              <span style={{ fontFamily: "var(--font-noto-serif), serif", fontStyle: "italic", fontSize: 16, color: "var(--primary)" }}>{restaurantName}</span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6 }}>{config?.direccion || ""}</p>
+          </div>
+          {hasContactInfo && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: 16 }}>Contacto</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
+                {config?.telefono && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Phone size={14} color="var(--primary)" /> {config.telefono}</span>}
+                {config?.whatsapp && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><MessageCircle size={14} color="var(--success)" /> WhatsApp: {config.whatsapp}</span>}
               </div>
-              <span style={{ fontFamily: "var(--font-noto-serif), serif", fontStyle: "italic", fontSize: 16, color: "var(--primary)" }}>El Mijano</span>
             </div>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6 }}>{config?.direccion || "Trujillo, Perú"}</p>
-          </div>
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: 16 }}>Contacto</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
-              {config?.telefono && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Phone size={14} color="var(--primary)" /> {config.telefono}</span>}
-              {config?.whatsapp && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><MessageCircle size={14} color="var(--success)" /> WhatsApp: {config.whatsapp}</span>}
+          )}
+          {hasHorarios && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: 16 }}>Horarios</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
+                {config?.horario_semana && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Clock size={14} color="var(--primary)" /> Lun - Vie: {config.horario_semana}</span>}
+                {config?.horario_finde && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Clock size={14} color="var(--tertiary)" /> Sab - Dom: {config.horario_finde}</span>}
+              </div>
             </div>
-          </div>
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: 16 }}>Horarios</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
-              {config?.horario_semana && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Clock size={14} color="var(--primary)" /> Lun - Vie: {config.horario_semana}</span>}
-              {config?.horario_finde && <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)" }}><Clock size={14} color="var(--tertiary)" /> Sab - Dom: {config.horario_finde}</span>}
-            </div>
-          </div>
+          )}
         </div>
         <div style={{ maxWidth: 1100, margin: "40px auto 0", paddingTop: 24, borderTop: "1px solid var(--border)", textAlign: "center" }}>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em" }}>© 2026 Restaurante — Trujillo, Perú. Todos los derechos reservados.</p>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em" }}>© 2026 {restaurantName} — Todos los derechos reservados.</p>
         </div>
       </footer>
 

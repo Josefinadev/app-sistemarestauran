@@ -85,6 +85,8 @@ export default function RestaurantPublicPage() {
     </div>
   );
 
+  const heroImage = restaurante.hero_banner_url || "/assets/placeholder-dish.png";
+
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", minHeight: "100vh" }}>
       {/* NAV */}
@@ -116,9 +118,14 @@ export default function RestaurantPublicPage() {
         minHeight: "100vh",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         textAlign: "center", padding: "120px 24px", position: "relative",
+        backgroundImage: `url(${heroImage})`, backgroundSize: "cover", backgroundPosition: "center",
       }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,11,14,0.85) 0%, rgba(12,11,14,0.6) 45%, rgba(12,11,14,0.9) 100%)", zIndex: 0 }} />
         <div style={{ position: "relative", zIndex: 1 }}>
+          {restaurante.logo_url && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={restaurante.logo_url} alt={restaurante.nombre} style={{ width: 86, height: 86, objectFit: "cover", borderRadius: 24, border: "1px solid var(--primary)", margin: "0 auto 24px", boxShadow: "0 18px 60px rgba(0,0,0,0.35)" }} />
+          )}
           <p style={{ fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 20 }}>Bienvenido a {restaurante.nombre}</p>
           <h1 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: "clamp(32px, 8vw, 64px)", fontWeight: 400, margin: "0 0 20px" }}>
             Experiencia Culinaria <br /><em style={{ color: "var(--primary)" }}>Inolvidable</em>

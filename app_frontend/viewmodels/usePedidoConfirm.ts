@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
    VIEWMODEL — usePedidoConfirm
    Lógica de confirmación del pedido del cliente.
-   Incluye validación de geofencing antes de confirmar.
+   Incluye validación de geofencing ESTRICTA antes de confirmar.
+   Si la geolocalización falla o es rechazada, el pedido se BLOQUEA.
    ═══════════════════════════════════════════════════════════ */
 
 import { useState } from "react";
@@ -15,7 +16,7 @@ export function usePedidoConfirm() {
   const params = useParams();
   const slug = params?.slug as string;
   const { restaurante, mesa, setActivePedido } = useAuth();
-  const { items, removeItem, clearCart, getTotal } = useCarrito();
+  const { items, removeItem, updateCantidad, clearCart, getTotal } = useCarrito();
 
   const [notas, setNotas] = useState("");
   const [sending, setSending] = useState(false);
@@ -32,31 +33,45 @@ export function usePedidoConfirm() {
     setSending(true);
     setError("");
 
-    // ── Geofencing: Validar ubicación ──
+    // ── Geofencing ESTRICTO: Validar ubicación ──
+    // La ubicación es OBLIGATORIA. Si falla, se bloquea el pedido.
     try {
       setGeoStatus("checking");
       const pos = await obtenerUbicacion();
-      const result = await validarUbicacion(
+      const geoResult = await validarUbicacion(
         slug,
         pos.coords.latitude,
         pos.coords.longitude
       );
 
-      if (result && result.dentroDelRadio === false) {
+      if (geoResult && geoResult.dentroDelRadio === false) {
         setGeoStatus("failed");
-        setError("No estás dentro del restaurante. Acércate para poder ordenar.");
+        setError(
+          `No estás dentro del restaurante. Estás a ${geoResult.distancia_metros}m, el límite es ${geoResult.radio_metros}m. Acércate para poder ordenar.`
+        );
         setSending(false);
         return;
       }
       setGeoStatus("ok");
     } catch (geoErr: any) {
-      // Si el usuario rechaza la geolocalización o falla el endpoint,
-      // dejamos pasar — no queremos bloquear por error técnico
-      console.warn("Geofencing check skipped:", geoErr.message);
-      setGeoStatus("ok");
+      // Geolocalización es OBLIGATORIA — si falla, bloqueamos el pedido.
+      // Esto previene pedidos falsos desde fuera del restaurante.
+      setGeoStatus("failed");
+      const msg = geoErr?.message || "";
+      if (msg.includes("denied") || msg.includes("permission") || msg.includes("Permission")) {
+        setError("Debes permitir el acceso a tu ubicación para poder realizar pedidos. Activa los permisos de ubicación en tu navegador.");
+      } else if (msg.includes("position unavailable") || msg.includes("unavailable")) {
+        setError("No se pudo obtener tu ubicación. Asegúrate de tener el GPS activado e inténtalo de nuevo.");
+      } else if (msg.includes("timeout")) {
+        setError("Se agotó el tiempo para obtener tu ubicación. Verifica tu conexión GPS e inténtalo de nuevo.");
+      } else {
+        setError("No se pudo verificar tu ubicación. Activa el GPS y los permisos de ubicación para continuar.");
+      }
+      setSending(false);
+      return;
     }
 
-    // ── Crear pedido ──
+    // ── Crear pedido (solo si la geolocalización fue exitosa) ──
     try {
       const pedidoData = {
         id_restaurante: restaurante.id,
@@ -94,6 +109,7 @@ export function usePedidoConfirm() {
     slug,
     setNotas,
     removeItem,
+    updateCantidad,
     handleConfirmar,
     goToMenu,
   };

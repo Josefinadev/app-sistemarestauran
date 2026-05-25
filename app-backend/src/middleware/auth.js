@@ -59,4 +59,22 @@ const restrictToTenant = (query, req) => {
   return query.eq('id_restaurante', req.user.id_restaurante);
 };
 
-module.exports = { authenticate, restrictToTenant };
+/**
+ * Middleware de autorización por rol.
+ * Superadmin (admin_saas) siempre pasa.
+ */
+const requireRoles = (roles) => (req, res, next) => {
+  try {
+    if (req.isSuperAdmin) return next();
+    const rol = req.user?.rol;
+    if (!rol) return res.status(401).json({ error: true, message: 'Acceso no autorizado.' });
+    if (!roles.includes(rol)) {
+      return res.status(403).json({ error: true, message: 'No tienes permisos para esta acción.' });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: true, message: 'Error validando permisos.' });
+  }
+};
+
+module.exports = { authenticate, restrictToTenant, requireRoles };

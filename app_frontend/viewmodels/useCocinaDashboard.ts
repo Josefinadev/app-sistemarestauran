@@ -149,7 +149,7 @@ export function useCocinaDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [addNotif]);
+  }, [idRestaurante, addNotif]);
 
   useEffect(() => { loadMesasCocina(); }, [loadMesasCocina]);
 

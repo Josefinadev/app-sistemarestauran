@@ -97,6 +97,20 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Error Toast */}
+      {vm.error && (
+        <div className="animate-fade-in" style={{
+          padding: "12px 16px", background: "rgba(239, 68, 68, 0.1)",
+          border: "1px solid rgba(239, 68, 68, 0.25)", borderRadius: "var(--radius-md)",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <p style={{ fontSize: 13, color: "var(--error)", margin: 0 }}>{vm.error}</p>
+          <button onClick={vm.clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={14} color="var(--error)" />
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", paddingBottom: 0, overflowX: "auto" }}>
         {tabs.map((tab) => {

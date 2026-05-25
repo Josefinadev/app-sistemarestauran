@@ -13,6 +13,7 @@ export interface Restaurante {
   nombre: string;
   slug: string;
   logo_url: string | null;
+  hero_banner_url: string | null;
   direccion: string | null;
   telefono: string | null;
   latitud: number;

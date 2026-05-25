@@ -46,10 +46,9 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 /**
- * GET /api/pedidos/:id
- * Obtiene un pedido completo
+ * GET /api/pedidos/:id (protegido)
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('pedido')
@@ -70,6 +69,11 @@ router.get('/:id', async (req, res) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
+
+    // Tenant isolation: si no es superadmin, solo puede ver pedidos de su restaurante
+    if (!req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+    }
 
     res.json({ data });
   } catch (err) {
@@ -93,11 +97,22 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Validar que la mesa pertenezca al restaurante
+    const { data: mesa, error: mesaError } = await supabase
+      .from('mesa')
+      .select('id, id_restaurante')
+      .eq('id', id_mesa)
+      .single();
+    if (mesaError) throw mesaError;
+    if (!mesa || mesa.id_restaurante !== id_restaurante) {
+      return res.status(400).json({ error: true, message: 'Mesa inválida para este restaurante.' });
+    }
+
     // 1. Obtener precios actuales de productos (incluye requiere_preparacion)
     const productIds = [...new Set(items.map((i) => i.id_producto))];
     const { data: productos, error: prodError } = await supabase
       .from('producto')
-      .select('id, precio, disponible, stock, requiere_preparacion')
+      .select('id, precio, disponible, stock, requiere_preparacion, id_restaurante')
       .in('id', productIds);
 
     if (prodError) throw prodError;
@@ -105,6 +120,9 @@ router.post('/', async (req, res) => {
     const precioMap = {};
     const prepMap = {}; // mapeo id_producto → requiere_preparacion
     for (const p of productos) {
+      if (p.id_restaurante !== id_restaurante) {
+        return res.status(400).json({ error: true, message: `Producto ${p.id} no pertenece al restaurante.` });
+      }
       if (!p.disponible || p.stock <= 0) {
         return res.status(400).json({
           error: true,
@@ -230,11 +248,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-/**
- * PATCH /api/pedidos/:id/estado
- * Actualiza el estado del pedido
- */
-router.patch('/:id/estado', async (req, res) => {
+router.patch('/:id/estado', authenticate, async (req, res) => {
   try {
     const { estado } = req.body;
     const validEstados = ['PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'CANCELADO'];
@@ -251,18 +265,20 @@ router.patch('/:id/estado', async (req, res) => {
       .single();
 
     if (error) throw error;
+    if (!req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+    }
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });
   }
 });
 
-/**
- * PATCH /api/pedidos/:id/pago
- * Registra el pago
- */
-router.patch('/:id/pago', async (req, res) => {
+router.patch('/:id/pago', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['caja', 'admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo caja/admin puede registrar pagos.' });
+    }
     const { metodo_pago, comprobante_url } = req.body;
     const validMetodos = ['EFECTIVO', 'YAPE', 'PLIN', 'TARJETA', 'OTRO'];
 
@@ -287,6 +303,10 @@ router.patch('/:id/pago', async (req, res) => {
 
     if (error) throw error;
 
+    if (!req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+    }
+
     // También marcar todos los detalles como ENTREGADO si no lo están
     await supabase
       .from('detalle_pedido')
@@ -305,7 +325,7 @@ router.patch('/:id/pago', async (req, res) => {
  * PATCH /api/pedidos/detalle/:id/estado
  * Actualiza el estado de un detalle individual (plato)
  */
-router.patch('/detalle/:id/estado', async (req, res) => {
+router.patch('/detalle/:id/estado', authenticate, async (req, res) => {
   try {
     const { estado } = req.body;
 
@@ -317,6 +337,12 @@ router.patch('/detalle/:id/estado', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Tenant isolation por el pedido
+    const { data: ped } = await supabase.from('pedido').select('id_restaurante').eq('id', data.id_pedido).single();
+    if (!req.isSuperAdmin && ped?.id_restaurante !== req.user.id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+    }
 
     // Auto-sincronizar estado del pedido padre:
     // Si TODOS los detalles están ENTREGADO → pedido.estado = ENTREGADO

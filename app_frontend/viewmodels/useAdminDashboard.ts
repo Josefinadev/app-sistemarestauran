@@ -25,6 +25,7 @@ export function useAdminDashboard() {
   const [activeTab, setActiveTab] = useState("productos");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [productos, setProductos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -53,6 +54,7 @@ export function useAdminDashboard() {
     if (!idRestaurante) return;
     try {
       setLoading(true);
+      setError(null);
       const [prods, cats, mesasData, pedidosData] = await Promise.all([
         getProductosTodos(idRestaurante),
         getCategorias(idRestaurante),
@@ -75,18 +77,20 @@ export function useAdminDashboard() {
         pedidosHoy: (pedidosData || []).length,
         ingresosHoy: ingresos,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading admin data:", err);
+      setError(err?.message || "Error cargando datos");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [idRestaurante]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleCreateProduct = async (imageFile?: File | null) => {
     if (!newProd.nombre || !newProd.id_categoria || !newProd.precio) return false;
     setSaving(true);
+    setError(null);
     try {
       let imagen_url = newProd.imagen_url;
       if (imageFile) {
@@ -109,8 +113,9 @@ export function useAdminDashboard() {
       setNewProd({ nombre: "", id_categoria: "", precio: "", descripcion: "", stock: "10", es_bebida: false, requiere_preparacion: true, imagen_url: "" });
       loadData();
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating product:", err);
+      setError(err?.message || "Error al crear producto");
       return false;
     } finally {
       setSaving(false);
@@ -119,27 +124,38 @@ export function useAdminDashboard() {
 
   const handleToggleDisponible = async (prod: any) => {
     try {
-      await actualizarProducto(prod.id, { disponible: !prod.disponible });
+      // Optimistic update for instant feedback
       setProductos((prev) =>
         prev.map((p) => (p.id === prod.id ? { ...p, disponible: !p.disponible } : p))
       );
-    } catch (err) {
+      await actualizarProducto(prod.id, { disponible: !prod.disponible });
+    } catch (err: any) {
       console.error("Error toggling product:", err);
+      // Revert on failure
+      setProductos((prev) =>
+        prev.map((p) => (p.id === prod.id ? { ...p, disponible: prod.disponible } : p))
+      );
+      setError(err?.message || "Error al cambiar disponibilidad");
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     try {
+      // Optimistic update
+      setProductos((prev) => prev.filter((p) => p.id !== id));
       await eliminarProducto(id);
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting product:", err);
+      setError(err?.message || "Error al eliminar producto");
+      loadData(); // Reload to restore state
     }
   };
 
   const handleCreateMesa = async () => {
     if (!newMesa.numero) return;
     setSaving(true);
+    setError(null);
     try {
       await crearMesa({
         id_restaurante: idRestaurante,
@@ -149,8 +165,9 @@ export function useAdminDashboard() {
       setShowMesaModal(false);
       setNewMesa({ numero: "", capacidad: "4" });
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating mesa:", err);
+      setError(err?.message || "Error al crear mesa");
     } finally {
       setSaving(false);
     }
@@ -159,6 +176,7 @@ export function useAdminDashboard() {
   const handleCreateCategoria = async () => {
     if (!newCat.nombre) return;
     setSaving(true);
+    setError(null);
     try {
       await crearCategoria({
         id_restaurante: idRestaurante,
@@ -169,8 +187,9 @@ export function useAdminDashboard() {
       setShowCatModal(false);
       setNewCat({ nombre: "", descripcion: "" });
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating category:", err);
+      setError(err?.message || "Error al crear categoría");
     } finally {
       setSaving(false);
     }
@@ -182,6 +201,8 @@ export function useAdminDashboard() {
     return `${base}/${restaurante.slug}/m/${mesaSlug}`;
   };
 
+  const clearError = () => setError(null);
+
   // ── Filtrado por búsqueda ──
   const productosFiltrados = productos.filter(
     (p: any) => !p.deleted_at && p.nombre.toLowerCase().includes(searchTerm.toLowerCase())
@@ -192,7 +213,7 @@ export function useAdminDashboard() {
 
   return {
     // Estado
-    activeTab, searchTerm, loading, saving,
+    activeTab, searchTerm, loading, saving, error,
     productos, productosFiltrados, categorias, categoriasFiltradas,
     mesas, stats,
     showProductModal, showMesaModal, showCatModal,
@@ -203,6 +224,6 @@ export function useAdminDashboard() {
     setNewProd, setNewMesa, setNewCat,
     handleCreateProduct, handleToggleDisponible, handleDeleteProduct,
     handleCreateMesa, handleCreateCategoria,
-    getQrUrl,
+    getQrUrl, loadData, clearError,
   };
 }

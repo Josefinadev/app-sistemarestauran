@@ -100,7 +100,7 @@ interface LoginSessionData {
   accessToken: string;
   refreshToken: string;
   usuario: AuthUsuario;
-  restaurante: Restaurante;
+  restaurante: Restaurante | null;
 }
 
 interface AuthState {

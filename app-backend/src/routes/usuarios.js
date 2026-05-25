@@ -34,12 +34,16 @@ router.get('/', authenticate, async (req, res) => {
 
 /**
  * POST /api/usuarios
- * Crear nuevo usuario (sin auth — solo tabla)
- * Para crear con autenticación real, usar POST /api/auth/crear-usuario
+ * Crear nuevo usuario (solo tabla). Para crear con Auth: POST /api/auth/crear-usuario
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const { id_restaurante, nombre, email, rol } = req.body;
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede crear usuarios.' });
+    }
+
+    const { nombre, email, rol } = req.body;
+    const id_restaurante = req.user.id_restaurante;
 
     if (!id_restaurante || !nombre || !rol) {
       return res.status(400).json({ error: true, message: 'Campos requeridos: id_restaurante, nombre, rol' });
@@ -62,8 +66,21 @@ router.post('/', async (req, res) => {
  * PATCH /api/usuarios/:id
  * Editar usuario — sincroniza email con Supabase Auth si tiene auth_id
  */
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede editar usuarios.' });
+    }
+
+    // Validar tenant (no permitir editar usuarios de otro restaurante)
+    const { data: tenantCheck } = await supabaseAdmin
+      .from('usuario')
+      .select('id_restaurante')
+      .eq('id', req.params.id)
+      .single();
+    if (tenantCheck && tenantCheck.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
+      return res.status(403).json({ error: true, message: 'No tienes permiso para editar este usuario.' });
+    }
     const { nombre, email, rol, activo } = req.body;
     const updateData = {};
 
@@ -117,8 +134,21 @@ router.patch('/:id', async (req, res) => {
  * DELETE /api/usuarios/:id
  * Eliminar usuario PERMANENTEMENTE de la BD y de Supabase Auth
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede eliminar usuarios.' });
+    }
+
+    // Validar tenant
+    const { data: tenantCheck } = await supabaseAdmin
+      .from('usuario')
+      .select('id_restaurante')
+      .eq('id', req.params.id)
+      .single();
+    if (tenantCheck && tenantCheck.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
+      return res.status(403).json({ error: true, message: 'No tienes permiso para eliminar este usuario.' });
+    }
     // 1. Obtener el auth_id del usuario antes de eliminarlo
     const { data: user, error: fetchError } = await supabaseAdmin
       .from('usuario')

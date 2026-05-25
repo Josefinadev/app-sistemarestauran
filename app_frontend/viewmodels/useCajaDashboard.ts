@@ -48,7 +48,7 @@ export function useCajaDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [idRest, loading]);
+  }, [idRest]);
 
   useEffect(() => {
     loadPedidos();

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { formatPrecio } from "@/lib/utils";
 import { useMenuDigital } from "@/viewmodels/useMenuDigital";
 import type { Agregado } from "@/lib/database.types";
 import {
-  Search, ShoppingBag, Plus, X, StickyNote, CheckCircle2,
-  Flame, Coffee, Info, User, QrCode, ArrowRight,
-  MapPin, FlaskConical, AlertTriangle
+  Search, ShoppingCart, Plus, X, StickyNote, CheckCircle2,
+  Info, User, QrCode, ArrowRight,
+  MapPin, FlaskConical, AlertTriangle, ChefHat, Menu as MenuIcon,
+  ChevronDown,
 } from "lucide-react";
 
 export default function MenuPage() {
@@ -38,124 +39,137 @@ export default function MenuPage() {
 
   if (vm.loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div className="skeleton" style={{ width: "60%", height: 28, margin: "0 auto" }} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-          {[1, 2, 3, 4].map((i) => (<div key={i} className="skeleton" style={{ width: 80, height: 32, borderRadius: 16 }} />))}
+      <div className="client-menu-page" style={{ paddingTop: 24 }}>
+        <div className="skeleton" style={{ height: 230, borderRadius: 28, marginBottom: 24 }} />
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ width: 92, height: 36, borderRadius: 18 }} />)}
         </div>
-        {[1, 2, 3, 4].map((i) => (<div key={i} className="skeleton" style={{ height: 120, borderRadius: 20 }} />))}
+        <div className="client-product-grid">
+          {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="skeleton" style={{ height: 176, borderRadius: 20 }} />)}
+        </div>
       </div>
     );
   }
 
   const showMesaWarning = !vm.mesa;
+  const heroImage = vm.restaurante?.hero_banner_url || "/assets/placeholder-dish.png";
+  const logoUrl = vm.restaurante?.logo_url;
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: vm.itemCount > 0 ? 140 : 24 }}>
-      {/* MESA WARNING BAR */}
-      {showMesaWarning && (
-        <div style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 20, padding: "20px", display: "flex", flexDirection: "column", gap: 16, marginBottom: -8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(251,191,36,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <QrCode size={22} color="var(--warning)" />
+    <main className="client-menu-page animate-fade-in" style={{ paddingBottom: vm.itemCount > 0 ? 150 : 32 }}>
+      <section className="client-hero" style={{ "--client-hero-image": `url(${heroImage})` } as CSSProperties}>
+        <header className="client-topbar">
+          <button type="button" className="client-round-button client-mobile-only" aria-label="Abrir menú">
+            <MenuIcon size={20} />
+          </button>
+
+          <div className="client-brand">
+            <div className="client-brand-mark">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={vm.restaurante?.nombre || "Restaurante"} />
+              ) : (
+                <ChefHat size={34} />
+              )}
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: "0 0 2px" }}>Mesa no identificada</p>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>Debes escanear el QR o usar una mesa de prueba para poder ordenar.</p>
+            <div>
+              <span className="client-brand-kicker">Restaurante</span>
+              <strong>{vm.restaurante?.nombre || "Cargando..."}</strong>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button 
-              onClick={vm.usarMesaPrueba} 
-              className="btn btn-secondary" 
-              style={{ flex: 1, height: 44, fontSize: 13, gap: 8, background: "rgba(255,255,255,0.03)", border: "1px dashed var(--border)" }}
-            >
-              <FlaskConical size={16} /> Mesa de prueba
-            </button>
-            <button className="btn btn-primary" style={{ flex: 1, height: 44, fontSize: 13, gap: 8 }}>
-              Escanear <ArrowRight size={16} />
-            </button>
+
+          <div className="client-top-actions">
+            <div className="client-table-pill">
+              <MapPin size={18} />
+              <span>{vm.mesa ? `Mesa ${vm.mesa.numero}` : "Sin mesa"}</span>
+              <ChevronDown size={16} />
+            </div>
+            <div className="client-user-pill">
+              <User size={16} />
+              <span>{vm.usuario?.nombre?.split(" ")[0] || "Cliente"}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="client-hero-copy">
+          <h1>Busca tu plato favorito...</h1>
+          <div className="client-search-box">
+            <input
+              type="text"
+              value={vm.searchTerm}
+              onChange={(e) => vm.setSearchTerm(e.target.value)}
+              placeholder="Busca tu plato favorito..."
+            />
+            <Search size={22} />
           </div>
         </div>
+      </section>
+
+      <nav className="client-category-row" aria-label="Categorías del menú">
+        <button onClick={() => vm.setSelectedCat("all")} className={`client-category-pill ${vm.selectedCat === "all" ? "active" : ""}`}>Todos</button>
+        {vm.categorias.map((cat: any) => (
+          <button key={cat.id} onClick={() => vm.setSelectedCat(cat.id)} className={`client-category-pill ${vm.selectedCat === cat.id ? "active" : ""}`}>
+            {cat.nombre}
+          </button>
+        ))}
+      </nav>
+
+      {showMesaWarning && (
+        <section className="client-warning-card">
+          <div className="client-warning-icon"><QrCode size={22} /></div>
+          <div>
+            <h2>Mesa no identificada</h2>
+            <p>Escanea el QR de tu mesa o usa una mesa de prueba para poder ordenar.</p>
+          </div>
+          <div className="client-warning-actions">
+            <button type="button" onClick={vm.usarMesaPrueba} className="btn btn-secondary"><FlaskConical size={16} /> Mesa de prueba</button>
+            <button type="button" className="btn btn-primary">Escanear <ArrowRight size={16} /></button>
+          </div>
+        </section>
       )}
 
-      <section className="card hero-card" style={{ padding: 24, borderRadius: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <p className="label">Restaurante</p>
-            <h2 style={{ fontSize: 28, margin: "8px 0", color: "var(--text)", fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontWeight: 400, letterSpacing: "-0.02em" }}>
-              {vm.restaurante?.nombre || "Cargando..."}
-            </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span className="menu-pill" style={{ color: "var(--primary)", background: "var(--primary-ghost)", fontWeight: 700 }}>
-                {vm.mesa ? `Mesa ${vm.mesa.numero}` : "Sin mesa"}
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--text-muted)", background: "rgba(255,255,255,0.03)", padding: "4px 10px", borderRadius: 100, border: "1px solid var(--border)" }}>
-                <MapPin size={10} color="var(--primary)" />
-                {vm.restaurante?.latitud ? "Ubicación requerida para pedidos" : "Ubicación no configurada"}
+      <section className="client-product-grid">
+        {vm.productosFiltrados.map((prod: any) => {
+          const categoryLabel = prod.categoria?.nombre || (prod.es_bebida ? "Bebida" : "Plato");
+          const productImage = prod.imagen_url || "/assets/placeholder-dish.png";
+          return (
+            <article key={prod.id} className="client-product-card">
+              <div className="client-product-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={productImage} alt={prod.nombre} />
               </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
-            {vm.usuario ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", padding: "8px 16px", borderRadius: 100, border: "1px solid var(--border)" }}>
-                <User size={14} color="var(--primary)" />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{vm.usuario.nombre.split(" ")[0]}</span>
+              <div className="client-product-body">
+                <div>
+                  <h2>{prod.nombre}</h2>
+                  {prod.descripcion && <p className="client-product-desc">{prod.descripcion}</p>}
+                  <span className="client-product-tag">{categoryLabel}</span>
+                </div>
+                <div className="client-product-footer">
+                  <strong>{formatPrecio(Number(prod.precio))}</strong>
+                  <div className="client-product-actions">
+                    <button type="button" className="client-outline-button" onClick={() => vm.openProductDetail(prod)}><Info size={14} /> Detalles</button>
+                    <button type="button" className="client-fill-button" onClick={() => vm.quickAddProduct(prod)}><Plus size={14} /> Agregar</button>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <button onClick={() => router.push(`/${slug}/registro`)} style={{ background: "none", border: "none", color: "var(--primary)", fontSize: 13, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Crear cuenta</button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ position: "relative" }}>
-              <Search size={18} color="var(--text-muted)" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)" }} />
-              <input type="text" value={vm.searchTerm} onChange={(e) => vm.setSearchTerm(e.target.value)} placeholder="Busca tu plato favorito..." className="input" style={{ paddingLeft: 46, height: 52, borderRadius: 16 }} />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8, width: "100%" }}>
-            <button onClick={() => vm.setSelectedCat("all")} className={`menu-pill ${vm.selectedCat === "all" ? "active" : ""}`} style={{ padding: "10px 20px" }}>Todos</button>
-            {vm.categorias.map((cat: any) => (<button key={cat.id} onClick={() => vm.setSelectedCat(cat.id)} className={`menu-pill ${vm.selectedCat === cat.id ? "active" : ""}`} style={{ padding: "10px 20px" }}>{cat.nombre}</button>))}
-          </div>
-        </div>
-      </section>
-
-      <section className="menu-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-        {vm.productosFiltrados.map((prod: any) => (
-          <article key={prod.id} className="menu-card" style={{ textAlign: "left", borderRadius: 24, overflow: "hidden" }}>
-            {prod.imagen_url && <div className="menu-card-image" style={{ height: 180 }}><img src={prod.imagen_url} alt={prod.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>}
-            <div style={{ padding: 20 }}>
-              <div className="menu-card-meta">
-                <div className="menu-card-icon" style={{ background: "var(--primary-ghost)", color: "var(--primary)" }}>{prod.es_bebida ? <Coffee size={20} /> : <Flame size={20} />}</div>
-                <div className="menu-card-title"><h3 style={{ fontSize: 18, fontWeight: 700 }}>{prod.nombre}</h3>{prod.descripcion && <p style={{ fontSize: 13, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{prod.descripcion}</p>}</div>
-              </div>
-              <div className="menu-card-footer" style={{ marginTop: 16 }}>
-                <div style={{ display: "flex", flexDirection: "column" }}><span style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>{formatPrecio(Number(prod.precio))}</span><span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{prod.es_bebida ? "Bebida" : "Plato"}</span></div>
-                <button type="button" onClick={() => vm.openProductDetail(prod)} style={{ background: "var(--surface)", border: "none", width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}><Info size={18} color="var(--text-muted)" /></button>
-              </div>
-              <div className="menu-card-actions" style={{ marginTop: 20, display: "flex", gap: 10 }}>
-                <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1, borderRadius: 12 }} onClick={() => vm.openProductDetail(prod)}>Detalles</button>
-                <button type="button" className="btn btn-primary btn-sm" style={{ flex: 1, borderRadius: 12 }} onClick={() => vm.quickAddProduct(prod)}>+ Agregar</button>
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </section>
 
       {vm.productosFiltrados.length === 0 && (
-        <div style={{ textAlign: "center", padding: 80, color: "var(--text-muted)" }}><Search size={48} style={{ margin: "0 auto 16px", display: "block", opacity: 0.2 }} /><p style={{ fontSize: 16 }}>No se encontraron platos.</p></div>
+        <div className="client-empty-state"><Search size={44} /><p>No se encontraron platos.</p></div>
       )}
 
       {vm.itemCount > 0 && (
-        <div className="cart-bottom-bar" style={{ padding: "20px 24px", background: "rgba(12,11,14,0.85)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--border)" }}>
-          <button onClick={() => router.push(`/${slug}/pedido`)} className="btn btn-primary btn-lg" style={{ width: "100%", height: 56, borderRadius: 18, fontSize: 16, fontWeight: 800, gap: 12, boxShadow: "0 8px 30px rgba(197, 160, 89, 0.3)" }}>
-            <ShoppingBag size={20} /> Mi pedido ({vm.itemCount}) · {formatPrecio(vm.cartTotal)}
-          </button>
-        </div>
+        <button className="client-cart-fab animate-scale-in" onClick={() => router.push(`/${slug}/pedido`)} type="button">
+          <div className="badge-count">{vm.itemCount}</div>
+          <ShoppingCart size={24} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+            <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ver Pedido</span>
+            <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{formatPrecio(vm.cartTotal)}</span>
+          </div>
+        </button>
       )}
 
       {vm.selectedProduct && (
@@ -208,6 +222,6 @@ export default function MenuPage() {
           </div>
         </>
       )}
-    </div>
+    </main>
   );
 }

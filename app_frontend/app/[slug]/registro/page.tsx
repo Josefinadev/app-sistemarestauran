@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { registrarCliente } from "@/lib/api";
-import { UserPlus, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
+import { UserPlus, ArrowLeft, Loader2, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/store";
 
 export default function ClienteRegistroPage() {
@@ -20,6 +20,7 @@ export default function ClienteRegistroPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +79,12 @@ export default function ClienteRegistroPage() {
             </div>
             <div>
               <p className="label" style={{ marginBottom: 8 }}>Contraseña</p>
-              <input required type="password" className="input" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+              <div style={{ position: "relative" }}>
+                <input required type={showPassword ? "text" : "password"} className="input" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={{ paddingRight: 44 }} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "var(--text-muted)", cursor: "pointer", display: "grid", placeItems: "center" }}>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {error && (

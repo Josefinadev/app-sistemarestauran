@@ -1,7 +1,7 @@
 const express = require('express');
 const supabase = require('../config/supabase');
 const router = express.Router();
-const { authenticate, restrictToTenant } = require('../middleware/auth');
+const { authenticate, restrictToTenant, requireRoles } = require('../middleware/auth');
 
 /**
  * GET /api/productos
@@ -70,10 +70,15 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede crear productos.' });
+    }
     const { id_categoria, nombre, descripcion, precio, imagen_url, disponible, stock, es_bebida, requiere_preparacion, orden } = req.body;
     
-    // Forzamos el id_restaurante del usuario autenticado
-    const id_restaurante = req.user.id_restaurante;
+    // Superadmin puede especificar el restaurante destino desde el body
+    const id_restaurante = req.isSuperAdmin
+      ? (req.body.id_restaurante || req.user.id_restaurante)
+      : req.user.id_restaurante;
 
     if (!id_categoria || !nombre || precio === undefined) {
       return res.status(400).json({ error: true, message: 'Campos requeridos: id_categoria, nombre, precio' });
@@ -102,6 +107,9 @@ router.post('/', authenticate, async (req, res) => {
  */
 router.patch('/:id', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede editar productos.' });
+    }
     const updates = req.body;
     
     // Validar que el producto sea del inquilino antes de actualizar
@@ -129,6 +137,9 @@ router.patch('/:id', authenticate, async (req, res) => {
  */
 router.delete('/:id', authenticate, async (req, res) => {
   try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede eliminar productos.' });
+    }
     // Validar tenant
     const { data: current } = await supabase.from('producto').select('id_restaurante').eq('id', req.params.id).single();
     if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
