@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { RolUsuario } from "@/lib/database.types";
-import { useAuth } from "@/lib/store";
+import { useAuth, normalizeRole } from "@/lib/store";
 import { loginAuth } from "@/lib/api";
 import {
   Wine,
@@ -15,8 +15,6 @@ import {
   Crown,
   Mail,
   CircleDot,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 
 const roleRoutes: Record<RolUsuario, string> = {
@@ -25,8 +23,6 @@ const roleRoutes: Record<RolUsuario, string> = {
   mesero: "/dashboard/mesero",
   caja: "/dashboard/caja",
   cliente: "/",
-  propietario: "/dashboard/admin",
-  admin_saas: "/superadmin"
 };
 
 export default function LoginPage() {
@@ -34,14 +30,8 @@ export default function LoginPage() {
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const canSubmit = email.trim().length > 0 && password.trim().length > 0;
 
@@ -72,9 +62,14 @@ export default function LoginPage() {
         restaurante: response.restaurante,
       });
 
-      // Redirigir al dashboard según el rol del usuario
-      const destino = roleRoutes[response.usuario.rol as RolUsuario] || "/dashboard/admin";
-      router.push(destino);
+      // Redirigir al dashboard según el rol del usuario (normalizando aliases)
+      const userRole = normalizeRole(response.usuario.rol);
+      if (userRole === "admin_saas") {
+        router.push("/superadmin");
+      } else {
+        const destino = userRole && (roleRoutes as any)[userRole] ? (roleRoutes as any)[userRole] : "/dashboard/admin";
+        router.push(destino);
+      }
     } catch (err: any) {
       setError(err.message || "Error al iniciar sesión. Verifica tus credenciales.");
     } finally {
@@ -143,7 +138,7 @@ export default function LoginPage() {
                 color: "var(--primary)",
               }}
             >
-              Restaurant OS
+              El Mijano
             </span>
           </div>
 
@@ -180,11 +175,10 @@ export default function LoginPage() {
               />
             </div>
 
-            {isClient ? (
-              <form
-                onSubmit={handleSubmit}
-                style={{ display: "flex", flexDirection: "column", gap: 24 }}
-              >
+            <form
+              onSubmit={handleSubmit}
+              style={{ display: "flex", flexDirection: "column", gap: 24 }}
+            >
               {/* Email */}
               <div>
                 <p className="label" style={{ marginBottom: 8 }}>
@@ -220,22 +214,14 @@ export default function LoginPage() {
                     style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)" }}
                   />
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type="password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     placeholder="••••••••"
                     className="input-underline"
                     autoComplete="current-password"
-                    style={{ paddingLeft: 24, paddingRight: 38 }}
+                    style={{ paddingLeft: 24 }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "var(--text-muted)", cursor: "pointer", padding: 4, display: "grid", placeItems: "center" }}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
                 </div>
               </div>
 
@@ -282,11 +268,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-            ) : (
-              <div style={{ minHeight: 250, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Loader2 className="spin-icon" size={24} color="var(--text-muted)" />
-              </div>
-            )}
           </div>
 
           {/* Footer */}
@@ -467,14 +448,16 @@ export default function LoginPage() {
       </div>
 
       {/* Spinner keyframe */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style jsx>{`
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
-        .spin-icon {
+        :global(.spin-icon) {
           animation: spin 0.8s linear infinite;
         }
-      `}} />
+      `}</style>
     </main>
   );
 }

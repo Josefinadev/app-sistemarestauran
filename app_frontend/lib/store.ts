@@ -3,6 +3,22 @@ import { persist } from "zustand/middleware";
 import type { ItemCarrito, Producto, Agregado, RolUsuario, Restaurante, Mesa, EstadoPedido } from "@/lib/database.types";
 import { v4 as uuidv4 } from "uuid";
 
+// Normalize role aliases coming from backend or external labels to canonical RolUsuario
+export function normalizeRole(input?: string | null) {
+  if (!input) return null;
+  const r = String(input).toLowerCase();
+  // SaaS / superadmin variants -> keep as admin_saas to distinguish from tenant `admin`
+  if (r === "admin_saas" || r === "adminsas" || r === "saas_admin" || r === "adminsaas" || r.includes("superadmin") || r.includes("super") || r.includes("owner")) return "admin_saas";
+  if (r === "admin" || r === "propietario") return "admin";
+  if (r.includes("cocina")) return "cocina";
+  if (r.includes("mesero")) return "mesero";
+  if (r.includes("caja")) return "caja";
+  if (r.includes("cliente") || r.includes("client")) return "cliente";
+  // fallback: if already a canonical role name
+  if (["admin", "cocina", "mesero", "caja", "cliente"].includes(r)) return r as RolUsuario;
+  return null;
+}
+
 /* ═══════════════════════════════════════════════════════════
    Store del Carrito (Cliente)
    ═══════════════════════════════════════════════════════════ */
@@ -92,7 +108,7 @@ interface AuthUsuario {
   id: string;
   nombre: string;
   email: string;
-  rol: RolUsuario;
+  rol: string; // allow admin_saas (superadmin) aliases
   auth_id: string;
 }
 
@@ -106,7 +122,7 @@ interface LoginSessionData {
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
-  rol: RolUsuario | null;
+  rol: string | null; // can be 'admin', 'admin_saas', 'cocina', etc.
   usuario: AuthUsuario | null;
   restaurante: Restaurante | null;
   mesa: Mesa | null;
@@ -135,14 +151,16 @@ export const useAuth = create<AuthState>()(
       activePedidoEstado: null,
       _hasHydrated: false,
 
-      setSession: ({ accessToken, refreshToken, usuario, restaurante }) =>
-        set({
-          accessToken,
-          refreshToken,
-          rol: usuario.rol,
-          usuario,
-          restaurante,
-        }),
+        setSession: ({ accessToken, refreshToken, usuario, restaurante }) => {
+          const norm = normalizeRole((usuario as any)?.rol) as string | null;
+          set({
+            accessToken,
+            refreshToken,
+            rol: norm,
+            usuario: usuario ? { ...usuario, rol: norm as string } : null,
+            restaurante,
+          });
+        },
 
       setRestaurante: (restaurante) => set({ restaurante }),
       setMesa: (mesa) => set({ mesa }),
@@ -173,6 +191,10 @@ export const useAuth = create<AuthState>()(
     }),
     {
       name: "el-mijano-auth",
+      // Use per-tab storage (sessionStorage) so multiple tabs can hold independent sessions.
+      // This avoids the last-write-wins behavior of shared localStorage when different
+      // roles are logged in across tabs in the same browser profile.
+      getStorage: () => sessionStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
