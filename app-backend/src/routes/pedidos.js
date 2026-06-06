@@ -1,7 +1,38 @@
 const express = require('express');
 const supabase = require('../config/supabase');
+const supabaseAdmin = require('../config/supabase-admin');
 const router = express.Router();
 const { authenticate, restrictToTenant } = require('../middleware/auth');
+
+/**
+ * Auth OPCIONAL para endpoints públicos-comensal.
+ * Si hay Bearer token válido, hidrata req.user + req.isSuperAdmin (tenant check activo).
+ * Si no hay token o es inválido, sigue sin autenticar (cliente comensal con UUID).
+ */
+async function optionalAuth(req, _res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+
+    const token = authHeader.split(' ')[1];
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData?.user) return next();
+
+    const { data: usuario } = await supabaseAdmin
+      .from('usuario')
+      .select('id, rol, id_restaurante')
+      .eq('auth_id', authData.user.id)
+      .eq('activo', true)
+      .single();
+    if (usuario) {
+      req.user = usuario;
+      req.isSuperAdmin = usuario.rol === 'admin_saas';
+    }
+    next();
+  } catch {
+    next();
+  }
+}
 
 /**
  * GET /api/pedidos
@@ -46,9 +77,14 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 /**
- * GET /api/pedidos/:id (protegido)
+ * GET /api/pedidos/:id
+ * Auth OPCIONAL: el cliente comensal (sin login con email) puede consultar el
+ * estado de su pedido pasando solo el UUID en la URL. Si hay un usuario
+ * autenticado (admin/cocina/mesero/caja), se aplica tenant isolation normal.
+ * El UUID del pedido oficia de "token" — no es enumerable y se comparte
+ * únicamente con el cliente a través del QR/redirect post-pedido.
  */
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('pedido')
@@ -70,8 +106,8 @@ router.get('/:id', authenticate, async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
 
-    // Tenant isolation: si no es superadmin, solo puede ver pedidos de su restaurante
-    if (!req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
+    // Tenant isolation SOLO si hay un usuario autenticado (no comensal guest)
+    if (req.user && !req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
       return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
     }
 
