@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { applyRestauranteBranding } from "@/lib/branding";
 import { useRestauranteRealtime } from "@/lib/realtime";
+import { CursorGlow } from "@/components/CursorGlow";
 import {
   Crown,
   Flame,
@@ -194,6 +195,7 @@ export default function DashboardLayout({
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
+      <CursorGlow />
       <aside style={{ width: sidebarCollapsed ? 72 : 240, height: "100vh", position: "sticky", top: 0, background: "var(--bg-elevated)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", justifyContent: "space-between", transition: "width var(--duration-normal) var(--ease-out)", overflow: "hidden", overflowY: "auto", flexShrink: 0 }}>
         <div>
           <div style={{ padding: sidebarCollapsed ? "20px 16px" : "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
