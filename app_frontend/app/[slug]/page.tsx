@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { getRestaurante, getWebConfig, getWebCombos, getWebOfertas } from "@/lib/api";
 import {
   Wine, CheckCircle2,
-  X, Loader2, Utensils
+  X, Loader2, Utensils, AlertTriangle, MessageCircle
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /* ═══════════════════════════════════════════════════════════
    PÁGINA WEB PÚBLICA DEL RESTAURANTE (Dinamica por SLUG)
@@ -30,6 +31,12 @@ export default function RestaurantPublicPage() {
     hora: "20:00", personas: "2", notas: "" 
   });
   const [reservaEnviada, setReservaEnviada] = useState(false);
+  const [reservaError, setReservaError] = useState("");
+
+  const openReserva = () => {
+    setReservaError("");
+    setShowReserva(true);
+  };
 
   const loadData = useCallback(async () => {
     if (!slug) return;
@@ -61,14 +68,34 @@ export default function RestaurantPublicPage() {
   }, [loadData]);
 
   const enviarReserva = () => {
-    if (!reservaData.nombre || !reservaData.telefono || !reservaData.fecha || !config?.whatsapp) return;
+    setReservaError("");
+    if (!reservaData.nombre.trim()) {
+      setReservaError("Por favor, ingresa tu nombre.");
+      return;
+    }
+    if (!reservaData.telefono.trim()) {
+      setReservaError("Por favor, ingresa tu número de teléfono.");
+      return;
+    }
+    if (!reservaData.fecha) {
+      setReservaError("Por favor, selecciona la fecha de la reserva.");
+      return;
+    }
+    if (!config?.whatsapp) {
+      setReservaError("El restaurante no tiene configurado un número de WhatsApp para reservas.");
+      return;
+    }
     const msg = `🍷 *Reserva ${restaurante.nombre}*\n\n👤 ${reservaData.nombre}\n📞 ${reservaData.telefono}\n📅 ${reservaData.fecha} a las ${reservaData.hora}\n👥 ${reservaData.personas} personas\n📝 ${reservaData.notas || "Sin notas"}\n\n¡Gracias por reservar!`;
-    window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
-    setReservaEnviada(true);
-    setTimeout(() => { 
-      setShowReserva(false); 
-      setReservaEnviada(false); 
-    }, 3000);
+    try {
+      window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+      setReservaEnviada(true);
+      setTimeout(() => { 
+        setShowReserva(false); 
+        setReservaEnviada(false); 
+      }, 3000);
+    } catch (err) {
+      setReservaError("No se pudo abrir WhatsApp. Comprueba si tienes bloqueadores de popups activos.");
+    }
   };
 
   if (loading) return (
@@ -109,7 +136,7 @@ export default function RestaurantPublicPage() {
         </div>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
           <a href={`/${slug}/menu`} style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)", textDecoration: "none" }}>Menú Digital</a>
-          <button onClick={() => setShowReserva(true)} className="btn btn-primary btn-sm">Reservar</button>
+          <button onClick={openReserva} className="btn btn-primary btn-sm">Reservar</button>
         </div>
       </nav>
 
@@ -132,42 +159,71 @@ export default function RestaurantPublicPage() {
           </h1>
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
             <button onClick={() => router.push(`/${slug}/menu`)} className="btn btn-primary btn-lg">Pedir ahora</button>
-            <button onClick={() => setShowReserva(true)} className="btn btn-secondary btn-lg">Reservar Mesa</button>
+            <button onClick={openReserva} className="btn btn-secondary btn-lg">Reservar Mesa</button>
           </div>
         </div>
       </section>
 
       {/* MODAL RESERVA */}
-      {showReserva && (
-        <>
-          <div className="overlay" onClick={() => setShowReserva(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 24, padding: 32, width: "90%", maxWidth: 440, border: "1px solid var(--border)" }}>
-            {reservaEnviada ? (
-              <div style={{ textAlign: "center", padding: "20px 0" }}>
-                <CheckCircle2 color="var(--success)" size={48} style={{ margin: "0 auto 16px" }} />
-                <h3 style={{ fontSize: 20, margin: "0 0 8px" }}>¡Solicitud enviada!</h3>
-                <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0 }}>Te contactaremos vía WhatsApp.</p>
-              </div>
-            ) : (
-              <>
-                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                  <h3 style={{ fontSize: 22, fontFamily: "var(--font-noto-serif), serif", margin: 0 }}>Reservar</h3>
-                  <button onClick={() => setShowReserva(false)} style={{ background: "none", border: "none" }}><X size={18} color="var(--text-muted)" /></button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <input className="input" placeholder="Tu nombre" value={reservaData.nombre} onChange={e => setReservaData({...reservaData, nombre: e.target.value})} />
-                  <input className="input" placeholder="Teléfono" value={reservaData.telefono} onChange={e => setReservaData({...reservaData, telefono: e.target.value})} />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <input className="input" type="date" value={reservaData.fecha} onChange={e => setReservaData({...reservaData, fecha: e.target.value})} />
-                    <input className="input" type="time" value={reservaData.hora} onChange={e => setReservaData({...reservaData, hora: e.target.value})} />
+      <AnimatePresence>
+        {showReserva && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowReserva(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl overflow-hidden"
+            >
+              {reservaEnviada ? (
+                <motion.div 
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-center py-6"
+                >
+                  <CheckCircle2 className="mx-auto mb-4 text-[var(--success)]" size={56} />
+                  <h3 className="text-2xl font-bold mb-2">¡Solicitud enviada!</h3>
+                  <p className="text-[var(--text-muted)]">Te contactaremos vía WhatsApp.</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-serif text-[var(--text)] m-0">Reservar Mesa</h3>
+                    <button 
+                      onClick={() => setShowReserva(false)} 
+                      className="p-2 rounded-full hover:bg-[var(--surface-hover)] transition-colors"
+                    >
+                      <X size={20} className="text-[var(--text-muted)]" />
+                    </button>
                   </div>
-                </div>
-                <button onClick={enviarReserva} className="btn btn-primary btn-lg" style={{ width: "100%", marginTop: 24 }}>Confirmar vía WhatsApp</button>
-              </>
-            )}
+                  {reservaError && (
+                    <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-red-500/10 text-red-400 text-[12px] font-semibold border border-red-500/20">
+                      <AlertTriangle size={15} className="flex-shrink-0" />
+                      <span>{reservaError}</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-4">
+                    <input className="input" placeholder="Tu nombre" value={reservaData.nombre} onChange={e => setReservaData({...reservaData, nombre: e.target.value})} />
+                    <input className="input" placeholder="Teléfono" value={reservaData.telefono} onChange={e => setReservaData({...reservaData, telefono: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input className="input" type="date" value={reservaData.fecha} onChange={e => setReservaData({...reservaData, fecha: e.target.value})} />
+                      <input className="input" type="time" value={reservaData.hora} onChange={e => setReservaData({...reservaData, hora: e.target.value})} />
+                    </div>
+                  </div>
+                  <button onClick={enviarReserva} className="btn btn-primary btn-lg w-full mt-6 rounded-2xl text-[15px] flex items-center justify-center gap-2">
+                    <MessageCircle size={18} /> Confirmar vía WhatsApp
+                  </button>
+                </>
+              )}
+            </motion.div>
           </div>
-        </>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

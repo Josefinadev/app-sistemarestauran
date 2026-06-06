@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RolUsuario } from "@/lib/database.types";
 import { useAuth, normalizeRole } from "@/lib/store";
 import { loginAuth } from "@/lib/api";
@@ -17,7 +17,7 @@ import {
   CircleDot,
 } from "lucide-react";
 
-const roleRoutes: Record<RolUsuario, string> = {
+const roleRoutes: Partial<Record<RolUsuario, string>> = {
   admin: "/dashboard/admin",
   cocina: "/dashboard/cocina",
   mesero: "/dashboard/mesero",
@@ -32,8 +32,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Patrón mounted: evita mismatches de hidratación cuando password managers
+  // o extensiones del navegador auto-rellenan los inputs antes de que React hidrate.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const canSubmit = email.trim().length > 0 && password.trim().length > 0;
+  // En servidor y durante la primera renderización del cliente, mantenemos
+  // el botón deshabilitado. Esto garantiza que el HTML del servidor y el del
+  // cliente coincidan exactamente, y solo después de hidratar aplicamos la
+  // lógica real (incluyendo cualquier auto-rellenado del navegador).
+  const isButtonDisabled = !mounted || !canSubmit || isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +63,7 @@ export default function LoginPage() {
       // Autenticación real con Supabase Auth via backend
       const response = await loginAuth(email.trim(), password);
 
-      // Guardar sesión en el store (persiste en localStorage)
+      // Guardar sesión en el store (persiste en sessionStorage por pestaña)
       setSession({
         accessToken: response.access_token,
         refreshToken: response.refresh_token,
@@ -247,10 +256,10 @@ export default function LoginPage() {
               <button
                 type="submit"
                 className="btn btn-primary btn-lg"
-                disabled={!canSubmit || isLoading}
+                disabled={isButtonDisabled}
                 style={{
                   width: "100%",
-                  opacity: canSubmit && !isLoading ? 1 : 0.5,
+                  opacity: !isButtonDisabled ? 1 : 0.5,
                   position: "relative",
                   display: "flex",
                   alignItems: "center",

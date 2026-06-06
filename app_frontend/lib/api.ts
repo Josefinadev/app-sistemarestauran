@@ -10,7 +10,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem("el-mijano-auth");
+    // El store (lib/store.ts) persiste en sessionStorage para mantener sesiones
+    // independientes por pestaña. Leer de localStorage siempre devolvería null
+    // y provocaría el error "Token faltante" en cada petición.
+    const raw = sessionStorage.getItem("el-mijano-auth");
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed?.state?.accessToken || null;
@@ -54,7 +57,7 @@ async function apiFetch(path: string, options?: RequestInit) {
   // Si el token expiró, limpiar sesión y redirigir al login
   if (res.status === 401 && token) {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("el-mijano-auth");
+      sessionStorage.removeItem("el-mijano-auth");
       window.location.href = "/login";
     }
     throw new Error("Sesión expirada. Inicia sesión nuevamente.");

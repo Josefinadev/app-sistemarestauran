@@ -1,3 +1,6 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 /**
  * Calcula la distancia en metros entre dos coordenadas GPS
  * usando la fórmula de Haversine.
@@ -131,4 +134,11 @@ export function truncate(text: string, maxLength: number): string {
  */
 export function generarSlugMesa(): string {
   return crypto.randomUUID();
+}
+
+/**
+ * Merge Tailwind classes with clsx and tailwind-merge
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }

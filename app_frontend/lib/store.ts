@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { ItemCarrito, Producto, Agregado, RolUsuario, Restaurante, Mesa, EstadoPedido } from "@/lib/database.types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -101,7 +101,8 @@ export const useCarrito = create<CarritoState>((set, get) => ({
 
 /* ═══════════════════════════════════════════════════════════
    Store de Sesión / Auth real con Supabase
-   Persiste en localStorage para sobrevivir recargas de página
+   Persiste en sessionStorage (ver bloque `persist` más abajo)
+   para sobrevivir recargas dentro de la misma pestaña
    ═══════════════════════════════════════════════════════════ */
 
 interface AuthUsuario {
@@ -194,7 +195,7 @@ export const useAuth = create<AuthState>()(
       // Use per-tab storage (sessionStorage) so multiple tabs can hold independent sessions.
       // This avoids the last-write-wins behavior of shared localStorage when different
       // roles are logged in across tabs in the same browser profile.
-      getStorage: () => sessionStorage,
+      storage: createJSONStorage(() => sessionStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

@@ -44,7 +44,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `(() => {
   try {
-    const raw = localStorage.getItem('el-mijano-auth');
+    const raw = sessionStorage.getItem('el-mijano-auth');
     if (!raw) return;
     const parsed = JSON.parse(raw);
     const r = parsed && parsed.state && parsed.state.restaurante;
