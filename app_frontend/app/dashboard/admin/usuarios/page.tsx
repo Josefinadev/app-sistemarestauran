@@ -10,6 +10,7 @@ import {
   Lock, Eye, EyeOff, AlertTriangle, Key, UserPlus, ShieldCheck,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
+import { toast } from "@/lib/toast";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Gestión de Usuarios (Admin del Restaurante)
@@ -64,14 +65,6 @@ export default function UsuariosPage() {
   const [deleteUser, setDeleteUser] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // ── Feedback ──
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  const showFeedback = (type: "success" | "error", message: string) => {
-    setFeedback({ type, message });
-    setTimeout(() => setFeedback(null), 4000);
-  };
-
   const loadUsers = useCallback(async () => {
     if (!restauranteId) return;
     try {
@@ -111,7 +104,10 @@ export default function UsuariosPage() {
       });
       setShowCreateModal(false);
       setNewUser({ nombre: "", email: "", rol: "mesero", password: "" });
-      showFeedback("success", `✅ Usuario "${newUser.nombre}" creado exitosamente.`);
+      toast.success({
+        message: "Usuario creado",
+        description: `${newUser.nombre} ya puede iniciar sesión.`,
+      });
       loadUsers();
     } catch (err: any) {
       setCreateError(err.message || "Error al crear usuario.");
@@ -140,7 +136,10 @@ export default function UsuariosPage() {
         rol: editData.rol,
       });
       setShowEditModal(false);
-      showFeedback("success", `✅ Usuario "${editData.nombre}" actualizado.`);
+      toast.success({
+        message: "Usuario actualizado",
+        description: editData.nombre,
+      });
       loadUsers();
     } catch (err: any) {
       setEditError(err.message || "Error al actualizar usuario.");
@@ -166,7 +165,10 @@ export default function UsuariosPage() {
     try {
       await cambiarPasswordAuth(pwdUser.id, newPassword);
       setShowPwdModal(false);
-      showFeedback("success", `🔑 Contraseña de "${pwdUser.nombre}" actualizada.`);
+      toast.success({
+        message: "Contraseña actualizada",
+        description: pwdUser.nombre,
+      });
     } catch (err: any) {
       setPwdError(err.message || "Error al cambiar contraseña.");
     } finally {
@@ -178,9 +180,14 @@ export default function UsuariosPage() {
     try {
       await actualizarUsuario(user.id, { activo: !user.activo });
       setUsuarios((prev) => prev.map((u) => u.id === user.id ? { ...u, activo: !u.activo } : u));
-      showFeedback("success", user.activo ? `⏸️ ${user.nombre} desactivado.` : `▶️ ${user.nombre} activado.`);
+      toast.success({
+        message: user.activo ? "Usuario desactivado" : "Usuario activado",
+        description: user.nombre,
+        duration: 2500,
+      });
     } catch (err) {
       console.error("Error toggling user:", err);
+      toast.error({ message: "No se pudo cambiar el estado" });
     }
   };
 
@@ -194,10 +201,13 @@ export default function UsuariosPage() {
     try {
       await eliminarUsuario(deleteUser.id);
       setShowDeleteModal(false);
-      showFeedback("success", `🗑️ Usuario "${deleteUser.nombre}" eliminado.`);
+      toast.success({
+        message: "Usuario eliminado",
+        description: deleteUser.nombre,
+      });
       loadUsers();
     } catch (err: any) {
-      showFeedback("error", err.message || "Error al eliminar usuario.");
+      toast.error({ message: "No se pudo eliminar", description: err.message });
     } finally {
       setDeleting(false);
     }
@@ -229,11 +239,7 @@ export default function UsuariosPage() {
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      {feedback && (
-        <div className="animate-fade-in" style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, padding: "14px 20px", borderRadius: 12, background: feedback.type === "success" ? "rgba(74,222,128,0.12)" : "rgba(226,114,91,0.12)", border: `1px solid ${feedback.type === "success" ? "rgba(74,222,128,0.3)" : "rgba(226,114,91,0.3)"}`, color: feedback.type === "success" ? "var(--success)" : "var(--secondary)", fontSize: 13, fontWeight: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
-          {feedback.message}
-        </div>
-      )}
+      {/* Notifications are surfaced via the global Toaster. */}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>

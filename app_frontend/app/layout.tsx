@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif, Manrope } from "next/font/google";
+import { Toaster } from "@/components/Toaster";
 import "./globals.css";
 
 const notoSerif = Noto_Serif({
@@ -71,6 +72,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <Toaster />
       </body>
     </html>
   );

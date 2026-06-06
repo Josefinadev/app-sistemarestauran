@@ -8,6 +8,7 @@ import {
   uploadImage, actualizarRestauranteBranding,
 } from "@/lib/api";
 import { ImageUploadInput } from "@/components/ImageUploadInput";
+import { toast } from "@/lib/toast";
 import {
   Globe, Gift, Calendar, Plus, Trash2, Pencil,
   Save, ExternalLink, CheckCircle2, Star, Sparkles,
@@ -123,9 +124,9 @@ export default function GestionWebPage() {
     setSaving(true);
     try {
       await saveWebConfig({ id_restaurante, ...webConfig });
-      alert("Configuración guardada ✅");
+      toast.success({ message: "Configuración guardada", description: "Tu web ya refleja los cambios." });
     } catch (err: any) {
-      alert(err?.message || "Error al guardar");
+      toast.error({ message: "Error al guardar", description: err?.message });
     }
     finally { setSaving(false); }
   };
@@ -136,9 +137,9 @@ export default function GestionWebPage() {
     try {
       const updated = await actualizarRestauranteBranding(id_restaurante, visualConfig);
       setRestaurante({ ...restaurante, ...updated } as any);
-      alert("Identidad visual guardada ✅");
+      toast.success({ message: "Identidad visual guardada", description: "Logo, colores e imágenes actualizados." });
     } catch (err: any) {
-      alert(err?.message || "Error al guardar identidad visual");
+      toast.error({ message: "Error al guardar identidad visual", description: err?.message });
     } finally {
       setSavingVisual(false);
     }
@@ -177,15 +178,28 @@ export default function GestionWebPage() {
         popular: newCombo.popular,
         imagen_url: newCombo.imagen_url || "/assets/placeholder-dish.png",
       };
-      if (editingCombo) await actualizarWebCombo(editingCombo.id, data);
-      else await crearWebCombo(data);
+      if (editingCombo) {
+        await actualizarWebCombo(editingCombo.id, data);
+        toast.success({ message: "Combo actualizado", description: newCombo.nombre });
+      } else {
+        await crearWebCombo(data);
+        toast.success({ message: "Combo creado", description: newCombo.nombre });
+      }
       closeComboModal();
       loadData();
-    } catch { alert("Error al guardar combo"); }
+    } catch (err: any) {
+      toast.error({ message: "No se pudo guardar el combo", description: err?.message });
+    }
   };
   const handleDeleteCombo = async (id: string) => {
     if (!confirm("¿Eliminar este combo?")) return;
-    try { await eliminarWebCombo(id); loadData(); } catch { alert("Error al eliminar"); }
+    try {
+      await eliminarWebCombo(id);
+      loadData();
+      toast.success({ message: "Combo eliminado" });
+    } catch (err: any) {
+      toast.error({ message: "No se pudo eliminar", description: err?.message });
+    }
   };
 
   // ── Ofertas ──
@@ -213,15 +227,28 @@ export default function GestionWebPage() {
         id_restaurante, titulo: newOferta.titulo, descripcion: newOferta.descripcion,
         descuento: newOferta.descuento, imagen_url: newOferta.imagen_url || null, activo: true,
       };
-      if (editingOferta) await actualizarWebOferta(editingOferta.id, data);
-      else await crearWebOferta(data);
+      if (editingOferta) {
+        await actualizarWebOferta(editingOferta.id, data);
+        toast.success({ message: "Oferta actualizada", description: newOferta.titulo });
+      } else {
+        await crearWebOferta(data);
+        toast.success({ message: "Oferta creada", description: newOferta.titulo });
+      }
       closeOfertaModal();
       loadData();
-    } catch { alert("Error al guardar oferta"); }
+    } catch (err: any) {
+      toast.error({ message: "No se pudo guardar la oferta", description: err?.message });
+    }
   };
   const handleDeleteOferta = async (id: string) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
-    try { await eliminarWebOferta(id); loadData(); } catch { alert("Error al eliminar"); }
+    try {
+      await eliminarWebOferta(id);
+      loadData();
+      toast.success({ message: "Oferta eliminada" });
+    } catch (err: any) {
+      toast.error({ message: "No se pudo eliminar", description: err?.message });
+    }
   };
 
   // ── Seed ──
