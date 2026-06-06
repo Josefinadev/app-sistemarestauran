@@ -30,68 +30,84 @@ export function usePedidoConfirm() {
       return;
     }
 
+    // DEV: salta el geofence si la URL trae ?skipGeo=1. Útil para testear
+    // el flujo de pedido en una PC de escritorio sin GPS preciso.
+    // No afecta a usuarios reales (no agregan el param).
+    const skipGeo = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("skipGeo") === "1";
+
     setSending(true);
     setError("");
 
-    // ── 1) Geolocalización del navegador (OBLIGATORIA) ──
-    // Separado del backend para que un fallo de red no se confunda con
-    // un problema de permisos/GPS del dispositivo.
-    setGeoStatus("checking");
-    let pos: GeolocationPosition;
-    try {
-      pos = await obtenerUbicacion();
-    } catch (geoErr: any) {
-      setGeoStatus("failed");
-      // GeolocationPositionError: code 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
-      // Firefox suele dejar `message` vacío, así que chequeamos también por `code`.
-      const code = typeof geoErr?.code === "number" ? geoErr.code : 0;
-      const raw = geoErr?.message || "";
-      if (code === 1 || /denied|permission/i.test(raw)) {
-        setError("Debes permitir el acceso a tu ubicación para poder realizar pedidos. Activa los permisos de ubicación en tu navegador.");
-      } else if (code === 2 || /unavailable/i.test(raw)) {
-        setError("No se pudo obtener tu ubicación. Asegúrate de tener el GPS activado e inténtalo de nuevo.");
-      } else if (code === 3 || /timeout/i.test(raw)) {
-        setError("Se agotó el tiempo para obtener tu ubicación. Verifica tu conexión GPS e inténtalo de nuevo.");
-      } else {
-        setError(`No se pudo verificar tu ubicación. Activa el GPS y los permisos de ubicación para continuar.${raw ? ` (${raw})` : ""}`);
+    if (skipGeo) {
+      console.warn("[DEV] Geofence saltado por ?skipGeo=1 — no se valida ubicación");
+      setGeoStatus("ok");
+    } else {
+      // ── 1) Geolocalización del navegador (OBLIGATORIA) ──
+      // Separado del backend para que un fallo de red no se confunda con
+      // un problema de permisos/GPS del dispositivo.
+      setGeoStatus("checking");
+      let pos: GeolocationPosition;
+      try {
+        pos = await obtenerUbicacion();
+        console.info("[geo] posición obtenida:", {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          accuracy_m: pos.coords.accuracy,
+        });
+      } catch (geoErr: any) {
+        setGeoStatus("failed");
+        // GeolocationPositionError: code 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
+        // Firefox suele dejar `message` vacío, así que chequeamos también por `code`.
+        const code = typeof geoErr?.code === "number" ? geoErr.code : 0;
+        const raw = geoErr?.message || "";
+        if (code === 1 || /denied|permission/i.test(raw)) {
+          setError("Debes permitir el acceso a tu ubicación para poder realizar pedidos. Activa los permisos de ubicación en tu navegador.");
+        } else if (code === 2 || /unavailable/i.test(raw)) {
+          setError("No se pudo obtener tu ubicación. Activa los servicios de ubicación de tu sistema operativo (o usa ?skipGeo=1 para testear).");
+        } else if (code === 3 || /timeout/i.test(raw)) {
+          setError("Se agotó el tiempo para obtener tu ubicación. Verifica tu conexión GPS e inténtalo de nuevo.");
+        } else {
+          setError(`No se pudo verificar tu ubicación. Activa el GPS y los permisos de ubicación para continuar.${raw ? ` (${raw})` : ""}`);
+        }
+        setSending(false);
+        return;
       }
-      setSending(false);
-      return;
-    }
 
-    // ── 2) Validación con el backend (separada) ──
-    // Un error aquí NO es de GPS — es de red, CORS, timeout, o que el
-    // restaurante no existe / no tiene coordenadas configuradas.
-    let geoResult: { dentroDelRadio: boolean; distancia_metros: number; radio_metros: number } | undefined;
-    try {
-      geoResult = await validarUbicacion(slug, pos.coords.latitude, pos.coords.longitude);
-    } catch (apiErr: any) {
-      setGeoStatus("failed");
-      // Log en consola para diagnóstico (visible en DevTools)
-      console.error("[validarUbicacion] error de backend:", apiErr);
-      const raw = apiErr?.message || "Error desconocido";
-      if (/Tiempo de espera|timeout|abort/i.test(raw)) {
-        setError(`El servidor no responde. ${raw}`);
-      } else if (/Failed to fetch|NetworkError|fetch|conexi[oó]n/i.test(raw)) {
-        setError("No se pudo contactar al servidor. Verifica tu conexión a internet.");
-      } else if (/no encontr/i.test(raw)) {
-        setError("No se encontró el restaurante. Verifica el enlace (slug) del QR.");
-      } else {
-        setError(`No se pudo validar la ubicación con el restaurante. ${raw}`);
+      // ── 2) Validación con el backend (separada) ──
+      // Un error aquí NO es de GPS — es de red, CORS, timeout, o que el
+      // restaurante no existe / no tiene coordenadas configuradas.
+      let geoResult: { dentroDelRadio: boolean; distancia_metros: number; radio_metros: number } | undefined;
+      try {
+        geoResult = await validarUbicacion(slug, pos.coords.latitude, pos.coords.longitude);
+        console.info("[geo] validación backend:", geoResult);
+      } catch (apiErr: any) {
+        setGeoStatus("failed");
+        console.error("[validarUbicacion] error de backend:", apiErr);
+        const raw = apiErr?.message || "Error desconocido";
+        if (/Tiempo de espera|timeout|abort/i.test(raw)) {
+          setError(`El servidor no responde. ${raw}`);
+        } else if (/Failed to fetch|NetworkError|fetch|conexi[oó]n/i.test(raw)) {
+          setError("No se pudo contactar al servidor. Verifica tu conexión a internet.");
+        } else if (/no encontr/i.test(raw)) {
+          setError("No se encontró el restaurante. Verifica el enlace (slug) del QR.");
+        } else {
+          setError(`No se pudo validar la ubicación con el restaurante. ${raw}`);
+        }
+        setSending(false);
+        return;
       }
-      setSending(false);
-      return;
-    }
 
-    if (geoResult && geoResult.dentroDelRadio === false) {
-      setGeoStatus("failed");
-      setError(
-        `No estás dentro del restaurante. Estás a ${geoResult.distancia_metros}m, el límite es ${geoResult.radio_metros}m. Acércate para poder ordenar.`
-      );
-      setSending(false);
-      return;
+      if (geoResult && geoResult.dentroDelRadio === false) {
+        setGeoStatus("failed");
+        setError(
+          `No estás dentro del restaurante. Estás a ${geoResult.distancia_metros}m, el límite es ${geoResult.radio_metros}m. Acércate para poder ordenar.`
+        );
+        setSending(false);
+        return;
+      }
+      setGeoStatus("ok");
     }
-    setGeoStatus("ok");
 
     // ── 3) Crear pedido (solo si la geolocalización fue exitosa) ──
     try {

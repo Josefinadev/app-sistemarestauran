@@ -41,6 +41,11 @@ export function dentroDelRadio(
 /**
  * Solicita la geolocalización del navegador.
  * Retorna las coordenadas o un error.
+ *
+ * Estrategia en dos pasadas:
+ *  1) enableHighAccuracy: true  → intenta GPS (móviles, laptops con GPS)
+ *  2) si falla con POSITION_UNAVAILABLE, reintenta con baja precisión
+ *     (Wi-Fi / IP) que suele funcionar en desktops sin hardware GPS
  */
 export function obtenerUbicacion(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -48,9 +53,26 @@ export function obtenerUbicacion(): Promise<GeolocationPosition> {
       reject(new Error("Geolocalización no soportada por este navegador."));
       return;
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
+
+    let retried = false;
+    const onError = (err: GeolocationPositionError) => {
+      // 2 = POSITION_UNAVAILABLE. Reintentamos con baja precisión (WiFi/IP)
+      // para cubrir desktops sin GPS. El resto de errores se propagan tal cual.
+      if (err?.code === 2 && !retried) {
+        retried = true;
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 12000,
+          maximumAge: 60_000,
+        });
+        return;
+      }
+      reject(err);
+    };
+
+    navigator.geolocation.getCurrentPosition(resolve, onError, {
       enableHighAccuracy: true,
-      timeout: 10000,
+      timeout: 8000,
       maximumAge: 0,
     });
   });
