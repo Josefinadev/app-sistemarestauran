@@ -5,10 +5,11 @@ import { getUsuarios, actualizarUsuario, eliminarUsuario } from "@/lib/api";
 import { crearUsuarioAuth, cambiarPasswordAuth } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import {
-  Users, Plus, X, Crown, Flame, UtensilsCrossed, Wallet, UserCircle,
+  Users, Plus, Crown, Flame, UtensilsCrossed, Wallet, UserCircle,
   Search, Shield, Trash2, ToggleLeft, ToggleRight, Mail, Pencil,
-  Lock, Eye, EyeOff, AlertTriangle, Key,
+  Lock, Eye, EyeOff, AlertTriangle, Key, UserPlus, ShieldCheck,
 } from "lucide-react";
+import { Modal, ModalFooter } from "@/components/Modal";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Gestión de Usuarios (Admin del Restaurante)
@@ -309,63 +310,283 @@ export default function UsuariosPage() {
       </div>
 
       {/* Modals are unchanged in structure, just ensuring they use dynamic IDs */}
-      {showCreateModal && (
-        <>
-          <div className="overlay" onClick={() => setShowCreateModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 440, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}><Plus size={18} color="var(--primary)" /> Nuevo Usuario</h3>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div><p className="label" style={{ marginBottom: 6 }}>Nombre completo *</p><input className="input" placeholder="Nombre completo" value={newUser.nombre} onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })} /></div>
-              <div><p className="label" style={{ marginBottom: 6 }}>Correo electrónico *</p><div style={{ position: "relative" }}><Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input className="input" placeholder="usuario@email.com" type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} style={{ paddingLeft: 36 }} /></div></div>
-              <div><p className="label" style={{ marginBottom: 6 }}>Contraseña *</p><div style={{ position: "relative" }}><Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input className="input" placeholder="••••••••" type={showCreatePwd ? "text" : "password"} value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} style={{ paddingLeft: 36, paddingRight: 40 }} /><button type="button" onClick={() => setShowCreatePwd(!showCreatePwd)} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}>{showCreatePwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}</button></div></div>
-              <div><p className="label" style={{ marginBottom: 8 }}>Seleccionar rol *</p><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>{Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => { const RoleIcon = cfg.Icon; return (<button key={key} type="button" onClick={() => setNewUser({ ...newUser, rol: key })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: newUser.rol === key ? `${cfg.color}15` : "var(--surface)", border: newUser.rol === key ? `1px solid ${cfg.color}` : "1px solid var(--border)", borderRadius: "var(--radius-md)", cursor: "pointer", transition: "all 0.15s" }}><RoleIcon size={16} color={newUser.rol === key ? cfg.color : "var(--text-muted)"} /><span style={{ fontSize: 12, fontWeight: 500, color: newUser.rol === key ? cfg.color : "var(--text-secondary)" }}>{cfg.label}</span></button>); })}</div></div>
-              {createError && <p style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>{createError}</p>}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => setShowCreateModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button><button onClick={handleCreate} className="btn btn-primary" disabled={saving} style={{ flex: 1, opacity: saving ? 0.6 : 1 }}>{saving ? "Creando..." : "Crear usuario"}</button></div>
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Nuevo usuario"
+        description="Crea una cuenta con acceso al panel. Recibirá un email de confirmación."
+        icon={<UserPlus size={18} />}
+        accentColor="var(--primary)"
+        size="md"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setShowCreateModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={handleCreate}
+              className="btn btn-primary"
+              disabled={saving}
+              style={{ opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? "Creando..." : "Crear usuario"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre completo *</label>
+          <input
+            className="input"
+            placeholder="Nombre completo"
+            value={newUser.nombre}
+            onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Correo electrónico *</label>
+          <div style={{ position: "relative" }}>
+            <Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              className="input"
+              placeholder="usuario@email.com"
+              type="email"
+              value={newUser.email}
+              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              style={{ paddingLeft: 36 }}
+            />
           </div>
-        </>
-      )}
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Contraseña *</label>
+          <div style={{ position: "relative" }}>
+            <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              className="input"
+              placeholder="••••••••"
+              type={showCreatePwd ? "text" : "password"}
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              style={{ paddingLeft: 36, paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowCreatePwd(!showCreatePwd)}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+            >
+              {showCreatePwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}
+            </button>
+          </div>
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Seleccionar rol *</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
+              const RoleIcon = cfg.Icon;
+              const active = newUser.rol === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setNewUser({ ...newUser, rol: key })}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 14px",
+                    background: active ? `${cfg.color}15` : "var(--surface)",
+                    border: active ? `1px solid ${cfg.color}` : "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <RoleIcon size={16} color={active ? cfg.color : "var(--text-muted)"} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: active ? cfg.color : "var(--text-secondary)" }}>{cfg.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {createError && (
+          <p style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+            {createError}
+          </p>
+        )}
+      </Modal>
 
-      {showEditModal && editUser && (
-        <>
-          <div className="overlay" onClick={() => setShowEditModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 440, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}><Pencil size={18} color="var(--primary)" /> Editar Usuario</h3><button onClick={() => setShowEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div><p className="label" style={{ marginBottom: 6 }}>Nombre</p><input className="input" value={editData.nombre} onChange={(e) => setEditData({ ...editData, nombre: e.target.value })} /></div>
-              <div><p className="label" style={{ marginBottom: 6 }}>Correo electrónico</p><input className="input" type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} /></div>
-              <div><p className="label" style={{ marginBottom: 8 }}>Rol</p><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>{Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => { const RoleIcon = cfg.Icon; return (<button key={key} type="button" onClick={() => setEditData({ ...editData, rol: key })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: editData.rol === key ? `${cfg.color}15` : "var(--surface)", border: editData.rol === key ? `1px solid ${cfg.color}` : "1px solid var(--border)", borderRadius: "var(--radius-md)", cursor: "pointer", transition: "all 0.15s" }}><RoleIcon size={16} color={editData.rol === key ? cfg.color : "var(--text-muted)"} /><span style={{ fontSize: 12, fontWeight: 500, color: editData.rol === key ? cfg.color : "var(--text-secondary)" }}>{cfg.label}</span></button>); })}</div></div>
-              {editError && <p style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>{editError}</p>}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => setShowEditModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button><button onClick={handleEdit} className="btn btn-primary" disabled={editSaving} style={{ flex: 1, opacity: editSaving ? 0.6 : 1 }}>{editSaving ? "Guardando..." : "Guardar cambios"}</button></div>
+      <Modal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Editar usuario"
+        description="Actualiza los datos del miembro del equipo."
+        icon={<Pencil size={18} />}
+        accentColor="var(--primary)"
+        size="md"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setShowEditModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={handleEdit}
+              className="btn btn-primary"
+              disabled={editSaving}
+              style={{ opacity: editSaving ? 0.6 : 1 }}
+            >
+              {editSaving ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre</label>
+          <input
+            className="input"
+            value={editData.nombre}
+            onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Correo electrónico</label>
+          <input
+            className="input"
+            type="email"
+            value={editData.email}
+            onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Rol</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
+              const RoleIcon = cfg.Icon;
+              const active = editData.rol === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setEditData({ ...editData, rol: key })}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 14px",
+                    background: active ? `${cfg.color}15` : "var(--surface)",
+                    border: active ? `1px solid ${cfg.color}` : "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <RoleIcon size={16} color={active ? cfg.color : "var(--text-muted)"} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: active ? cfg.color : "var(--text-secondary)" }}>{cfg.label}</span>
+                </button>
+              );
+            })}
           </div>
-        </>
-      )}
+        </div>
+        {editError && (
+          <p style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+            {editError}
+          </p>
+        )}
+      </Modal>
 
-      {showPwdModal && pwdUser && (
-        <>
-          <div className="overlay" onClick={() => setShowPwdModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 400, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}><Key size={18} color="var(--tertiary)" /> Nueva Password</h3><button onClick={() => setShowPwdModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
-            <div style={{ position: "relative" }}><Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input className="input" placeholder="Nueva contraseña" type={showPwd ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ paddingLeft: 36, paddingRight: 40 }} /><button type="button" onClick={() => setShowPwd(!showPwd)} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}>{showPwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}</button></div>
-            {pwdError && <p style={{ fontSize: 12, color: "var(--secondary)", margin: "12px 0 0" }}>{pwdError}</p>}
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => setShowPwdModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button><button onClick={handleChangePassword} className="btn btn-primary" disabled={pwdSaving} style={{ flex: 1, opacity: pwdSaving ? 0.6 : 1 }}>Actualizar</button></div>
+      <Modal
+        open={showPwdModal}
+        onClose={() => setShowPwdModal(false)}
+        title="Nueva contraseña"
+        description={pwdUser ? `Actualiza la contraseña de ${pwdUser.nombre}.` : undefined}
+        icon={<ShieldCheck size={18} />}
+        accentColor="var(--tertiary)"
+        size="sm"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setShowPwdModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={handleChangePassword}
+              className="btn btn-primary"
+              disabled={pwdSaving}
+              style={{ opacity: pwdSaving ? 0.6 : 1, background: "var(--tertiary)", borderColor: "var(--tertiary)" }}
+            >
+              {pwdSaving ? "Actualizando..." : "Actualizar"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nueva contraseña</label>
+          <div style={{ position: "relative" }}>
+            <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              className="input"
+              placeholder="Nueva contraseña"
+              type={showPwd ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              style={{ paddingLeft: 36, paddingRight: 40 }}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd(!showPwd)}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+            >
+              {showPwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}
+            </button>
           </div>
-        </>
-      )}
+          <span className="premium-field-hint">Mínimo 8 caracteres. Comparte la nueva contraseña por un canal seguro.</span>
+        </div>
+        {pwdError && (
+          <p style={{ fontSize: 12, color: "var(--secondary)", margin: 0, padding: "8px 12px", background: "rgba(226,114,91,0.08)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(226,114,91,0.2)" }}>
+            {pwdError}
+          </p>
+        )}
+      </Modal>
 
-      {showDeleteModal && deleteUser && (
-        <>
-          <div className="overlay" onClick={() => setShowDeleteModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 420, border: "1px solid var(--border)" }}>
-            <div style={{ textAlign: "center", marginBottom: 20 }}><div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(226,114,91,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><AlertTriangle size={28} color="var(--secondary)" /></div><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: "0 0 8px" }}>¿Eliminar usuario?</h3><p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>Esto eliminará permanentemente a <strong>{deleteUser.nombre}</strong>.</p></div>
-            <div style={{ display: "flex", gap: 10 }}><button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button><button onClick={handleDeleteConfirm} className="btn btn-primary" disabled={deleting} style={{ flex: 1, background: "var(--secondary)", borderColor: "var(--secondary)" }}>Eliminar</button></div>
+      <Modal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="¿Eliminar usuario?"
+        description={deleteUser ? `Esta acción es permanente y no se puede deshacer.` : undefined}
+        icon={<AlertTriangle size={18} />}
+        accentColor="var(--secondary)"
+        size="sm"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={handleDeleteConfirm}
+              className="btn btn-primary"
+              disabled={deleting}
+              style={{ opacity: deleting ? 0.6 : 1, background: "var(--secondary)", borderColor: "var(--secondary)" }}
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          textAlign: "center", padding: "8px 0 4px", gap: 12,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: "rgba(226,114,91,0.12)",
+            border: "1px solid rgba(226,114,91,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <AlertTriangle size={32} color="var(--secondary)" />
           </div>
-        </>
-      )}
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+            Vas a eliminar permanentemente a <strong style={{ color: "var(--text)" }}>{deleteUser?.nombre}</strong>.
+            <br />No podrá acceder al panel ni a sus pedidos asignados.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

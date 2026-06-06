@@ -6,8 +6,10 @@ import { useAdminDashboard } from "@/viewmodels/useAdminDashboard";
 import { QRCode } from "react-qrcode-logo";
 import {
   Package, Tag, Armchair, Receipt, DollarSign, Plus, Pause, Play,
-  Trash2, Search, QrCode as QrIcon, X, Download, Copy,
+  Trash2, Search, QrCode as QrIcon, X, Download, Copy, ImageIcon, ChefHat,
+  GlassWater, Sparkles, Hash, Users, BookOpen,
 } from "lucide-react";
+import { Modal, ModalFooter } from "@/components/Modal";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Admin Dashboard
@@ -203,106 +205,300 @@ export default function AdminDashboard() {
       )}
 
       {/* ── Modals ── */}
-      {vm.showProductModal && (
-        <>
-          <div className="overlay" onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 420, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nuevo Producto</h3><button onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input className="input" placeholder="Nombre" value={vm.newProd.nombre} onChange={(e) => vm.setNewProd({ ...vm.newProd, nombre: e.target.value })} />
-              <select className="input" value={vm.newProd.id_categoria} onChange={(e) => vm.setNewProd({ ...vm.newProd, id_categoria: e.target.value })} style={{ color: vm.newProd.id_categoria ? "var(--text)" : "var(--text-muted)" }}>
-                <option value="">Seleccionar categoría</option>
-                {vm.categorias.map((c: any) => (<option key={c.id} value={c.id}>{c.nombre}</option>))}
-              </select>
-              <input className="input" placeholder="Precio" type="number" step="0.01" value={vm.newProd.precio} onChange={(e) => vm.setNewProd({ ...vm.newProd, precio: e.target.value })} />
-              <input className="input" placeholder="Descripción" value={vm.newProd.descripcion} onChange={(e) => vm.setNewProd({ ...vm.newProd, descripcion: e.target.value })} />
-              <div style={{ display: "grid", gap: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Imagen del plato</label>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {previewUrl ? (
-                    <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 140, background: "var(--surface)", border: "1px solid var(--border)" }}>
-                      <img src={previewUrl} alt="Vista previa" style={{ width: "100%", height: "140px", objectFit: "cover", display: "block" }} />
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", placeItems: "center", minHeight: 140, background: "var(--surface)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-muted)", fontSize: 12 }}>
-                      Selecciona una imagen para mostrar en la carta
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button type="button" onClick={() => fileRef.current?.click()} className="btn btn-secondary btn-sm" style={{ flex: 1, minWidth: 140 }}>
-                      Seleccionar imagen
-                    </button>
-                    {previewUrl && (
-                      <button type="button" onClick={handleClearImage} className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 140 }}>
-                        Quitar imagen
-                      </button>
-                    )}
-                    <input ref={fileRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <input className="input" placeholder="Stock" type="number" value={vm.newProd.stock} onChange={(e) => vm.setNewProd({ ...vm.newProd, stock: e.target.value })} style={{ flex: 1 }} />
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)", cursor: "pointer" }}><input type="checkbox" checked={vm.newProd.es_bebida} onChange={(e) => vm.setNewProd({ ...vm.newProd, es_bebida: e.target.checked, requiere_preparacion: e.target.checked ? vm.newProd.requiere_preparacion : true })} />Es bebida</label>
-              </div>
-              {vm.newProd.es_bebida && (
-                <div style={{ padding: "10px 14px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-secondary)", cursor: "pointer" }}>
-                    <input type="checkbox" checked={vm.newProd.requiere_preparacion} onChange={(e) => vm.setNewProd({ ...vm.newProd, requiere_preparacion: e.target.checked })} />
-                    <span>Requiere preparación en cocina</span>
-                  </label>
-                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "6px 0 0 26px" }}>
-                    {vm.newProd.requiere_preparacion
-                      ? "🔥 Pasa por cocina (ej: Chicha Morada, Limonada)"
-                      : "⚡ Va directo al mesero (ej: Coca-Cola, Inca Kola)"}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => { vm.setShowProductModal(false); handleClearImage(); }} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={async () => {
+      <Modal
+        open={vm.showProductModal}
+        onClose={() => { vm.setShowProductModal(false); handleClearImage(); }}
+        title="Nuevo producto"
+        description="Agrégalo a la carta. Aparecerá inmediatamente en la vista del cliente."
+        icon={<Sparkles size={18} />}
+        accentColor="var(--primary)"
+        size="lg"
+        footer={
+          <ModalFooter>
+            <button
+              onClick={() => { vm.setShowProductModal(false); handleClearImage(); }}
+              className="btn btn-secondary"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
                 const created = await vm.handleCreateProduct(selectedImageFile);
                 if (created) handleClearImage();
-              }} className="btn btn-primary" disabled={vm.saving} style={{ flex: 1, opacity: vm.saving ? 0.6 : 1 }}>{vm.saving ? "Guardando..." : "Crear"}</button>
-            </div>
-          </div>
-        </>
-      )}
+              }}
+              className="btn btn-primary"
+              disabled={vm.saving}
+              style={{ opacity: vm.saving ? 0.6 : 1 }}
+            >
+              {vm.saving ? "Guardando..." : "Crear producto"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre del plato</label>
+          <input
+            className="input"
+            placeholder="Ej: Lomo Saltado"
+            value={vm.newProd.nombre}
+            onChange={(e) => vm.setNewProd({ ...vm.newProd, nombre: e.target.value })}
+            autoFocus
+          />
+        </div>
 
-      {vm.showMesaModal && (
-        <>
-          <div className="overlay" onClick={() => vm.setShowMesaModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 360, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nueva Mesa</h3><button onClick={() => vm.setShowMesaModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input className="input" placeholder="Número de mesa" type="number" value={vm.newMesa.numero} onChange={(e) => vm.setNewMesa({ ...vm.newMesa, numero: e.target.value })} />
-              <input className="input" placeholder="Capacidad" type="number" value={vm.newMesa.capacidad} onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: e.target.value })} />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => vm.setShowMesaModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={vm.handleCreateMesa} className="btn btn-primary" disabled={vm.saving} style={{ flex: 1, opacity: vm.saving ? 0.6 : 1 }}>{vm.saving ? "Guardando..." : "Crear"}</button>
-            </div>
-          </div>
-        </>
-      )}
+        <div className="premium-field">
+          <label className="premium-field-label">Categoría</label>
+          <select
+            className="input"
+            value={vm.newProd.id_categoria}
+            onChange={(e) => vm.setNewProd({ ...vm.newProd, id_categoria: e.target.value })}
+            style={{ color: vm.newProd.id_categoria ? "var(--text)" : "var(--text-muted)" }}
+          >
+            <option value="">Seleccionar categoría</option>
+            {vm.categorias.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
 
-      {vm.showCatModal && (
-        <>
-          <div className="overlay" onClick={() => vm.setShowCatModal(false)} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 360, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>Nueva Categoría</h3><button onClick={() => vm.setShowCatModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <input className="input" placeholder="Nombre" value={vm.newCat.nombre} onChange={(e) => vm.setNewCat({ ...vm.newCat, nombre: e.target.value })} />
-              <input className="input" placeholder="Descripción (opcional)" value={vm.newCat.descripcion} onChange={(e) => vm.setNewCat({ ...vm.newCat, descripcion: e.target.value })} />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => vm.setShowCatModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={vm.handleCreateCategoria} className="btn btn-primary" disabled={vm.saving} style={{ flex: 1, opacity: vm.saving ? 0.6 : 1 }}>{vm.saving ? "Guardando..." : "Crear"}</button>
-            </div>
+        <div className="premium-field-row">
+          <div className="premium-field">
+            <label className="premium-field-label">Precio (S/)</label>
+            <input
+              className="input"
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              value={vm.newProd.precio}
+              onChange={(e) => vm.setNewProd({ ...vm.newProd, precio: e.target.value })}
+            />
           </div>
-        </>
-      )}
+          <div className="premium-field">
+            <label className="premium-field-label">Stock</label>
+            <input
+              className="input"
+              placeholder="10"
+              type="number"
+              value={vm.newProd.stock}
+              onChange={(e) => vm.setNewProd({ ...vm.newProd, stock: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción</label>
+          <input
+            className="input"
+            placeholder="Breve descripción para el cliente"
+            value={vm.newProd.descripcion}
+            onChange={(e) => vm.setNewProd({ ...vm.newProd, descripcion: e.target.value })}
+          />
+        </div>
+
+        <div className="premium-field">
+          <label className="premium-field-label">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <ImageIcon size={12} /> Imagen del plato
+            </span>
+          </label>
+          {previewUrl ? (
+            <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)" }}>
+              <img
+                src={previewUrl}
+                alt="Vista previa"
+                style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+              />
+            </div>
+          ) : (
+            <div style={{
+              display: "grid", placeItems: "center", minHeight: 120,
+              background: "var(--surface)",
+              border: "1px dashed var(--border)",
+              borderRadius: 14, color: "var(--text-muted)", fontSize: 12,
+            }}>
+              Selecciona una imagen para mostrar en la carta
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1, minWidth: 140 }}
+            >
+              {previewUrl ? "Cambiar imagen" : "Seleccionar imagen"}
+            </button>
+            {previewUrl && (
+              <button
+                type="button"
+                onClick={handleClearImage}
+                className="btn btn-ghost btn-sm"
+                style={{ minWidth: 100 }}
+              >
+                Quitar
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+
+        <div className="premium-field">
+          <label style={{
+            display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+            padding: "10px 12px", borderRadius: 10,
+            border: "1px solid var(--border)",
+            background: vm.newProd.es_bebida ? "rgba(91, 192, 222, 0.06)" : "transparent",
+            transition: "background var(--duration-fast) var(--ease-out)",
+          }}>
+            <input
+              type="checkbox"
+              checked={vm.newProd.es_bebida}
+              onChange={(e) => vm.setNewProd({
+                ...vm.newProd,
+                es_bebida: e.target.checked,
+                requiere_preparacion: e.target.checked ? vm.newProd.requiere_preparacion : true,
+              })}
+              style={{ accentColor: "var(--tertiary)" }}
+            />
+            <GlassWater size={14} color="var(--tertiary)" />
+            <span style={{ fontSize: 13, color: "var(--text)" }}>Es bebida</span>
+          </label>
+
+          {vm.newProd.es_bebida && (
+            <div style={{
+              padding: "10px 12px", background: "var(--surface)", borderRadius: 10,
+              border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: 6,
+            }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={vm.newProd.requiere_preparacion}
+                  onChange={(e) => vm.setNewProd({ ...vm.newProd, requiere_preparacion: e.target.checked })}
+                  style={{ accentColor: "var(--primary)" }}
+                />
+                <ChefHat size={13} color="var(--primary)" />
+                <span>Requiere preparación en cocina</span>
+              </label>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0 24px" }}>
+                {vm.newProd.requiere_preparacion
+                  ? "🔥 Pasa por cocina (ej: Chicha Morada, Limonada)"
+                  : "⚡ Va directo al mesero (ej: Coca-Cola, Inca Kola)"}
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={vm.showMesaModal}
+        onClose={() => vm.setShowMesaModal(false)}
+        title="Nueva mesa"
+        description="Generaremos su QR automáticamente para que los clientes escaneen."
+        icon={<Armchair size={18} />}
+        accentColor="var(--tertiary)"
+        size="sm"
+        footer={
+          <ModalFooter>
+            <button onClick={() => vm.setShowMesaModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={vm.handleCreateMesa}
+              className="btn btn-primary"
+              disabled={vm.saving}
+              style={{ opacity: vm.saving ? 0.6 : 1, background: "var(--tertiary)", borderColor: "var(--tertiary)" }}
+            >
+              {vm.saving ? "Guardando..." : "Crear mesa"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Hash size={12} /> Número de mesa
+            </span>
+          </label>
+          <input
+            className="input"
+            placeholder="Ej: 1, 2, 3..."
+            type="number"
+            value={vm.newMesa.numero}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, numero: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Users size={12} /> Capacidad
+            </span>
+          </label>
+          <input
+            className="input"
+            placeholder="Ej: 4 personas"
+            type="number"
+            value={vm.newMesa.capacidad}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: e.target.value })}
+          />
+          <span className="premium-field-hint">Número máximo de comensales en esta mesa.</span>
+        </div>
+      </Modal>
+
+      <Modal
+        open={vm.showCatModal}
+        onClose={() => vm.setShowCatModal(false)}
+        title="Nueva categoría"
+        description="Agrupa platos similares para que el cliente navegue mejor la carta."
+        icon={<Tag size={18} />}
+        accentColor="var(--success)"
+        size="sm"
+        footer={
+          <ModalFooter>
+            <button onClick={() => vm.setShowCatModal(false)} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={vm.handleCreateCategoria}
+              className="btn btn-primary"
+              disabled={vm.saving}
+              style={{ opacity: vm.saving ? 0.6 : 1, background: "var(--success)", borderColor: "var(--success)" }}
+            >
+              {vm.saving ? "Guardando..." : "Crear categoría"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <BookOpen size={12} /> Nombre
+            </span>
+          </label>
+          <input
+            className="input"
+            placeholder="Ej: Entradas, Platos fuertes, Postres"
+            value={vm.newCat.nombre}
+            onChange={(e) => vm.setNewCat({ ...vm.newCat, nombre: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción (opcional)</label>
+          <input
+            className="input"
+            placeholder="Una nota breve para tu equipo"
+            value={vm.newCat.descripcion}
+            onChange={(e) => vm.setNewCat({ ...vm.newCat, descripcion: e.target.value })}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

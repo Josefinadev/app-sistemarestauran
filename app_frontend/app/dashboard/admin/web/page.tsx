@@ -9,10 +9,11 @@ import {
 } from "@/lib/api";
 import { ImageUploadInput } from "@/components/ImageUploadInput";
 import {
-  Globe, Gift, Calendar, Plus, X, Trash2, Pencil,
+  Globe, Gift, Calendar, Plus, Trash2, Pencil,
   Save, ExternalLink, CheckCircle2, Star, Sparkles,
-  MessageCircle, Loader2, Zap, Database, Upload, ImagePlus,
+  MessageCircle, Loader2, Zap, Database, Upload, ImagePlus, Flame,
 } from "lucide-react";
+import { Modal, ModalFooter } from "@/components/Modal";
 
 /* ═══════════════════════════════════════════════════════════
    ADMIN — Gestión de Web Pública
@@ -500,71 +501,164 @@ export default function GestionWebPage() {
       )}
 
       {/* ═══ COMBO MODAL ═══ */}
-      {showComboModal && (
-        <>
-          <div className="overlay" onClick={closeComboModal} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 500, border: "1px solid var(--border)", maxHeight: "90vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>
-                {editingCombo ? "Editar Combo" : "Nuevo Combo"}
-              </h3>
-              <button onClick={closeComboModal} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Image picker */}
-              <ImagePicker
-                value={newCombo.imagen_url}
-                onChange={(url) => setNewCombo({ ...newCombo, imagen_url: url })}
-                uploading={uploading} fileRef={comboFileRef} target="combo"
-              />
-              <input className="input" placeholder="Nombre del combo" value={newCombo.nombre} onChange={(e) => setNewCombo({ ...newCombo, nombre: e.target.value })} />
-              <input className="input" placeholder="Descripción" value={newCombo.descripcion} onChange={(e) => setNewCombo({ ...newCombo, descripcion: e.target.value })} />
-              <div style={{ display: "flex", gap: 10 }}>
-                <input className="input" placeholder="Precio" type="number" step="0.01" value={newCombo.precio} onChange={(e) => setNewCombo({ ...newCombo, precio: e.target.value })} style={{ flex: 1 }} />
-                <input className="input" placeholder="Precio original" type="number" step="0.01" value={newCombo.precio_original} onChange={(e) => setNewCombo({ ...newCombo, precio_original: e.target.value })} style={{ flex: 1 }} />
-              </div>
-              <input className="input" placeholder="Incluye (separar con coma)" value={newCombo.incluye} onChange={(e) => setNewCombo({ ...newCombo, incluye: e.target.value })} />
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)", cursor: "pointer" }}>
-                <input type="checkbox" checked={newCombo.popular} onChange={(e) => setNewCombo({ ...newCombo, popular: e.target.checked })} /> Marcar como popular
-              </label>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={closeComboModal} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={handleSaveCombo} className="btn btn-primary" style={{ flex: 1 }}>{editingCombo ? "Actualizar" : "Guardar"}</button>
-            </div>
+      <Modal
+        open={showComboModal}
+        onClose={closeComboModal}
+        title={editingCombo ? "Editar combo" : "Nuevo combo"}
+        description="Crea paquetes que agrupen varios productos con precio especial."
+        icon={<Gift size={18} />}
+        accentColor="var(--primary)"
+        size="md"
+        footer={
+          <ModalFooter>
+            <button onClick={closeComboModal} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button onClick={handleSaveCombo} className="btn btn-primary">
+              {editingCombo ? "Actualizar" : "Guardar combo"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <ImagePicker
+          value={newCombo.imagen_url}
+          onChange={(url) => setNewCombo({ ...newCombo, imagen_url: url })}
+          uploading={uploading} fileRef={comboFileRef} target="combo"
+        />
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre del combo</label>
+          <input
+            className="input"
+            placeholder="Ej: Combo Familiar"
+            value={newCombo.nombre}
+            onChange={(e) => setNewCombo({ ...newCombo, nombre: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción</label>
+          <input
+            className="input"
+            placeholder="Una línea que enganche al cliente"
+            value={newCombo.descripcion}
+            onChange={(e) => setNewCombo({ ...newCombo, descripcion: e.target.value })}
+          />
+        </div>
+        <div className="premium-field-row">
+          <div className="premium-field">
+            <label className="premium-field-label">Precio del combo (S/)</label>
+            <input
+              className="input"
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              value={newCombo.precio}
+              onChange={(e) => setNewCombo({ ...newCombo, precio: e.target.value })}
+            />
           </div>
-        </>
-      )}
+          <div className="premium-field">
+            <label className="premium-field-label">Precio original (S/)</label>
+            <input
+              className="input"
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              value={newCombo.precio_original}
+              onChange={(e) => setNewCombo({ ...newCombo, precio_original: e.target.value })}
+            />
+            <span className="premium-field-hint">Tachado en la web para mostrar el ahorro.</span>
+          </div>
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">¿Qué incluye?</label>
+          <input
+            className="input"
+            placeholder="Ej: 2 hamburguesas, papas, 2 refrescos"
+            value={newCombo.incluye}
+            onChange={(e) => setNewCombo({ ...newCombo, incluye: e.target.value })}
+          />
+          <span className="premium-field-hint">Separa los items con comas.</span>
+        </div>
+        <label style={{
+          display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+          padding: "10px 12px", borderRadius: 10,
+          border: "1px solid var(--border)",
+          background: newCombo.popular ? "rgba(197,160,89,0.06)" : "transparent",
+          transition: "background var(--duration-fast) var(--ease-out)",
+        }}>
+          <input
+            type="checkbox"
+            checked={newCombo.popular}
+            onChange={(e) => setNewCombo({ ...newCombo, popular: e.target.checked })}
+            style={{ accentColor: "var(--primary)" }}
+          />
+          <Flame size={14} color="var(--primary)" />
+          <span style={{ fontSize: 13, color: "var(--text)" }}>Marcar como popular</span>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>Se destacará en la web</span>
+        </label>
+      </Modal>
 
       {/* ═══ OFERTA MODAL ═══ */}
-      {showOfertaModal && (
-        <>
-          <div className="overlay" onClick={closeOfertaModal} />
-          <div className="modal" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 28, width: "90%", maxWidth: 500, border: "1px solid var(--border)", maxHeight: "90vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: 0 }}>
-                {editingOferta ? "Editar Oferta" : "Nueva Oferta"}
-              </h3>
-              <button onClick={closeOfertaModal} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color="var(--text-muted)" /></button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Image picker */}
-              <ImagePicker
-                value={newOferta.imagen_url}
-                onChange={(url) => setNewOferta({ ...newOferta, imagen_url: url })}
-                uploading={uploading} fileRef={ofertaFileRef} target="oferta"
-              />
-              <input className="input" placeholder="Título (ej: 2x1 en Pisco Sour)" value={newOferta.titulo} onChange={(e) => setNewOferta({ ...newOferta, titulo: e.target.value })} />
-              <textarea className="input" placeholder="Descripción de la oferta" value={newOferta.descripcion} onChange={(e: any) => setNewOferta({ ...newOferta, descripcion: e.target.value })} rows={3} style={{ resize: "vertical", fontFamily: "inherit" }} />
-              <input className="input" placeholder="Descuento (ej: 2x1, 30% OFF, GRATIS)" value={newOferta.descuento} onChange={(e) => setNewOferta({ ...newOferta, descuento: e.target.value })} />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={closeOfertaModal} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-              <button onClick={handleSaveOferta} className="btn btn-primary" style={{ flex: 1 }}>{editingOferta ? "Actualizar" : "Crear oferta"}</button>
-            </div>
-          </div>
-        </>
-      )}
+      <Modal
+        open={showOfertaModal}
+        onClose={closeOfertaModal}
+        title={editingOferta ? "Editar oferta" : "Nueva oferta"}
+        description="Promociones temporales que aparecen en la portada de la web."
+        icon={<Sparkles size={18} />}
+        accentColor="var(--secondary)"
+        size="md"
+        footer={
+          <ModalFooter>
+            <button onClick={closeOfertaModal} className="btn btn-secondary">
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveOferta}
+              className="btn btn-primary"
+              style={{ background: "var(--secondary)", borderColor: "var(--secondary)" }}
+            >
+              {editingOferta ? "Actualizar" : "Crear oferta"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <ImagePicker
+          value={newOferta.imagen_url}
+          onChange={(url) => setNewOferta({ ...newOferta, imagen_url: url })}
+          uploading={uploading} fileRef={ofertaFileRef} target="oferta"
+        />
+        <div className="premium-field">
+          <label className="premium-field-label">Título</label>
+          <input
+            className="input"
+            placeholder="Ej: 2x1 en Pisco Sour"
+            value={newOferta.titulo}
+            onChange={(e) => setNewOferta({ ...newOferta, titulo: e.target.value })}
+            autoFocus
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción</label>
+          <textarea
+            className="input"
+            placeholder="Detalles de la promoción..."
+            value={newOferta.descripcion}
+            onChange={(e: any) => setNewOferta({ ...newOferta, descripcion: e.target.value })}
+            rows={3}
+            style={{ resize: "vertical", fontFamily: "inherit" }}
+          />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Etiqueta de descuento</label>
+          <input
+            className="input"
+            placeholder="Ej: 2x1, 30% OFF, GRATIS"
+            value={newOferta.descuento}
+            onChange={(e) => setNewOferta({ ...newOferta, descuento: e.target.value })}
+          />
+          <span className="premium-field-hint">Texto corto que aparece como badge encima de la imagen.</span>
+        </div>
+      </Modal>
     </div>
   );
 }
