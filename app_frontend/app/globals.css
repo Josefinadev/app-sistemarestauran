@@ -2627,6 +2627,31 @@ body {
   min-width: 0;
 }
 
+.premium-field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--error, #ef4444);
+  line-height: 1.4;
+  letter-spacing: 0.005em;
+}
+
+.premium-field-error svg {
+  flex-shrink: 0;
+}
+
+.input--invalid {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.input--invalid:focus {
+  border-color: rgba(239, 68, 68, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
 /* Responsive: reduce paddings on small screens */
 @media (max-width: 480px) {
   .premium-modal-header {
@@ -2695,17 +2720,6 @@ body {
   overflow: hidden;
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
-}
-
-.toast-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--toast-accent, var(--primary));
-  opacity: 0.85;
 }
 
 .toast-icon {
@@ -2785,6 +2799,41 @@ body {
   .toast-card {
     min-width: 0;
     max-width: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CURSOR GLOW — soft flashlight that follows the mouse
+   ═══════════════════════════════════════════════════════════ */
+
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 480px;
+  height: 480px;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    circle at center,
+    rgba(197, 160, 89, 0.11) 0%,
+    rgba(197, 160, 89, 0.05) 25%,
+    rgba(197, 160, 89, 0.02) 45%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-glow {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .cursor-glow {
+    display: none;
   }
 }
 

@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getUsuarios, actualizarUsuario, eliminarUsuario } from "@/lib/api";
 import { crearUsuarioAuth, cambiarPasswordAuth } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import {
   Users, Plus, Crown, Flame, UtensilsCrossed, Wallet, UserCircle,
   Search, Shield, Trash2, ToggleLeft, ToggleRight, Mail, Pencil,
-  Lock, Eye, EyeOff, AlertTriangle, Key, UserPlus, ShieldCheck,
+  Lock, Eye, EyeOff, AlertTriangle, Key, UserPlus, ShieldCheck, AlertCircle,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
 import { toast } from "@/lib/toast";
+import { sanitize, validate } from "@/lib/inputValidation";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Gestión de Usuarios (Admin del Restaurante)
@@ -83,15 +84,23 @@ export default function UsuariosPage() {
   // ═══════════════════════════════════════════
   // CREAR USUARIO (con Supabase Auth)
   // ═══════════════════════════════════════════
+  const createErrors = useMemo(() => ({
+    nombre: validate(newUser.nombre, "text", { required: true }),
+    email: validate(newUser.email, "email", { required: true }),
+    password: newUser.password.length === 0
+      ? "La contraseña es obligatoria"
+      : newUser.password.length < 6
+        ? "Mínimo 6 caracteres"
+        : null,
+  }), [newUser.nombre, newUser.email, newUser.password]);
+
+  const isCreateFormValid = !createErrors.nombre && !createErrors.email && !createErrors.password;
+
   const handleCreate = async () => {
     if (!restauranteId) return;
     setCreateError("");
 
-    if (!newUser.nombre.trim()) { setCreateError("El nombre es obligatorio."); return; }
-    if (!newUser.email.trim()) { setCreateError("El email es obligatorio."); return; }
-    if (!isValidEmail(newUser.email)) { setCreateError("Ingresa un email válido."); return; }
-    if (!newUser.password.trim()) { setCreateError("La contraseña es obligatoria."); return; }
-    if (newUser.password.length < 6) { setCreateError("Mínimo 6 caracteres."); return; }
+    if (!isCreateFormValid) return;
 
     setSaving(true);
     try {
@@ -332,8 +341,8 @@ export default function UsuariosPage() {
             <button
               onClick={handleCreate}
               className="btn btn-primary"
-              disabled={saving}
-              style={{ opacity: saving ? 0.6 : 1 }}
+              disabled={saving || !isCreateFormValid}
+              style={{ opacity: saving || !isCreateFormValid ? 0.5 : 1 }}
             >
               {saving ? "Creando..." : "Crear usuario"}
             </button>
@@ -343,33 +352,43 @@ export default function UsuariosPage() {
         <div className="premium-field">
           <label className="premium-field-label">Nombre completo *</label>
           <input
-            className="input"
+            className={`input ${createErrors.nombre ? "input--invalid" : ""}`}
             placeholder="Nombre completo"
             value={newUser.nombre}
             onChange={(e) => setNewUser({ ...newUser, nombre: e.target.value })}
             autoFocus
           />
+          {createErrors.nombre && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {createErrors.nombre}
+            </span>
+          )}
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Correo electrónico *</label>
           <div style={{ position: "relative" }}>
             <Mail size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             <input
-              className="input"
+              className={`input ${createErrors.email ? "input--invalid" : ""}`}
               placeholder="usuario@email.com"
               type="email"
               value={newUser.email}
-              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              onChange={(e) => setNewUser({ ...newUser, email: sanitize(e.target.value, "email") })}
               style={{ paddingLeft: 36 }}
             />
           </div>
+          {createErrors.email && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {createErrors.email}
+            </span>
+          )}
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Contraseña *</label>
           <div style={{ position: "relative" }}>
             <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             <input
-              className="input"
+              className={`input ${createErrors.password ? "input--invalid" : ""}`}
               placeholder="••••••••"
               type={showCreatePwd ? "text" : "password"}
               value={newUser.password}
@@ -384,6 +403,13 @@ export default function UsuariosPage() {
               {showCreatePwd ? <EyeOff size={14} color="var(--text-muted)" /> : <Eye size={14} color="var(--text-muted)" />}
             </button>
           </div>
+          {createErrors.password ? (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {createErrors.password}
+            </span>
+          ) : (
+            <span className="premium-field-hint">Mínimo 6 caracteres.</span>
+          )}
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Seleccionar rol *</label>

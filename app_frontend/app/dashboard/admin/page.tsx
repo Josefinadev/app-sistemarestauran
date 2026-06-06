@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { formatPrecio } from "@/lib/utils";
 import { useAdminDashboard } from "@/viewmodels/useAdminDashboard";
 import { QRCode } from "react-qrcode-logo";
 import {
   Package, Tag, Armchair, Receipt, DollarSign, Plus, Pause, Play,
   Trash2, Search, QrCode as QrIcon, X, Download, Copy, ImageIcon, ChefHat,
-  GlassWater, Sparkles, Hash, Users, BookOpen,
+  GlassWater, Sparkles, Hash, Users, BookOpen, AlertCircle,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
+import { sanitize, validate } from "@/lib/inputValidation";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Admin Dashboard
@@ -55,6 +56,27 @@ export default function AdminDashboard() {
       setPreviewUrl("");
     }
   };
+
+  // ── Live form validation ──
+  const productErrors = useMemo(() => ({
+    nombre: validate(vm.newProd.nombre, "text", { required: true }),
+    id_categoria: validate(vm.newProd.id_categoria, "text", { required: true }),
+    precio: validate(vm.newProd.precio, "decimal", { required: true, min: 0.01, max: 99999 }),
+  }), [vm.newProd.nombre, vm.newProd.id_categoria, vm.newProd.precio]);
+
+  const isProductFormValid = !productErrors.nombre && !productErrors.id_categoria && !productErrors.precio;
+
+  const mesaErrors = useMemo(() => ({
+    numero: validate(vm.newMesa.numero, "integer", { required: true, min: 1, max: 9999 }),
+  }), [vm.newMesa.numero]);
+
+  const isMesaFormValid = !mesaErrors.numero;
+
+  const categoriaErrors = useMemo(() => ({
+    nombre: validate(vm.newCat.nombre, "text", { required: true }),
+  }), [vm.newCat.nombre]);
+
+  const isCategoriaFormValid = !categoriaErrors.nombre;
 
   const handleClearImage = () => {
     setSelectedImageFile(null);
@@ -215,8 +237,8 @@ export default function AdminDashboard() {
                 if (created) handleClearImage();
               }}
               className="btn btn-primary"
-              disabled={vm.saving}
-              style={{ opacity: vm.saving ? 0.6 : 1 }}
+              disabled={vm.saving || !isProductFormValid}
+              style={{ opacity: vm.saving || !isProductFormValid ? 0.5 : 1 }}
             >
               {vm.saving ? "Guardando..." : "Crear producto"}
             </button>
@@ -224,20 +246,25 @@ export default function AdminDashboard() {
         }
       >
         <div className="premium-field">
-          <label className="premium-field-label">Nombre del plato</label>
+          <label className="premium-field-label">Nombre del plato *</label>
           <input
-            className="input"
+            className={`input ${productErrors.nombre ? "input--invalid" : ""}`}
             placeholder="Ej: Lomo Saltado"
             value={vm.newProd.nombre}
             onChange={(e) => vm.setNewProd({ ...vm.newProd, nombre: e.target.value })}
             autoFocus
           />
+          {productErrors.nombre && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {productErrors.nombre}
+            </span>
+          )}
         </div>
 
         <div className="premium-field">
-          <label className="premium-field-label">Categoría</label>
+          <label className="premium-field-label">Categoría *</label>
           <select
-            className="input"
+            className={`input ${productErrors.id_categoria ? "input--invalid" : ""}`}
             value={vm.newProd.id_categoria}
             onChange={(e) => vm.setNewProd({ ...vm.newProd, id_categoria: e.target.value })}
             style={{ color: vm.newProd.id_categoria ? "var(--text)" : "var(--text-muted)" }}
@@ -247,29 +274,47 @@ export default function AdminDashboard() {
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
+          {productErrors.id_categoria && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {productErrors.id_categoria}
+            </span>
+          )}
         </div>
 
         <div className="premium-field-row">
           <div className="premium-field">
-            <label className="premium-field-label">Precio (S/)</label>
+            <label className="premium-field-label">Precio (S/) *</label>
             <input
-              className="input"
+              className={`input ${productErrors.precio ? "input--invalid" : ""}`}
               placeholder="0.00"
-              type="number"
-              step="0.01"
+              inputMode="decimal"
               value={vm.newProd.precio}
-              onChange={(e) => vm.setNewProd({ ...vm.newProd, precio: e.target.value })}
+              onChange={(e) => vm.setNewProd({ ...vm.newProd, precio: sanitize(e.target.value, "decimal") })}
+              onKeyDown={(e) => {
+                if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+              }}
             />
+            {productErrors.precio ? (
+              <span className="premium-field-error">
+                <AlertCircle size={11} /> {productErrors.precio}
+              </span>
+            ) : (
+              <span className="premium-field-hint">Solo números, hasta 2 decimales.</span>
+            )}
           </div>
           <div className="premium-field">
             <label className="premium-field-label">Stock</label>
             <input
               className="input"
               placeholder="10"
-              type="number"
+              inputMode="numeric"
               value={vm.newProd.stock}
-              onChange={(e) => vm.setNewProd({ ...vm.newProd, stock: e.target.value })}
+              onChange={(e) => vm.setNewProd({ ...vm.newProd, stock: sanitize(e.target.value, "integer") || "0" })}
+              onKeyDown={(e) => {
+                if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+              }}
             />
+            <span className="premium-field-hint">Unidades disponibles para la venta.</span>
           </div>
         </div>
 
@@ -399,8 +444,8 @@ export default function AdminDashboard() {
             <button
               onClick={vm.handleCreateMesa}
               className="btn btn-primary"
-              disabled={vm.saving}
-              style={{ opacity: vm.saving ? 0.6 : 1, background: "var(--tertiary)", borderColor: "var(--tertiary)" }}
+              disabled={vm.saving || !isMesaFormValid}
+              style={{ opacity: vm.saving || !isMesaFormValid ? 0.5 : 1, background: "var(--tertiary)", borderColor: "var(--tertiary)" }}
             >
               {vm.saving ? "Guardando..." : "Crear mesa"}
             </button>
@@ -410,17 +455,25 @@ export default function AdminDashboard() {
         <div className="premium-field">
           <label className="premium-field-label">
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Hash size={12} /> Número de mesa
+              <Hash size={12} /> Número de mesa *
             </span>
           </label>
           <input
-            className="input"
+            className={`input ${mesaErrors.numero ? "input--invalid" : ""}`}
             placeholder="Ej: 1, 2, 3..."
-            type="number"
+            inputMode="numeric"
             value={vm.newMesa.numero}
-            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, numero: e.target.value })}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, numero: sanitize(e.target.value, "integer") })}
+            onKeyDown={(e) => {
+              if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+            }}
             autoFocus
           />
+          {mesaErrors.numero && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {mesaErrors.numero}
+            </span>
+          )}
         </div>
         <div className="premium-field">
           <label className="premium-field-label">
@@ -431,9 +484,12 @@ export default function AdminDashboard() {
           <input
             className="input"
             placeholder="Ej: 4 personas"
-            type="number"
+            inputMode="numeric"
             value={vm.newMesa.capacidad}
-            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: e.target.value })}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: sanitize(e.target.value, "integer") || "4" })}
+            onKeyDown={(e) => {
+              if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+            }}
           />
           <span className="premium-field-hint">Número máximo de comensales en esta mesa.</span>
         </div>
@@ -455,8 +511,8 @@ export default function AdminDashboard() {
             <button
               onClick={vm.handleCreateCategoria}
               className="btn btn-primary"
-              disabled={vm.saving}
-              style={{ opacity: vm.saving ? 0.6 : 1, background: "var(--success)", borderColor: "var(--success)" }}
+              disabled={vm.saving || !isCategoriaFormValid}
+              style={{ opacity: vm.saving || !isCategoriaFormValid ? 0.5 : 1, background: "var(--success)", borderColor: "var(--success)" }}
             >
               {vm.saving ? "Guardando..." : "Crear categoría"}
             </button>
@@ -466,16 +522,21 @@ export default function AdminDashboard() {
         <div className="premium-field">
           <label className="premium-field-label">
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <BookOpen size={12} /> Nombre
+              <BookOpen size={12} /> Nombre *
             </span>
           </label>
           <input
-            className="input"
+            className={`input ${categoriaErrors.nombre ? "input--invalid" : ""}`}
             placeholder="Ej: Entradas, Platos fuertes, Postres"
             value={vm.newCat.nombre}
             onChange={(e) => vm.setNewCat({ ...vm.newCat, nombre: e.target.value })}
             autoFocus
           />
+          {categoriaErrors.nombre && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {categoriaErrors.nombre}
+            </span>
+          )}
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Descripción (opcional)</label>

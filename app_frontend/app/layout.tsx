@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif, Manrope } from "next/font/google";
 import { Toaster } from "@/components/Toaster";
+import { CursorGlow } from "@/components/CursorGlow";
 import "./globals.css";
 
 const notoSerif = Noto_Serif({
@@ -73,6 +74,7 @@ export default function RootLayout({
         />
         {children}
         <Toaster />
+        <CursorGlow />
       </body>
     </html>
   );
