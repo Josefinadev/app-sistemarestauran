@@ -6,7 +6,9 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -52,6 +54,11 @@ export function Modal({
   const reduce = useReducedMotion();
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open || !closeOnEsc) return;
@@ -82,7 +89,7 @@ export function Modal({
     ? { duration: 0 }
     : { type: "spring" as const, stiffness: 320, damping: 28, mass: 0.9 };
 
-  return (
+  const dialog = (
     <AnimatePresence>
       {open && (
         <div
@@ -169,6 +176,9 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+  return createPortal(dialog, document.body);
 }
 
 type ModalFooterProps = {
