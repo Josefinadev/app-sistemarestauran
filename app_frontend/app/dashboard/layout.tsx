@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useNotificaciones } from "@/lib/store";
 import { useEffect, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { applyRestauranteBranding } from "@/lib/branding";
 import { useRestauranteRealtime } from "@/lib/realtime";
@@ -20,6 +21,9 @@ import {
   BarChart3,
   Gift,
   CircleDot,
+  Menu,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -49,6 +53,7 @@ export default function DashboardLayout({
   const { unreadCount, items: notifItems, markAllRead } = useNotificaciones();
   
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [time, setTime] = useState("");
   const [showNotifs, setShowNotifs] = useState(false);
   const [modulosActivos, setModulosActivos] = useState<string[]>([]);
@@ -95,6 +100,11 @@ export default function DashboardLayout({
     const id = setInterval(update, 30000);
     return () => clearInterval(id);
   }, []);
+
+  // ── Close mobile menu when route changes ──
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   // Fetch active modules for tenant
   useEffect(() => {
@@ -196,39 +206,124 @@ export default function DashboardLayout({
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
       <CursorGlow />
-      <aside style={{ width: sidebarCollapsed ? 72 : 240, height: "100vh", position: "sticky", top: 0, background: "var(--bg-elevated)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", justifyContent: "space-between", transition: "width var(--duration-normal) var(--ease-out)", overflow: "hidden", overflowY: "auto", flexShrink: 0 }}>
-        <div>
-          <div style={{ padding: sidebarCollapsed ? "20px 16px" : "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: restaurante?.logo_url ? "transparent" : "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
-              {restaurante?.logo_url ? <img src={restaurante.logo_url} alt={restaurante.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Wine size={16} color="var(--text-inverse)" />}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="premium-sidebar-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
+      <aside
+        className={[
+          "premium-sidebar",
+          sidebarCollapsed ? "premium-sidebar--collapsed" : "",
+          mobileMenuOpen ? "premium-sidebar--mobile-open" : "",
+        ].filter(Boolean).join(" ")}
+        aria-label="Navegación principal"
+      >
+        <div className="premium-sidebar-header">
+          <div className="premium-sidebar-logo" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+            <div className="premium-sidebar-logo-img">
+              {restaurante?.logo_url ? (
+                <img src={restaurante.logo_url} alt={restaurante.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <Wine size={16} color="var(--text-inverse, #fff)" />
+              )}
             </div>
-            {!sidebarCollapsed && <span style={{ fontFamily: "var(--font-noto-serif), serif", fontStyle: "italic", fontSize: 16, color: "var(--primary)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{restaurante?.nombre || "Cargando..."}</span>}
+            {!sidebarCollapsed && (
+              <span className="premium-sidebar-brand">{restaurante?.nombre || "Cargando..."}</span>
+            )}
           </div>
-          <nav style={{ padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <button key={item.href} onClick={() => router.push(item.href)} style={{ display: "flex", alignItems: "center", gap: 12, padding: sidebarCollapsed ? "12px" : "12px 16px", borderRadius: "var(--radius-md)", border: "none", background: isActive ? "var(--primary-ghost)" : "transparent", cursor: "pointer", transition: "all var(--duration-fast) var(--ease-out)", justifyContent: sidebarCollapsed ? "center" : "flex-start", width: "100%" }}>
-                  <Icon size={18} style={{ flexShrink: 0 }} color={isActive ? "var(--primary)" : "var(--text-muted)"} />
-                  {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--primary)" : "var(--text-secondary)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{item.label}</span>}
-                  {isActive && !sidebarCollapsed && <div style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "var(--primary)" }} />}
-                </button>
-              );
-            })}
-          </nav>
+          {!sidebarCollapsed && (
+            <button
+              className="premium-sidebar-collapse"
+              onClick={() => setSidebarCollapsed(true)}
+              aria-label="Colapsar menú"
+              title="Colapsar"
+            >
+              <ChevronsLeft size={14} />
+            </button>
+          )}
         </div>
-        <div style={{ padding: sidebarCollapsed ? "16px" : "16px 20px", borderTop: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "var(--primary)", flexShrink: 0, border: "1px solid var(--border)" }}>{usuario?.nombre?.charAt(0) || "?"}</div>
-            {!sidebarCollapsed && <div style={{ overflow: "hidden" }}><div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>{usuario?.nombre || "Usuario"}</div><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 4 }}>{roleIcons[rol || ""] || null}{rol || "Sin rol"}</div></div>}
+        <nav className="premium-sidebar-nav">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className={`premium-sidebar-item ${isActive ? "premium-sidebar-item--active" : ""}`}
+                title={sidebarCollapsed ? item.label : undefined}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="premium-sidebar-pill"
+                    className="premium-sidebar-pill"
+                    transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.7 }}
+                  />
+                )}
+                <Icon size={18} className="premium-sidebar-item-icon" />
+                {!sidebarCollapsed && (
+                  <span className="premium-sidebar-item-label">{item.label}</span>
+                )}
+                {isActive && !sidebarCollapsed && (
+                  <div className="premium-sidebar-item-dot" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="premium-sidebar-footer">
+          <div className="premium-sidebar-user" title={sidebarCollapsed ? `${usuario?.nombre || "Usuario"} · ${rol || ""}` : undefined}>
+            <div className="premium-sidebar-avatar">
+              {usuario?.nombre?.charAt(0).toUpperCase() || "?"}
+              <div className="premium-sidebar-avatar-pulse" />
+            </div>
+            {!sidebarCollapsed && (
+              <div className="premium-sidebar-user-info">
+                <div className="premium-sidebar-user-name">{usuario?.nombre || "Usuario"}</div>
+                <div className="premium-sidebar-user-role">
+                  {roleIcons[rol || ""] || null}
+                  {rol || "Sin rol"}
+                </div>
+              </div>
+            )}
           </div>
-          {!sidebarCollapsed && <button onClick={handleLogout} style={{ width: "100%", marginTop: 12, padding: "8px", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><LogOut size={12} />Cerrar sesión</button>}
+          {!sidebarCollapsed ? (
+            <button onClick={handleLogout} className="premium-sidebar-logout" aria-label="Cerrar sesión">
+              <LogOut size={12} />Cerrar sesión
+            </button>
+          ) : (
+            <button
+              className="premium-sidebar-expand"
+              onClick={() => setSidebarCollapsed(false)}
+              aria-label="Expandir menú"
+              title="Expandir"
+              style={{ alignSelf: "center", marginTop: 4 }}
+            >
+              <ChevronsRight size={14} />
+            </button>
+          )}
         </div>
       </aside>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <header style={{ height: 60, borderBottom: "1px solid var(--border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-elevated)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button
+              className="premium-header-hamburger"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <Menu size={18} />
+            </button>
             <h2 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: 18, fontWeight: 400, color: "var(--text)", margin: 0 }}>{navItems.find((n) => pathname?.startsWith(n.href))?.label || "Dashboard"}</h2>
             <span className="badge badge-delivered" style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 4 }}><CircleDot size={8} /> En línea</span>
           </div>
