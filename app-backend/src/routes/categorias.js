@@ -1,5 +1,6 @@
 const express = require('express');
 const supabase = require('../config/supabase');
+const supabaseAdmin = require('../config/supabase-admin');
 const router = express.Router();
 const { authenticate, restrictToTenant } = require('../middleware/auth');
 
@@ -47,7 +48,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: true, message: 'Campos requeridos: id_restaurante, nombre' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('categoria')
       .insert({ id_restaurante, nombre, descripcion, imagen_url, orden: orden || 0 })
       .select()
@@ -70,12 +71,12 @@ router.patch('/:id', authenticate, async (req, res) => {
     }
 
     // Validar tenant
-    const { data: current } = await supabase.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
+    const { data: current } = await supabaseAdmin.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
     if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
       return res.status(403).json({ error: true, message: 'No tienes permiso para editar esta categoría.' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('categoria')
       .update(req.body)
       .eq('id', req.params.id)
@@ -98,12 +99,12 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: true, message: 'Solo admin/propietario puede eliminar categorías.' });
     }
 
-    const { data: current } = await supabase.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
+    const { data: current } = await supabaseAdmin.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
     if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
       return res.status(403).json({ error: true, message: 'No tienes permiso para eliminar esta categoría.' });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('categoria')
       .update({ activo: false })
       .eq('id', req.params.id);

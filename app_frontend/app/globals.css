@@ -3383,6 +3383,8 @@ canvas {
   gap: 12px;
   background: var(--bg-elevated);
   flex-shrink: 0;
+  position: relative;
+  z-index: 50;
 }
 
 .dashboard-header-left {
@@ -3414,6 +3416,8 @@ canvas {
 
 .dashboard-notif-dropdown {
   width: min(320px, calc(100vw - 24px));
+  z-index: 99999 !important;
+  position: absolute !important;
 }
 
 @media (max-width: 640px) {

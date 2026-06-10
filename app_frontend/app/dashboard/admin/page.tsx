@@ -88,7 +88,7 @@ export default function AdminDashboard() {
 
   // ── Edit product state ──
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editData, setEditData] = useState({ nombre: "", precio: "", stock: "", descripcion: "", disponible: true });
+  const [editData, setEditData] = useState({ nombre: "", precio: "", stock: "", descripcion: "", disponible: true, id_categoria: "", es_bebida: false, requiere_preparacion: true });
   const [editSaving, setEditSaving] = useState(false);
 
   const handleEditProduct = (p: any) => {
@@ -99,6 +99,9 @@ export default function AdminDashboard() {
       stock: String(p.stock || ""),
       descripcion: p.descripcion || "",
       disponible: p.disponible !== false,
+      id_categoria: p.id_categoria || "",
+      es_bebida: p.es_bebida || false,
+      requiere_preparacion: p.requiere_preparacion !== false,
     });
   };
 
@@ -113,6 +116,9 @@ export default function AdminDashboard() {
         stock: parseInt(editData.stock) || 0,
         descripcion: editData.descripcion,
         disponible: editData.disponible,
+        id_categoria: editData.id_categoria,
+        es_bebida: editData.es_bebida,
+        requiere_preparacion: editData.requiere_preparacion,
       });
       setEditProduct(null);
       vm.loadData();
@@ -653,6 +659,15 @@ export default function AdminDashboard() {
           <label className="premium-field-label">Nombre</label>
           <input className="input" value={editData.nombre} onChange={(e) => setEditData({ ...editData, nombre: e.target.value })} />
         </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Categoria</label>
+          <select className="input" value={editData.id_categoria} onChange={(e) => setEditData({ ...editData, id_categoria: e.target.value })}>
+            <option value="">Seleccionar...</option>
+            {vm.categorias.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+            ))}
+          </select>
+        </div>
         <div className="premium-field-row">
           <div className="premium-field">
             <label className="premium-field-label">Precio</label>
@@ -664,8 +679,16 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="premium-field">
-          <label className="premium-field-label">Descripción</label>
-          <input className="input" value={editData.descripcion} onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })} placeholder="Descripción breve" />
+          <label className="premium-field-label">Descripcion</label>
+          <input className="input" value={editData.descripcion} onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })} placeholder="Descripcion breve" />
+        </div>
+        <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <input type="checkbox" id="edit-bebida" checked={editData.es_bebida} onChange={(e) => setEditData({ ...editData, es_bebida: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />
+          <label htmlFor="edit-bebida" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer" }}>Es bebida</label>
+        </div>
+        <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <input type="checkbox" id="edit-prep" checked={editData.requiere_preparacion} onChange={(e) => setEditData({ ...editData, requiere_preparacion: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />
+          <label htmlFor="edit-prep" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer" }}>Requiere preparacion (pasa por cocina)</label>
         </div>
         <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <input type="checkbox" id="edit-disp" checked={editData.disponible} onChange={(e) => setEditData({ ...editData, disponible: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />

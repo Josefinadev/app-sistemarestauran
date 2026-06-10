@@ -259,9 +259,9 @@ export default function DashboardLayout({
           </div>
           <button
             className="premium-sidebar-collapse"
-            onClick={() => setSidebarCollapsed(true)}
-            aria-label="Colapsar menú"
-            title="Colapsar"
+            onClick={() => { setSidebarCollapsed(true); setMobileMenuOpen(false); }}
+            aria-label="Cerrar menú"
+            title="Cerrar"
           >
             <ChevronsLeft size={14} />
           </button>
@@ -326,8 +326,8 @@ export default function DashboardLayout({
           <div className="dashboard-header-left">
             <button
               className="premium-header-hamburger"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Abrir menú"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileMenuOpen}
               aria-controls="premium-sidebar"
             >
@@ -339,7 +339,7 @@ export default function DashboardLayout({
           <div className="dashboard-header-right">
             <span className="dashboard-header-time" style={{ fontSize: 12, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
             <ThemeToggle />
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", zIndex: 9999 }}>
               <button onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Bell size={16} color="var(--text-secondary)" /></button>
               {unreadCount() > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--secondary)", color: "white", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount()}</span>}
               {showNotifs && (

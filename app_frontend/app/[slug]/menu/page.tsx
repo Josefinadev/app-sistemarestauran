@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ClientAuthModal } from "@/components/ClientAuthModal";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function MenuPage() {
   const vm = useMenuDigital();
   const cartVm = usePedidoConfirm();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const sheetRef = useRef<HTMLDivElement | null>(null);
 
@@ -30,6 +32,17 @@ export default function MenuPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Mostrar el modal de login automáticamente al entrar por primera vez al menú
+  // (solo si el cliente no ha iniciado sesión y no se ha mostrado ya en esta sesión).
+  useEffect(() => {
+    if (vm.loading) return;
+    if (vm.usuario) return;
+    const key = `auth-modal-shown:${slug}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    setShowAuthModal(true);
+  }, [vm.loading, vm.usuario, slug]);
 
   useEffect(() => {
     if (!isCartOpen) return undefined;
@@ -100,12 +113,16 @@ export default function MenuPage() {
             <div className="client-table-pill">
               <MapPin size={18} />
               <span>{vm.mesa ? `Mesa ${vm.mesa.numero}` : "Sin mesa"}</span>
-              <ChevronDown size={16} />
+        
             </div>
-            <div className="client-user-pill">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="client-user-pill"
+              style={{ border: "none", cursor: "pointer" }}
+            >
               <User size={16} />
               <span>{vm.usuario?.nombre?.split(" ")[0] || "Cliente"}</span>
-            </div>
+            </button>
           </div>
         </header>
 
@@ -509,6 +526,14 @@ export default function MenuPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Client Auth Modal */}
+      <ClientAuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onContinueAsGuest={() => setShowAuthModal(false)}
+        slug={slug}
+      />
     </main>
   );
 }
