@@ -39,7 +39,7 @@ export default function SuscripcionDashboard() {
               <h4 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: "0 0 8px 0" }}>{plan.nombre}</h4>
               <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 16px 0", flex: 1 }}>{plan.descripcion}</p>
               <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", marginBottom: 16 }}>
-                S/ {formatPrecio(plan.precio_mensual)} <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ mes</span>
+                {formatPrecio(plan.precio_mensual)} <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ mes</span>
               </div>
               <button 
                 className={`btn ${vm.suscripcionActual?.id_plan === plan.id ? "btn-secondary" : "btn-primary"}`}

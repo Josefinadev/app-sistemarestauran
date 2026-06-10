@@ -157,28 +157,34 @@ export default function VoucherPage() {
   const heroImage = restaurante?.hero_banner_url;
 
   return (
-    <div style={{ minHeight: "100vh", background: heroImage ? `linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.4) 100%), url(${heroImage}) center/cover no-repeat` : "var(--bg)" }}>
-    <main className="animate-fade-in" style={{ maxWidth: 520, margin: "0 auto", padding: "32px 16px" }}>
+    <div style={{ 
+      minHeight: "100vh", 
+      background: heroImage ? `linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.45) 100%), url(${heroImage}) center/cover no-repeat` : "var(--bg)",
+      backgroundAttachment: "fixed"
+    }}>
+    <main className="animate-fade-in" style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 16px" }}>
       <ThemeToggle floating />
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
         <h1
           style={{
             fontFamily: "var(--font-noto-serif), 'Noto Serif', serif",
-            fontSize: 28,
+            fontSize: 32,
             fontWeight: 700,
             color: "var(--text)",
-            margin: "0 0 4px",
+            margin: "0 0 8px",
           }}
         >
           Voucher
         </h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>
           Comprobante de tu pedido
         </p>
       </div>
 
-      {/* Printable Voucher Card */}
+      {/* Contenedor Grid: Voucher + Estado */}
+      <div data-voucher-grid style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+        {/* Printable Voucher Card */}
       <div
         ref={voucherRef}
         id="voucher-printable"
@@ -303,8 +309,8 @@ export default function VoucherPage() {
         </div>
       </div>
 
-      {/* ── Seccion de estado del pago ── */}
-      <div style={{ marginTop: 20 }}>
+      {/* ── Seccion de estado del pago (Columna 2 del Grid) ── */}
+      <div>
         {!isPagado ? (
           /* PASO 1: Esperando que Caja confirme */
           <div
@@ -526,9 +532,17 @@ export default function VoucherPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Print-specific CSS */}
       <style jsx global>{`
+        @media (max-width: 768px) {
+          [data-voucher-grid] {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 24px !important;
+          }
+        }
         @media print {
           body * { visibility: hidden; }
           #voucher-printable, #voucher-printable * { visibility: visible; }

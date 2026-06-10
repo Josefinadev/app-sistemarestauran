@@ -109,7 +109,7 @@ export default function PedidoPage() {
           <strong>{formatPrecio(vm.total)}</strong>
         </footer>
 
-        <div className="order-actions">
+        <div className="order-actions">zz
           <button onClick={vm.handleConfirmar} className="order-confirm-button" disabled={vm.sending}>
             {vm.sending ? (
               vm.geoStatus === "checking" ? <><MapPin size={16} /> Verificando...</> : <><Loader2 size={16} className="spin-icon" /> Enviando...</>
