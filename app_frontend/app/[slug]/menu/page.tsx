@@ -260,6 +260,7 @@ export default function MenuPage() {
       )}
 
       {/* CART DRAWER */}
+      {mounted && createPortal(
       <AnimatePresence>
         {isCartOpen && vm.itemCount > 0 && (
           <div className="fixed inset-0 z-50">
@@ -271,9 +272,9 @@ export default function MenuPage() {
               onClick={() => setIsCartOpen(false)}
             />
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.7 }}
               className="client-cart-drawer"
             >
@@ -385,7 +386,9 @@ export default function MenuPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       <AnimatePresence>
         {vm.selectedProduct && (

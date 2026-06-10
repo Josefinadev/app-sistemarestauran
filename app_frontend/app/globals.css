@@ -1323,7 +1323,8 @@ canvas {
     left: 0;
     right: 0;
     bottom: 0;
-    top: 8vh;
+    max-height: 90vh;
+    height: auto;
     border-top-left-radius: 32px;
     border-top-right-radius: 32px;
     border-bottom: none;
@@ -1345,6 +1346,9 @@ canvas {
     border-top: none;
     border-bottom: none;
   }
+  .client-cart-drawer-content {
+    flex: 1;
+  }
 }
 
 .client-cart-drawer-header {
@@ -1357,7 +1361,6 @@ canvas {
 }
 
 .client-cart-drawer-content {
-  flex: 1;
   overflow-y: auto;
   padding: 16px 24px;
   min-height: 0;
