@@ -57,13 +57,22 @@ async function apiFetch(path: string, options?: RequestInit) {
     clearTimeout(timeoutId);
   }
 
-  // Si el token expiró, limpiar sesión y redirigir al login
+  // Si el token expiró (401 real, no error temporal), limpiar sesión
   if (res.status === 401 && token) {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("el-mijano-auth");
-      window.location.href = "/login";
+    const body = await res.json().catch(() => ({}));
+    // Solo redirigir si es un 401 genuino (token invalido/expirado)
+    if (body.message?.includes("expirada") || body.message?.includes("inválido") || body.message?.includes("faltante")) {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("el-mijano-auth");
+        window.location.href = "/login";
+      }
     }
-    throw new Error("Sesión expirada. Inicia sesión nuevamente.");
+    throw new Error(body.message || "Error de autenticación");
+  }
+
+  // Error temporal del servidor - no cerrar sesión
+  if (res.status === 503) {
+    throw new Error("Error temporal del servidor. Intenta de nuevo.");
   }
 
   if (!res.ok) {
@@ -220,6 +229,12 @@ export const getCategorias = (idRestaurante: string) =>
 
 export const crearCategoria = (data: any) =>
   apiFetch("/categorias", { method: "POST", body: JSON.stringify(data) });
+
+export const actualizarCategoria = (id: string, data: any) =>
+  apiFetch(`/categorias/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+export const eliminarCategoria = (id: string) =>
+  apiFetch(`/categorias/${id}`, { method: "DELETE" });
 
 // ── Productos ──
 export const getProductos = (idRestaurante: string) =>

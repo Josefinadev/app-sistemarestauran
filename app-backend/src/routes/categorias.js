@@ -89,4 +89,30 @@ router.patch('/:id', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/categorias/:id
+ */
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    if (!req.isSuperAdmin && !['admin', 'propietario'].includes(req.user.rol)) {
+      return res.status(403).json({ error: true, message: 'Solo admin/propietario puede eliminar categorías.' });
+    }
+
+    const { data: current } = await supabase.from('categoria').select('id_restaurante').eq('id', req.params.id).single();
+    if (current && current.id_restaurante !== req.user.id_restaurante && !req.isSuperAdmin) {
+      return res.status(403).json({ error: true, message: 'No tienes permiso para eliminar esta categoría.' });
+    }
+
+    const { error } = await supabase
+      .from('categoria')
+      .update({ activo: false })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+});
+
 module.exports = router;

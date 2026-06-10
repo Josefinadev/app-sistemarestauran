@@ -13,7 +13,17 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     // 1. Verificar token con Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    let authData, authError;
+    try {
+      const result = await supabaseAdmin.auth.getUser(token);
+      authData = result.data;
+      authError = result.error;
+    } catch (fetchErr) {
+      // Error de red/socket con Supabase - NO es un 401 real
+      console.error('[Auth] Supabase connection error:', fetchErr.message);
+      return res.status(503).json({ error: true, message: 'Error de conexión temporal. Intenta de nuevo.' });
+    }
+
     if (authError || !authData?.user) {
       return res.status(401).json({ error: true, message: 'Sesión expirada o token inválido.' });
     }
@@ -33,13 +43,13 @@ const authenticate = async (req, res, next) => {
     // 3. Adjuntar info al request para ser usada en los controladores
     req.user = usuario;
     
-    // Superadmin puede ignorar la restricción de tenant si lo desea (o pasar el id_restaurante por query)
+    // Superadmin puede ignorar la restricción de tenant si lo desea
     req.isSuperAdmin = usuario.rol === 'admin_saas';
 
     next();
   } catch (err) {
     console.error('[Auth Middleware Error]', err.message);
-    res.status(500).json({ error: true, message: 'Error de autenticación servidor.' });
+    res.status(503).json({ error: true, message: 'Error temporal de autenticación.' });
   }
 };
 

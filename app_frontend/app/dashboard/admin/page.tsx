@@ -123,6 +123,38 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Edit/Delete categorias ──
+  const [editCat, setEditCat] = useState<any>(null);
+  const [editCatData, setEditCatData] = useState({ nombre: "", descripcion: "" });
+
+  const handleEditCategoria = (cat: any) => {
+    setEditCat(cat);
+    setEditCatData({ nombre: cat.nombre || "", descripcion: cat.descripcion || "" });
+  };
+
+  const handleSaveEditCat = async () => {
+    if (!editCat) return;
+    try {
+      const { actualizarCategoria } = await import("@/lib/api");
+      await actualizarCategoria(editCat.id, editCatData);
+      setEditCat(null);
+      vm.loadData();
+    } catch (err: any) {
+      console.error("Error editing category:", err);
+    }
+  };
+
+  const handleDeleteCategoria = async (id: string) => {
+    if (!confirm("¿Eliminar esta categoría?")) return;
+    try {
+      const { eliminarCategoria } = await import("@/lib/api");
+      await eliminarCategoria(id);
+      vm.loadData();
+    } catch (err: any) {
+      console.error("Error deleting category:", err);
+    }
+  };
+
   const statCards = [
     { label: "Productos activos", value: String(vm.stats.productos), Icon: Package, color: "var(--primary)" },
     { label: "Mesas activas", value: String(vm.stats.mesas), Icon: Armchair, color: "var(--tertiary)" },
@@ -232,7 +264,11 @@ export default function AdminDashboard() {
           {vm.categoriasFiltradas.map((cat: any) => (
             <div key={cat.id} className="card-flat" style={{ padding: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><Tag size={16} color="var(--primary)" /><h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}>{cat.nombre}</h4></div>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{cat.descripcion || "Sin descripción"}</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 12px" }}>{cat.descripcion || "Sin descripción"}</p>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => handleEditCategoria(cat)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }} title="Editar"><Pencil size={12} /></button>
+                <button onClick={() => handleDeleteCategoria(cat.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px", color: "var(--error)" }} title="Eliminar"><Trash2 size={12} /></button>
+              </div>
             </div>
           ))}
         </div>
@@ -634,6 +670,31 @@ export default function AdminDashboard() {
         <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <input type="checkbox" id="edit-disp" checked={editData.disponible} onChange={(e) => setEditData({ ...editData, disponible: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />
           <label htmlFor="edit-disp" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer" }}>Disponible en la carta</label>
+        </div>
+      </Modal>
+
+      {/* Modal Editar Categoria */}
+      <Modal
+        open={!!editCat}
+        onClose={() => setEditCat(null)}
+        title="Editar categoría"
+        description={`Editando: ${editCat?.nombre || ""}`}
+        icon={<Pencil size={18} />}
+        accentColor="var(--primary)"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setEditCat(null)} className="btn btn-secondary">Cancelar</button>
+            <button onClick={handleSaveEditCat} className="btn btn-primary">Guardar</button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre</label>
+          <input className="input" value={editCatData.nombre} onChange={(e) => setEditCatData({ ...editCatData, nombre: e.target.value })} />
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción</label>
+          <input className="input" value={editCatData.descripcion} onChange={(e) => setEditCatData({ ...editCatData, descripcion: e.target.value })} placeholder="Opcional" />
         </div>
       </Modal>
     </div>
