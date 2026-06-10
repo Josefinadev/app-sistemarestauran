@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
-import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
+import { getPedidos, actualizarEstadoDetalle, getUsuarios } from "@/lib/api";
 import { agruparDetalles, getDetalleCantidad, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { useDetallesRealtime, usePedidosRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
@@ -19,6 +19,7 @@ export function useMeseroDashboard() {
   const [filtro, setFiltro] = useState<"todos" | "platos" | "bebidas">("todos");
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedPedidos, setExpandedPedidos] = useState<Set<string>>(new Set());
+  const [noUsuariosAsignados, setNoUsuariosAsignados] = useState(false);
   const { add: addNotif } = useNotificaciones();
   const prevListosRef = useRef<Set<string>>(new Set());
 
@@ -31,6 +32,20 @@ export function useMeseroDashboard() {
     });
   };
 
+  useEffect(() => {
+    const checkUsuarios = async () => {
+      if (!idRestaurante) return;
+      try {
+        const usuarios = await getUsuarios(idRestaurante);
+        const usuariosMesero = (usuarios || []).filter((u: any) => u.rol === "mesero");
+        setNoUsuariosAsignados(usuariosMesero.length === 0);
+      } catch (err) {
+        console.error("Error checking usuarios:", err);
+      }
+    };
+    checkUsuarios();
+  }, [idRestaurante]);
+
   const loadData = useCallback(async () => {
     if (!idRestaurante) return;
     try {
@@ -39,6 +54,8 @@ export function useMeseroDashboard() {
       const allItems: ItemServir[] = [];
 
       for (const pedido of data || []) {
+        // Solo pedidos activos (no pagados) - evitar mostrar historicos
+        if (pedido.estado_pago === "PAGADO") continue;
         const mesaNum = pedido.mesa?.numero || 0;
 
         if (!mesaMap.has(mesaNum)) {
@@ -87,6 +104,7 @@ export function useMeseroDashboard() {
           esBebida: grupo.esBebida,
           pedidoId: pedido.id,
           detalleIds: grupo.detalleIds,
+          imagenUrl: grupo.imagenUrl || null,
         }));
 
         if (itemsPedido.length > 0) {
@@ -201,7 +219,8 @@ export function useMeseroDashboard() {
     bebidasCount,
     mesasActivasCount,
     setFiltro,
-    marcarEntregado
+    marcarEntregado,
+    noUsuariosAsignados
 
   };
 }

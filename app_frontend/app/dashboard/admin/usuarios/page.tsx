@@ -413,7 +413,7 @@ export default function UsuariosPage() {
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Seleccionar rol *</label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
             {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
               const RoleIcon = cfg.Icon;
               const active = newUser.rol === key;
@@ -490,7 +490,7 @@ export default function UsuariosPage() {
         </div>
         <div className="premium-field">
           <label className="premium-field-label">Rol</label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
             {Object.entries(roleConfig).filter(([k]) => k !== "cliente").map(([key, cfg]) => {
               const RoleIcon = cfg.Icon;
               const active = editData.rol === key;

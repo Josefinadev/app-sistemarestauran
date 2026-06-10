@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getEstadoTexto, formatHora } from "@/lib/utils";
 import { useCocinaDashboard } from "@/viewmodels/useCocinaDashboard";
+import { NoUsuariosAsignados } from "@/components/NoUsuariosAsignados";
 import {
   Clock, ChefHat, CheckCircle2, StickyNote, Plus,
   PartyPopper, Flame, Truck, ChevronDown, ChevronUp, Package,
@@ -20,11 +21,20 @@ const filtros = ["TODOS", "PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO"] a
 
 export default function CocinaDashboard() {
   const vm = useCocinaDashboard();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expandedMesas, setExpandedMesas] = useState<Set<string>>(new Set());
 
-  const toggleExpand = (mesaId: string) => {
-    setExpanded((prev) => ({ ...prev, [mesaId]: !prev[mesaId] }));
+  const toggleMesa = (id: string) => {
+    setExpandedMesas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
+
+  if (vm.noUsuariosAsignados) {
+    return <NoUsuariosAsignados rolLabel="Cocina" rol="cocina" />;
+  }
 
   if (vm.loading) {
     return (
@@ -35,7 +45,7 @@ export default function CocinaDashboard() {
           ))}
         </div>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton" style={{ height: 200, borderRadius: 16 }} />
+          <div key={i} className="skeleton" style={{ height: 70, borderRadius: 16 }} />
         ))}
       </div>
     );
@@ -43,12 +53,13 @@ export default function CocinaDashboard() {
 
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
         {(["PENDIENTE", "EN_PREPARACION", "LISTO"] as const).map((est) => {
           const c = estadoConfig[est];
           const Icon = c.Icon;
           return (
-            <div key={est} className="card-flat" style={{ padding: "16px 20px", borderLeft: `3px solid ${c.dot}` }}>
+            <div key={est} className="card-flat" style={{ padding: "16px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
@@ -63,7 +74,7 @@ export default function CocinaDashboard() {
             </div>
           );
         })}
-        <div className="card-flat" style={{ padding: "16px 20px", borderLeft: "3px solid var(--primary)" }}>
+        <div className="card-flat" style={{ padding: "16px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
@@ -78,6 +89,7 @@ export default function CocinaDashboard() {
         </div>
       </div>
 
+      {/* Filtros */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {filtros.map((f) => (
           <button
@@ -90,153 +102,119 @@ export default function CocinaDashboard() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
+      {/* Lista vertical de mesas */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {vm.mesasFiltradas.map((mesa) => {
-          const isExpanded = Boolean(expanded[mesa.id]);
+          const isExpanded = expandedMesas.has(mesa.id);
           return (
-            <div
-              key={mesa.id}
-              className="animate-scale-in"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-lg)",
-                padding: "20px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                <div>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Mesa</p>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "4px 0 2px" }}>
-                    Mesa {mesa.mesa}
-                  </h3>
-                  <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+            <div key={mesa.id} className="card-flat" style={{ overflow: "hidden" }}>
+              {/* Row header */}
+              <div
+                onClick={() => toggleMesa(mesa.id)}
+                style={{ display: "flex", alignItems: "center", padding: "14px 20px", cursor: "pointer", gap: 14 }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--primary-ghost)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "var(--primary)", flexShrink: 0 }}>
+                  {mesa.mesa}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesa {mesa.mesa}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>
                     {mesa.cantidadPlatos} platos · {mesa.cantidadPedidos} pedido{mesa.cantidadPedidos !== 1 ? "s" : ""} · {formatHora(mesa.hora)}
                   </p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ padding: "6px 10px", borderRadius: 999, background: "var(--primary-ghost)", color: "var(--primary)", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                    <Package size={12} />
-                    {mesa.cantidadPedidos} pedido{mesa.cantidadPedidos !== 1 ? "s" : ""}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  {mesa.pendientesCount > 0 && (
+                    <span className="badge badge-pending" style={{ fontSize: 9 }}>{mesa.pendientesCount} pend.</span>
+                  )}
+                  <span style={{ padding: "4px 10px", borderRadius: 999, background: "var(--primary-ghost)", color: "var(--primary)", fontSize: 11, fontWeight: 700 }}>
+                    <Package size={10} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                    {mesa.cantidadPedidos}
+                  </span>
+                  <div style={{ color: "var(--text-muted)" }}>
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(mesa.id)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {isExpanded ? "Ocultar" : "Ver detalle"}
-                  </button>
                 </div>
               </div>
 
-              {mesa.pendientesCount > 0 && (
-                <button
-                  onClick={() => vm.empezarPreparacionMesa(mesa)}
-                  className="btn btn-primary btn-sm"
-                  disabled={vm.updating === mesa.id}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: vm.updating === mesa.id ? 0.6 : 1 }}
-                >
-                  {vm.updating === mesa.id ? "Actualizando..." : <><Flame size={14} /> Empezar a preparar mesa completa</>}
-                </button>
+              {/* Acciones rapidas (siempre visibles si hay items) */}
+              {(mesa.pendientesCount > 0 || mesa.lineas.some((l) => l.estado === "EN_PREPARACION")) && (
+                <div style={{ padding: "0 20px 14px", display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {mesa.pendientesCount > 0 && (
+                    <button
+                      onClick={() => vm.empezarPreparacionMesa(mesa)}
+                      className="btn btn-primary btn-sm"
+                      disabled={vm.updating === mesa.id}
+                      style={{ display: "flex", alignItems: "center", gap: 6, opacity: vm.updating === mesa.id ? 0.6 : 1 }}
+                    >
+                      {vm.updating === mesa.id ? "..." : <><Flame size={14} /> Preparar mesa</>}
+                    </button>
+                  )}
+                  {mesa.lineas.some((l) => l.estado === "EN_PREPARACION") && (
+                    <button
+                      onClick={() => vm.marcarTodosListoMesa(mesa)}
+                      className="btn btn-sm btn-secondary"
+                      disabled={vm.updating === mesa.id}
+                      style={{ display: "flex", alignItems: "center", gap: 6, opacity: vm.updating === mesa.id ? 0.6 : 1 }}
+                    >
+                      {vm.updating === mesa.id ? "..." : <><CheckCircle2 size={14} /> Todo listo</>}
+                    </button>
+                  )}
+                </div>
               )}
 
+              {/* Contenido expandido */}
               {isExpanded && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ padding: "0 20px 20px", borderTop: "1px solid var(--border)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
                   {mesa.pedidosRecientes.map((pedido) => (
-                    <div key={pedido.id} style={{ border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <div>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", margin: 0 }}>{pedido.numeroPedido}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "3px 0 0" }}>
-                            Pedido reciente · {pedido.cantidadPlatos} platos · {formatHora(pedido.hora)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {pedido.lineas.map((plato) => {
-                        const c = estadoConfig[plato.estado] || estadoConfig.PENDIENTE;
-                        const StatusIcon = c.Icon;
-                        return (
-                          <div
-                            key={plato.id}
-                            style={{
-                              background: c.bg,
-                              border: `1px solid ${c.border}`,
-                              borderRadius: "var(--radius-md)",
-                              padding: "14px 16px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 10,
-                              opacity: plato.estado === "ENTREGADO" ? 0.75 : 1,
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                              <div>
-                                <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0 }}>
-                                  {plato.cantidad} {plato.nombre}
+                    <div key={pedido.id} style={{ padding: 12, background: "var(--surface-hover)", borderRadius: 12 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: "0 0 8px" }}>
+                        {pedido.numeroPedido} · {pedido.cantidadPlatos} platos · {formatHora(pedido.hora)}
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {pedido.lineas.map((plato) => {
+                          const c = estadoConfig[plato.estado] || estadoConfig.PENDIENTE;
+                          const StatusIcon = c.Icon;
+                          return (
+                            <div key={plato.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--bg-elevated)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>
+                                  {plato.cantidad}x {plato.nombre}
                                 </p>
-                                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "3px 0 0" }}>
-                                  {plato.estado === "PENDIENTE" ? "Pendiente de cocina" : formatHora(plato.hora)}
-                                </p>
+                                {plato.notas && (
+                                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "2px 0 0", fontStyle: "italic" }}>
+                                    <StickyNote size={9} style={{ verticalAlign: "middle", marginRight: 3 }} />{plato.notas}
+                                  </p>
+                                )}
+                                {plato.agregados.length > 0 && (
+                                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+                                    {plato.agregados.map((a, i) => (
+                                      <span key={i} style={{ fontSize: 9, padding: "2px 6px", background: "var(--primary-ghost)", borderRadius: 99, color: "var(--primary)" }}>
+                                        <Plus size={7} style={{ verticalAlign: "middle" }} /> {a}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                              <span
-                                className={`badge ${plato.estado === "PENDIENTE" ? "badge-pending" : plato.estado === "EN_PREPARACION" ? "badge-preparing" : "badge-ready"}`}
-                                style={{ display: "flex", alignItems: "center", gap: 4 }}
-                              >
-                                <StatusIcon size={10} />
-                                {plato.estado === "ENTREGADO" ? "Entregado" : getEstadoTexto(plato.estado)}
-                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                <span className={`badge ${plato.estado === "PENDIENTE" ? "badge-pending" : plato.estado === "EN_PREPARACION" ? "badge-preparing" : plato.estado === "LISTO" ? "badge-ready" : "badge-delivered"}`} style={{ fontSize: 9 }}>
+                                  <StatusIcon size={9} style={{ marginRight: 3 }} />
+                                  {getEstadoTexto(plato.estado)}
+                                </span>
+                                {plato.estado === "EN_PREPARACION" && (
+                                  <button
+                                    onClick={() => vm.marcarPlatoListo(plato)}
+                                    className="btn btn-primary btn-sm"
+                                    disabled={vm.updating === plato.id}
+                                    style={{ padding: "4px 10px", fontSize: 9, opacity: vm.updating === plato.id ? 0.6 : 1 }}
+                                  >
+                                    Listo
+                                  </button>
+                                )}
+                              </div>
                             </div>
-
-                            {plato.notas && (
-                              <div style={{ padding: "8px 12px", background: "rgba(0,0,0,0.16)", borderRadius: "var(--radius-sm)", fontSize: 12, color: "var(--secondary-light)", fontStyle: "italic", display: "flex", alignItems: "center", gap: 6 }}>
-                                <StickyNote size={12} /> {plato.notas}
-                              </div>
-                            )}
-
-                            {plato.agregados.length > 0 && (
-                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                {plato.agregados.map((a, i) => (
-                                  <span key={`${plato.id}-${i}`} style={{ fontSize: 10, padding: "3px 8px", background: "rgba(197,160,89,0.1)", borderRadius: "var(--radius-full)", color: "var(--primary-light)", display: "flex", alignItems: "center", gap: 3 }}>
-                                    <Plus size={8} /> {a}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-
-                            {plato.estado === "PENDIENTE" && (
-                              <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 12, color: "var(--warning)", letterSpacing: "0.03em" }}>
-                                <Clock size={14} /> Esperando inicio general de preparacion
-                              </div>
-                            )}
-                            {plato.estado === "EN_PREPARACION" && (
-                              <button
-                                onClick={() => vm.marcarPlatoListo(plato)}
-                                className="btn btn-primary btn-sm"
-                                disabled={vm.updating === plato.id}
-                                style={{ width: "100%", opacity: vm.updating === plato.id ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                              >
-                                {vm.updating === plato.id ? "Actualizando..." : <><CheckCircle2 size={14} /> Marcar plato como listo</>}
-                              </button>
-                            )}
-                            {plato.estado === "LISTO" && (
-                              <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 12, color: "var(--success)", letterSpacing: "0.03em" }}>
-                                <CheckCircle2 size={14} /> Listo - Mesero notificado
-                              </div>
-                            )}
-                            {plato.estado === "ENTREGADO" && (
-                              <div style={{ textAlign: "center", padding: "8px", fontSize: 11, color: "var(--primary)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                                <Truck size={14} /> Entregado al mesero
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>

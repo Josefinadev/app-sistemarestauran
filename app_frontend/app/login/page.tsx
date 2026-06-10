@@ -20,6 +20,8 @@ import {
   Lock,
   LogIn,
   Loader2,
+  Eye,
+  EyeOff,
   Crown,
   Monitor,
   Wifi,
@@ -27,6 +29,7 @@ import {
   ShieldCheck,
   AlertCircle,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const roleRoutes: Partial<Record<RolUsuario, string>> = {
   admin: "/dashboard/admin",
@@ -67,6 +70,7 @@ export default function LoginPage() {
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailFocus, setEmailFocus] = useState(false);
@@ -162,6 +166,7 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
+      <ThemeToggle floating />
       {/* ── Orbes de fondo (drift orgánico, blurred) ── */}
       <motion.div
         className="login-orb login-orb--1"
@@ -283,7 +288,7 @@ export default function LoginPage() {
                     <Lock size={14} />
                   </motion.div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
                     onFocus={() => setPassFocus(true)}
@@ -291,8 +296,29 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     className="input-underline"
                     autoComplete="current-password"
-                    style={{ paddingLeft: 24 }}
+                    style={{ paddingLeft: 24, paddingRight: 36 }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 6,
+                      color: "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </motion.div>
 

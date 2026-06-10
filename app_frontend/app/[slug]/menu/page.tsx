@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useParams } from "next/navigation";
 import { formatPrecio } from "@/lib/utils";
 import { useMenuDigital } from "@/viewmodels/useMenuDigital";
@@ -13,6 +14,7 @@ import {
   ChevronDown, Trash2, ShieldCheck, Check, Utensils, ArrowLeft, Loader2, AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -21,7 +23,13 @@ export default function MenuPage() {
   const vm = useMenuDigital();
   const cartVm = usePedidoConfirm();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+
+  // Necesario para renderizar el FAB del carrito vía portal (solo en cliente).
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isCartOpen) return undefined;
@@ -69,7 +77,7 @@ export default function MenuPage() {
   const logoUrl = vm.restaurante?.logo_url;
 
   return (
-    <main className="client-menu-page animate-fade-in" style={{ paddingBottom: vm.itemCount > 0 ? 150 : 32 }}>
+    <main className="client-menu-page animate-fade-in" style={{ paddingBottom: vm.itemCount > 0 ? 100 : 24 }}>
       <section className="client-hero" style={{ "--client-hero-image": `url(${heroImage})` } as CSSProperties}>
         <header className="client-topbar">
           <div className="client-brand">
@@ -88,6 +96,7 @@ export default function MenuPage() {
           </div>
 
           <div className="client-top-actions">
+            <ThemeToggle />
             <div className="client-table-pill">
               <MapPin size={18} />
               <span>{vm.mesa ? `Mesa ${vm.mesa.numero}` : "Sin mesa"}</span>
@@ -157,6 +166,11 @@ export default function MenuPage() {
                 </div>
                 <div className="client-product-footer">
                   <strong>{formatPrecio(Number(prod.precio))}</strong>
+                  {prod.stock != null && prod.stock <= 10 && (
+                    <span style={{ fontSize: 10, color: prod.stock <= 3 ? "var(--error)" : "var(--warning)", fontWeight: 600 }}>
+                      {prod.stock <= 0 ? "Agotado" : `${prod.stock} disp.`}
+                    </span>
+                  )}
                 </div>
               </button>
               {/* Zona de imagen + dos acciones claras: lápiz = con notas, + = directo */}
@@ -203,40 +217,47 @@ export default function MenuPage() {
         <div className="client-empty-state"><Search size={44} /><p>No se encontraron platos.</p></div>
       )}
 
-      <AnimatePresence>
-        {vm.itemCount > 0 && !isCartOpen && (
-          <motion.button
-            key="cart-fab"
-            className="client-cart-fab"
-            onClick={() => setIsCartOpen(true)}
-            type="button"
-            initial={{ y: 80, scale: 0.5, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 80, scale: 0.5, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 520, damping: 22, mass: 0.7 }}
-            whileTap={{ scale: 0.94 }}
-            whileHover={{ y: -2 }}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.div
-                key={vm.itemCount}
-                className="badge-count"
-                initial={{ scale: 0.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.3, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 700, damping: 14, mass: 0.4 }}
-              >
-                {vm.itemCount}
-              </motion.div>
-            </AnimatePresence>
-            <ShoppingCart size={22} strokeWidth={2.4} />
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ver Pedido</span>
-              <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{formatPrecio(vm.cartTotal)}</span>
-            </div>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* FAB del carrito — renderizado vía portal a <body> para flotar SIEMPRE
+          por encima de todo el contenido (escapa de cualquier transform/stacking
+          context de los ancestros, igual que un botón flotante de WhatsApp).
+          Se oculta cuando hay un overlay abierto (carrito o detalle de producto). */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {vm.itemCount > 0 && !isCartOpen && !vm.selectedProduct && (
+            <motion.button
+              key="cart-fab"
+              className="client-cart-fab"
+              onClick={() => setIsCartOpen(true)}
+              type="button"
+              initial={{ y: 80, scale: 0.5, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: 80, scale: 0.5, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 520, damping: 22, mass: 0.7 }}
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ y: -2 }}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={vm.itemCount}
+                  className="badge-count"
+                  initial={{ scale: 0.3, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.3, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 700, damping: 14, mass: 0.4 }}
+                >
+                  {vm.itemCount}
+                </motion.div>
+              </AnimatePresence>
+              <ShoppingCart size={22} strokeWidth={2.4} />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ver Pedido</span>
+                <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{formatPrecio(vm.cartTotal)}</span>
+              </div>
+            </motion.button>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* CART DRAWER */}
       <AnimatePresence>

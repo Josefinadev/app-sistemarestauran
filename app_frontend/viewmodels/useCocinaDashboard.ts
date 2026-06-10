@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getPedidos, actualizarEstadoDetalle } from "@/lib/api";
+import { getPedidos, actualizarEstadoDetalleBatch, getUsuarios } from "@/lib/api";
 import { agruparDetalles, type RawDetallePedido } from "@/lib/pedidoGrouping";
 import { usePedidosRealtime, useDetallesRealtime } from "@/lib/realtime";
 import { useNotificaciones } from "@/lib/store";
@@ -16,6 +16,7 @@ export function useCocinaDashboard() {
   const [filtro, setFiltro] = useState<"TODOS" | "PENDIENTE" | "EN_PREPARACION" | "LISTO" | "ENTREGADO">("TODOS");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [noUsuariosAsignados, setNoUsuariosAsignados] = useState(false);
   const { add: addNotif } = useNotificaciones();
   const prevListosRef = useRef<Set<string>>(new Set());
   const prevPendientesRef = useRef<Set<string>>(new Set());
@@ -31,6 +32,8 @@ export function useCocinaDashboard() {
       hace24h.setHours(hace24h.getHours() - 24);
 
       for (const pedido of data || []) {
+        // Solo mostrar pedidos activos (no pagados) para evitar mezclar con historico
+        if (pedido.estado_pago === "PAGADO") continue;
         const mesaNum = pedido.mesa?.numero || 0;
         const detallesPedido: RawDetallePedido[] = [];
 
@@ -151,6 +154,20 @@ export function useCocinaDashboard() {
     }
   }, [idRestaurante, addNotif]);
 
+  useEffect(() => {
+    const checkUsuarios = async () => {
+      if (!idRestaurante) return;
+      try {
+        const usuarios = await getUsuarios(idRestaurante);
+        const usuariosCocina = (usuarios || []).filter((u: any) => u.rol === "cocina");
+        setNoUsuariosAsignados(usuariosCocina.length === 0);
+      } catch (err) {
+        console.error("Error checking usuarios:", err);
+      }
+    };
+    checkUsuarios();
+  }, [idRestaurante]);
+
   useEffect(() => { loadMesasCocina(); }, [loadMesasCocina]);
 
   const handleRealtimeChange = useCallback(() => { loadMesasCocina(); }, [loadMesasCocina]);
@@ -164,7 +181,7 @@ export function useCocinaDashboard() {
     setUpdating(mesa.id);
     try {
       const detalleIds = pendientes.flatMap((linea) => linea.detalleIds);
-      await Promise.all(detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "EN_PREPARACION")));
+      await actualizarEstadoDetalleBatch(detalleIds, "EN_PREPARACION");
       await loadMesasCocina();
     } catch (err) {
       console.error("Error starting mesa prep:", err);
@@ -178,7 +195,7 @@ export function useCocinaDashboard() {
 
     setUpdating(plato.id);
     try {
-      await Promise.all(plato.detalleIds.map((detalleId) => actualizarEstadoDetalle(detalleId, "LISTO")));
+      await actualizarEstadoDetalleBatch(plato.detalleIds, "LISTO");
       await loadMesasCocina();
 
 
@@ -190,6 +207,28 @@ export function useCocinaDashboard() {
 
     } catch (err) {
       console.error("Error marking plato ready:", err);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const marcarTodosListoMesa = async (mesa: MesaCocina) => {
+    const enPreparacion = mesa.lineas.filter((linea) => linea.estado === "EN_PREPARACION");
+    if (enPreparacion.length === 0) return;
+
+    setUpdating(mesa.id);
+    try {
+      const detalleIds = enPreparacion.flatMap((linea) => linea.detalleIds);
+      await actualizarEstadoDetalleBatch(detalleIds, "LISTO");
+      await loadMesasCocina();
+
+      addNotif({
+        tipo: "info",
+        titulo: `Mesa ${mesa.mesa} - Todos listos`,
+        mensaje: `Todos los platos de la mesa ${mesa.mesa} están listos para servir.`,
+      });
+    } catch (err) {
+      console.error("Error marking all ready:", err);
     } finally {
       setUpdating(null);
     }
@@ -247,5 +286,7 @@ export function useCocinaDashboard() {
     setFiltro,
     empezarPreparacionMesa,
     marcarPlatoListo,
+    marcarTodosListoMesa,
+    noUsuariosAsignados,
   };
 }

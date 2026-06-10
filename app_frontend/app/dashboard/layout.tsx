@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { applyRestauranteBranding } from "@/lib/branding";
 import { useRestauranteRealtime } from "@/lib/realtime";
 import { CursorGlow } from "@/components/CursorGlow";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Crown,
   Flame,
@@ -70,8 +71,8 @@ export default function DashboardLayout({
     if (!_hasHydrated || !accessToken || !rol) return;
 
      const allowedPrefixesByRole: Record<string, string[]> = {
-       admin: ["/dashboard/admin"],
-       propietario: ["/dashboard/admin"],
+       admin: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
+       propietario: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
        cocina: ["/dashboard/cocina"],
        caja: ["/dashboard/caja"],
        mesero: ["/dashboard/mesero"],
@@ -105,6 +106,21 @@ export default function DashboardLayout({
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  // ── Mobile drawer: cerrar con Esc + bloquear scroll del body ──
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [mobileMenuOpen]);
 
   // Fetch active modules for tenant
   useEffect(() => {
@@ -204,7 +220,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
       <CursorGlow />
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -220,12 +236,15 @@ export default function DashboardLayout({
         )}
       </AnimatePresence>
       <aside
+        id="premium-sidebar"
         className={[
           "premium-sidebar",
           sidebarCollapsed ? "premium-sidebar--collapsed" : "",
           mobileMenuOpen ? "premium-sidebar--mobile-open" : "",
         ].filter(Boolean).join(" ")}
         aria-label="Navegación principal"
+        role={mobileMenuOpen ? "dialog" : undefined}
+        aria-modal={mobileMenuOpen ? true : undefined}
       >
         <div className="premium-sidebar-header">
           <div className="premium-sidebar-logo" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
@@ -236,20 +255,16 @@ export default function DashboardLayout({
                 <Wine size={16} color="var(--text-inverse, #fff)" />
               )}
             </div>
-            {!sidebarCollapsed && (
-              <span className="premium-sidebar-brand">{restaurante?.nombre || "Cargando..."}</span>
-            )}
+            <span className="premium-sidebar-brand">{restaurante?.nombre || "Cargando..."}</span>
           </div>
-          {!sidebarCollapsed && (
-            <button
-              className="premium-sidebar-collapse"
-              onClick={() => setSidebarCollapsed(true)}
-              aria-label="Colapsar menú"
-              title="Colapsar"
-            >
-              <ChevronsLeft size={14} />
-            </button>
-          )}
+          <button
+            className="premium-sidebar-collapse"
+            onClick={() => setSidebarCollapsed(true)}
+            aria-label="Colapsar menú"
+            title="Colapsar"
+          >
+            <ChevronsLeft size={14} />
+          </button>
         </div>
         <nav className="premium-sidebar-nav">
           {navItems.map((item) => {
@@ -271,10 +286,8 @@ export default function DashboardLayout({
                   />
                 )}
                 <Icon size={18} className="premium-sidebar-item-icon" />
-                {!sidebarCollapsed && (
-                  <span className="premium-sidebar-item-label">{item.label}</span>
-                )}
-                {isActive && !sidebarCollapsed && (
+                <span className="premium-sidebar-item-label">{item.label}</span>
+                {isActive && (
                   <div className="premium-sidebar-item-dot" />
                 )}
               </button>
@@ -282,58 +295,55 @@ export default function DashboardLayout({
           })}
         </nav>
         <div className="premium-sidebar-footer">
-          <div className="premium-sidebar-user" title={sidebarCollapsed ? `${usuario?.nombre || "Usuario"} · ${rol || ""}` : undefined}>
+          <div className="premium-sidebar-user" title={`${usuario?.nombre || "Usuario"} · ${rol || ""}`}>
             <div className="premium-sidebar-avatar">
               {usuario?.nombre?.charAt(0).toUpperCase() || "?"}
               <div className="premium-sidebar-avatar-pulse" />
             </div>
-            {!sidebarCollapsed && (
-              <div className="premium-sidebar-user-info">
-                <div className="premium-sidebar-user-name">{usuario?.nombre || "Usuario"}</div>
-                <div className="premium-sidebar-user-role">
-                  {roleIcons[rol || ""] || null}
-                  {rol || "Sin rol"}
-                </div>
+            <div className="premium-sidebar-user-info">
+              <div className="premium-sidebar-user-name">{usuario?.nombre || "Usuario"}</div>
+              <div className="premium-sidebar-user-role">
+                {roleIcons[rol || ""] || null}
+                {rol || "Sin rol"}
               </div>
-            )}
+            </div>
           </div>
-          {!sidebarCollapsed ? (
-            <button onClick={handleLogout} className="premium-sidebar-logout" aria-label="Cerrar sesión">
-              <LogOut size={12} />Cerrar sesión
-            </button>
-          ) : (
-            <button
-              className="premium-sidebar-expand"
-              onClick={() => setSidebarCollapsed(false)}
-              aria-label="Expandir menú"
-              title="Expandir"
-              style={{ alignSelf: "center", marginTop: 4 }}
-            >
-              <ChevronsRight size={14} />
-            </button>
-          )}
+          <button onClick={handleLogout} className="premium-sidebar-logout" aria-label="Cerrar sesión" title="Cerrar sesión">
+            <LogOut size={12} /><span>Cerrar sesión</span>
+          </button>
+          <button
+            className="premium-sidebar-expand"
+            onClick={() => setSidebarCollapsed(false)}
+            aria-label="Expandir menú"
+            title="Expandir"
+          >
+            <ChevronsRight size={14} />
+          </button>
         </div>
       </aside>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <header style={{ height: 60, borderBottom: "1px solid var(--border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-elevated)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <header className="dashboard-header">
+          <div className="dashboard-header-left">
             <button
               className="premium-header-hamburger"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Abrir menú"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="premium-sidebar"
             >
               <Menu size={18} />
             </button>
-            <h2 style={{ fontFamily: "var(--font-noto-serif), serif", fontSize: 18, fontWeight: 400, color: "var(--text)", margin: 0 }}>{navItems.find((n) => pathname?.startsWith(n.href))?.label || "Dashboard"}</h2>
-            <span className="badge badge-delivered" style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 4 }}><CircleDot size={8} /> En línea</span>
+            <h2 className="dashboard-header-title">{navItems.find((n) => pathname?.startsWith(n.href))?.label || "Dashboard"}</h2>
+            <span className="badge badge-delivered dashboard-header-status" style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 4 }}><CircleDot size={8} /> En línea</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
+          <div className="dashboard-header-right">
+            <span className="dashboard-header-time" style={{ fontSize: 12, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
+            <ThemeToggle />
             <div style={{ position: "relative" }}>
               <button onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Bell size={16} color="var(--text-secondary)" /></button>
               {unreadCount() > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--secondary)", color: "white", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount()}</span>}
               {showNotifs && (
-                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, maxHeight: 400, overflowY: "auto", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", zIndex: 100, padding: "8px" }}>
+                <div className="dashboard-notif-dropdown" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, maxHeight: 400, overflowY: "auto", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", zIndex: 9999, padding: "8px" }}>
                   <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}><p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0 }}>Notificaciones</p></div>
                   {notifItems.length === 0 ? <div style={{ padding: "24px", textAlign: "center" }}><Bell size={24} color="var(--text-muted)" style={{ marginBottom: 8 }} /><p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Sin notificaciones</p></div> : notifItems.slice(0, 10).map((n) => (<div key={n.id} style={{ padding: "10px 12px", borderRadius: "var(--radius-sm)", background: n.leida ? "transparent" : "var(--primary-ghost)", marginBottom: 2 }}><p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: "0 0 2px" }}>{n.titulo}</p><p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{n.mensaje}</p></div>))}
                 </div>
@@ -341,7 +351,7 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-        <main style={{ flex: 1, overflow: "auto", padding: "28px" }}>{children}</main>
+        <main className="dashboard-main">{children}</main>
       </div>
     </div>
   );

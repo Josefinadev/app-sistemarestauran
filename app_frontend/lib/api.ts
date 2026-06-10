@@ -49,6 +49,9 @@ async function apiFetch(path: string, options?: RequestInit) {
     if (err?.name === "AbortError") {
       throw new Error(`Tiempo de espera agotado (${timeoutMs / 1000}s). Verifica que el backend esté corriendo en ${API_URL}.`);
     }
+    if (err instanceof TypeError) {
+      throw new Error(`No se pudo conectar al servidor. Verifica que el backend esté corriendo en ${API_URL}.`);
+    }
     throw err;
   } finally {
     clearTimeout(timeoutId);
@@ -92,6 +95,9 @@ export const loginAuth = async (email: string, password: string) => {
   } catch (err: any) {
     if (err?.name === "AbortError") {
       throw new Error(`Tiempo de espera agotado (${timeoutMs / 1000}s). Verifica que el backend esté corriendo en ${API_URL}.`);
+    }
+    if (err instanceof TypeError) {
+      throw new Error(`No se pudo conectar al servidor. Verifica que el backend esté corriendo en ${API_URL}.`);
     }
     throw err;
   } finally {
@@ -274,6 +280,12 @@ export const actualizarEstadoDetalle = (id: string, estado: string) =>
   apiFetch(`/pedidos/detalle/${id}/estado`, {
     method: "PATCH",
     body: JSON.stringify({ estado }),
+  });
+
+export const actualizarEstadoDetalleBatch = (ids: string[], estado: string) =>
+  apiFetch(`/pedidos/detalle/batch/estado`, {
+    method: "PATCH",
+    body: JSON.stringify({ ids, estado }),
   });
 
 export const registrarPago = (id: string, metodo_pago: string, comprobante_url?: string) =>

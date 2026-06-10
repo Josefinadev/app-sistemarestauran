@@ -487,7 +487,7 @@ export default function GestionWebPage() {
 
       {/* ═══ CONFIG ═══ */}
       {activeTab === "config" && (
-        <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
           <div className="card-flat" style={{ padding: 24, gridColumn: "1 / -1" }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px", display: "flex", alignItems: "center", gap: 8 }}>
               <ImagePlus size={18} color="var(--primary)" /> Identidad visual

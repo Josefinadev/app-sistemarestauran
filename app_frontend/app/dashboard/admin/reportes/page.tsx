@@ -172,7 +172,7 @@ export default function ReportesPage() {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
         <div className="card-flat" style={{ padding: 24 }}>
           <p className="label" style={{ marginBottom: 20 }}>Top 8 Productos</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

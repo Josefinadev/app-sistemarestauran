@@ -8,6 +8,7 @@ export interface ItemServir {
   esBebida: boolean;
   pedidoId: string;
   detalleIds: string[];
+  imagenUrl?: string | null;
 }
 
 export interface PedidoMesero {

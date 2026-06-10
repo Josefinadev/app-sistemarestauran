@@ -7,7 +7,7 @@ import { QRCode } from "react-qrcode-logo";
 import {
   Package, Tag, Armchair, Receipt, DollarSign, Plus, Pause, Play,
   Trash2, Search, QrCode as QrIcon, X, Download, Copy, ImageIcon, ChefHat,
-  GlassWater, Sparkles, Hash, Users, BookOpen, AlertCircle,
+  GlassWater, Sparkles, Hash, Users, BookOpen, AlertCircle, Pencil,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
 import { sanitize, validate } from "@/lib/inputValidation";
@@ -86,6 +86,43 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Edit product state ──
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [editData, setEditData] = useState({ nombre: "", precio: "", stock: "", descripcion: "", disponible: true });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const handleEditProduct = (p: any) => {
+    setEditProduct(p);
+    setEditData({
+      nombre: p.nombre || "",
+      precio: String(p.precio || ""),
+      stock: String(p.stock || ""),
+      descripcion: p.descripcion || "",
+      disponible: p.disponible !== false,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editProduct) return;
+    setEditSaving(true);
+    try {
+      const { actualizarProducto } = await import("@/lib/api");
+      await actualizarProducto(editProduct.id, {
+        nombre: editData.nombre,
+        precio: parseFloat(editData.precio),
+        stock: parseInt(editData.stock) || 0,
+        descripcion: editData.descripcion,
+        disponible: editData.disponible,
+      });
+      setEditProduct(null);
+      vm.loadData();
+    } catch (err: any) {
+      console.error("Error editing product:", err);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const statCards = [
     { label: "Productos activos", value: String(vm.stats.productos), Icon: Package, color: "var(--primary)" },
     { label: "Mesas activas", value: String(vm.stats.mesas), Icon: Armchair, color: "var(--tertiary)" },
@@ -150,26 +187,36 @@ export default function AdminDashboard() {
       {vm.activeTab === "productos" && (
         <div className="table-container animate-fade-in">
           <table>
-            <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Flujo</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th style={{ width: 50 }}></th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Flujo</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody>
               {vm.productosFiltrados.map((p: any) => (
                 <tr key={p.id}>
+                  <td style={{ padding: "8px" }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, overflow: "hidden", background: "var(--surface-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {p.imagen_url ? (
+                        <img src={p.imagen_url} alt={p.nombre} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      ) : (
+                        <ImageIcon size={16} color="var(--text-muted)" />
+                      )}
+                    </div>
+                  </td>
                   <td style={{ fontWeight: 500, color: "var(--text)" }}>{p.nombre}</td>
                   <td>{p.categoria?.nombre || "—"}</td>
                   <td style={{ fontVariantNumeric: "tabular-nums" }}>{formatPrecio(Number(p.precio))}</td>
                   <td style={{ fontVariantNumeric: "tabular-nums" }}>{p.stock}</td>
                   <td>
                     {p.es_bebida && p.requiere_preparacion === false ? (
-                      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(151,176,255,0.1)", color: "var(--tertiary)", fontWeight: 600 }}>⚡ Directo</span>
+                      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(151,176,255,0.1)", color: "var(--tertiary)", fontWeight: 600 }}>Directo</span>
                     ) : (
-                      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(251,191,36,0.1)", color: "var(--warning)", fontWeight: 600 }}>🔥 Cocina</span>
+                      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(251,191,36,0.1)", color: "var(--warning)", fontWeight: 600 }}>Cocina</span>
                     )}
                   </td>
                   <td><span className={`badge ${p.disponible ? "badge-ready" : "badge-cancelled"}`}>{p.disponible ? "Disponible" : "Agotado"}</span></td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => vm.handleToggleDisponible(p)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}>{p.disponible ? <Pause size={14} /> : <Play size={14} />}</button>
-                      <button onClick={() => vm.handleDeleteProduct(p.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}><Trash2 size={14} /></button>
+                      <button onClick={() => handleEditProduct(p)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }} title="Editar"><Pencil size={14} /></button>
+                      <button onClick={() => vm.handleToggleDisponible(p)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }} title={p.disponible ? "Pausar" : "Activar"}>{p.disponible ? <Pause size={14} /> : <Play size={14} />}</button>
+                      <button onClick={() => vm.handleDeleteProduct(p.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }} title="Eliminar"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -546,6 +593,47 @@ export default function AdminDashboard() {
             value={vm.newCat.descripcion}
             onChange={(e) => vm.setNewCat({ ...vm.newCat, descripcion: e.target.value })}
           />
+        </div>
+      </Modal>
+
+      {/* Modal Editar Producto */}
+      <Modal
+        open={!!editProduct}
+        onClose={() => setEditProduct(null)}
+        title="Editar producto"
+        description={`Editando: ${editProduct?.nombre || ""}`}
+        icon={<Pencil size={18} />}
+        accentColor="var(--primary)"
+        footer={
+          <ModalFooter>
+            <button onClick={() => setEditProduct(null)} className="btn btn-secondary">Cancelar</button>
+            <button onClick={handleSaveEdit} className="btn btn-primary" disabled={editSaving} style={{ opacity: editSaving ? 0.5 : 1 }}>
+              {editSaving ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </ModalFooter>
+        }
+      >
+        <div className="premium-field">
+          <label className="premium-field-label">Nombre</label>
+          <input className="input" value={editData.nombre} onChange={(e) => setEditData({ ...editData, nombre: e.target.value })} />
+        </div>
+        <div className="premium-field-row">
+          <div className="premium-field">
+            <label className="premium-field-label">Precio</label>
+            <input className="input" type="number" step="0.01" value={editData.precio} onChange={(e) => setEditData({ ...editData, precio: e.target.value })} />
+          </div>
+          <div className="premium-field">
+            <label className="premium-field-label">Stock</label>
+            <input className="input" type="number" value={editData.stock} onChange={(e) => setEditData({ ...editData, stock: e.target.value })} />
+          </div>
+        </div>
+        <div className="premium-field">
+          <label className="premium-field-label">Descripción</label>
+          <input className="input" value={editData.descripcion} onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })} placeholder="Descripción breve" />
+        </div>
+        <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <input type="checkbox" id="edit-disp" checked={editData.disponible} onChange={(e) => setEditData({ ...editData, disponible: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />
+          <label htmlFor="edit-disp" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer" }}>Disponible en la carta</label>
         </div>
       </Modal>
     </div>

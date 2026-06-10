@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Wine, Zap, Shield, Smartphone, Globe, 
@@ -9,9 +9,13 @@ import {
 } from "lucide-react";
 import { crearRestaurante } from "@/lib/api";
 import { ImageUploadInput } from "@/components/ImageUploadInput";
+import { resetRestauranteBranding } from "@/lib/branding";
 
 export default function SaaSLandingPage() {
   const router = useRouter();
+
+  // Reset branding para que la landing no muestre colores del restaurante
+  useEffect(() => { resetRestauranteBranding(); }, []);
   const [showRegModal, setShowRegModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

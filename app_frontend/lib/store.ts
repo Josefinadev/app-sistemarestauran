@@ -41,6 +41,16 @@ export const useCarrito = create<CarritoState>((set, get) => ({
     const precioAgregados = agregados.reduce((sum, a) => sum + a.precio, 0);
     const precioTotal = producto.precio + precioAgregados;
 
+    // Stock validation: check total quantity of this product in cart
+    const currentInCart = get().items
+      .filter((item) => item.producto.id === producto.id)
+      .reduce((sum, item) => sum + item.cantidad, 0);
+
+    const stock = producto.stock ?? Infinity;
+    if (currentInCart + cantidad > stock) {
+      return; // Cannot exceed stock
+    }
+
     // Check if item already exists (same product, notes, agregados)
     const existingIndex = get().items.findIndex((item) =>
       item.producto.id === producto.id &&
@@ -86,6 +96,15 @@ export const useCarrito = create<CarritoState>((set, get) => ({
       // Remove item if quantity is 0 or less
       set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }));
     } else {
+      // Stock validation
+      const item = get().items.find((i) => i.id === itemId);
+      if (item) {
+        const otherQty = get().items
+          .filter((i) => i.producto.id === item.producto.id && i.id !== itemId)
+          .reduce((sum, i) => sum + i.cantidad, 0);
+        const stock = item.producto.stock ?? Infinity;
+        if (otherQty + cantidad > stock) return;
+      }
       set((state) => ({
         items: state.items.map((i) => (i.id === itemId ? { ...i, cantidad } : i)),
       }));

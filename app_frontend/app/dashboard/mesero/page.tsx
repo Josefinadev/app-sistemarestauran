@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatHora } from "@/lib/utils";
 import { useMeseroDashboard } from "@/viewmodels/useMeseroDashboard";
+import { NoUsuariosAsignados } from "@/components/NoUsuariosAsignados";
 import {
   CheckCircle2,
   UtensilsCrossed,
@@ -21,6 +22,10 @@ export default function MeseroDashboard() {
   const toggleExpand = (mesaNumero: number) => {
     setExpanded((prev) => ({ ...prev, [mesaNumero]: !prev[mesaNumero] }));
   };
+
+  if (vm.noUsuariosAsignados) {
+    return <NoUsuariosAsignados rolLabel="Mesero" rol="mesero" />;
+  }
 
   if (vm.loading) {
     return (
@@ -41,7 +46,7 @@ export default function MeseroDashboard() {
           { label: "Bebidas pendientes", value: vm.bebidasCount, color: "var(--tertiary)", Icon: Coffee },
           { label: "Mesas activas", value: vm.mesasActivasCount, color: "var(--primary)", Icon: Package },
         ].map((s) => (
-          <div key={s.label} className="card-flat" style={{ padding: "16px 20px", borderLeft: `3px solid ${s.color}` }}>
+          <div key={s.label} className="card-flat" style={{ padding: "16px 20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>{s.label}</p>
@@ -137,7 +142,13 @@ export default function MeseroDashboard() {
                               {platos.map((item) => (
                                 <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", background: item.estado === "LISTO" ? "rgba(74,222,128,0.06)" : "var(--surface-hover)" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <UtensilsCrossed size={18} color="var(--primary)" />
+                                    <div style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "var(--surface-active)", border: "1px solid var(--border)" }}>
+                                      {item.imagenUrl ? (
+                                        <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                      ) : (
+                                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><UtensilsCrossed size={14} color="var(--text-muted)" /></div>
+                                      )}
+                                    </div>
                                     <div>
                                       <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>{item.cantidad} {item.nombre}</p>
                                       <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "2px 0 0" }}>{formatHora(item.hora)}</p>

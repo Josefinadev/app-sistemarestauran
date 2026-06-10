@@ -8,6 +8,7 @@ interface RawProducto {
   nombre?: string | null;
   es_bebida?: boolean | null;
   requiere_preparacion?: boolean | null;
+  imagen_url?: string | null;
 }
 
 export interface RawDetallePedido {
@@ -36,6 +37,7 @@ export interface DetalleAgrupado {
   detalleIds: string[];
   precioUnitario: number;
   precioTotal: number;
+  imagenUrl: string | null;
 }
 
 export function getDetalleCantidad(detalle: RawDetallePedido) {
@@ -86,6 +88,7 @@ export function agruparDetalles(
         detalleIds: [detalle.id],
         precioUnitario,
         precioTotal: precioUnitario * cantidad,
+        imagenUrl: detalle.producto?.imagen_url || null,
       });
       continue;
     }

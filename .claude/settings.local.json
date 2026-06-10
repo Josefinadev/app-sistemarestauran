@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm run *)",
-      "Bash(npm start *)"
+      "Bash(npm start *)",
+      "Bash(ls *)",
+      "Bash(find \"C:\\\\\\\\Users\\\\\\\\key\\\\\\\\app-sistemarestauran\\\\\\\\app_frontend\" -name \"globals.css\" -o -name \"global.css\")"
     ]
   }
 }

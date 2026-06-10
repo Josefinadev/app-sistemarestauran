@@ -80,7 +80,13 @@ export function useAdminDashboard() {
       });
     } catch (err: any) {
       console.error("Error loading admin data:", err);
-      setError(err?.message || "Error cargando datos");
+      const msg = err?.message || "Error cargando datos";
+      const isNetworkError = msg.includes("No se pudo conectar") || msg.includes("Tiempo de espera");
+      setError(
+        isNetworkError
+          ? "No se pudo conectar al servidor. Asegúrate de que el backend esté corriendo e intenta de nuevo."
+          : msg
+      );
     } finally {
       setLoading(false);
     }

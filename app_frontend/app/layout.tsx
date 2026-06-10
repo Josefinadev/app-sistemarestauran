@@ -38,22 +38,31 @@ export default function RootLayout({
     >
       <body suppressHydrationWarning>
         {/*
-          Bootstrap de tema antes de hidratar React.
+          Bootstrap de tema + branding antes de hidratar React.
           Evita el flash a colores default en recargas.
         */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => {
   try {
-    const raw = sessionStorage.getItem('el-mijano-auth');
+    // 1. Aplicar tema (light/dark)
+    var theme = localStorage.getItem('el-mijano-theme') || 'light';
+    if (theme !== 'light' && theme !== 'dark') theme = 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // 2. Aplicar branding del restaurante (solo en rutas de tenant, NO en landing/superadmin)
+    var path = window.location.pathname;
+    if (path === '/' || path.startsWith('/superadmin') || path === '/login') return;
+
+    var raw = sessionStorage.getItem('el-mijano-auth');
     if (!raw) return;
-    const parsed = JSON.parse(raw);
-    const r = parsed && parsed.state && parsed.state.restaurante;
+    var parsed = JSON.parse(raw);
+    var r = parsed && parsed.state && parsed.state.restaurante;
     if (!r) return;
 
-    const root = document.documentElement;
-    const primary = typeof r.color_primario === 'string' ? r.color_primario : null;
-    const secondary = typeof r.color_secundario === 'string' ? r.color_secundario : null;
+    var root = document.documentElement;
+    var primary = typeof r.color_primario === 'string' ? r.color_primario : null;
+    var secondary = typeof r.color_secundario === 'string' ? r.color_secundario : null;
 
     if (primary && primary.startsWith('#')) {
       root.style.setProperty('--primary', primary);

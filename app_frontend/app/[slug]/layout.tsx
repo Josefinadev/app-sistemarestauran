@@ -52,8 +52,8 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0C0B0E" }}>
-        <Loader2 size={32} color="#C5A059" className="spin-icon" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg)" }}>
+        <Loader2 size={32} color="var(--primary)" className="spin-icon" />
       </div>
     );
   }
@@ -61,10 +61,10 @@ export default function SlugLayout({ children }: { children: React.ReactNode }) 
   if (error) {
     const wasDeleted = error.toLowerCase().includes("eliminado");
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16, background: "#0C0B0E", padding: 24, textAlign: "center" }}>
-        <Wine size={48} color="#5A4E38" />
-        <h2 style={{ fontSize: 18, color: "#F0E6D0", margin: 0 }}>{wasDeleted ? "Restaurante eliminado" : "Restaurante no encontrado"}</h2>
-        <p style={{ fontSize: 13, color: "#B8A98C", margin: 0 }}>{error}</p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16, background: "var(--bg)", padding: 24, textAlign: "center" }}>
+        <Wine size={48} color="var(--text-muted)" />
+        <h2 style={{ fontSize: 18, color: "var(--text)", margin: 0 }}>{wasDeleted ? "Restaurante eliminado" : "Restaurante no encontrado"}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>{error}</p>
       </div>
     );
   }

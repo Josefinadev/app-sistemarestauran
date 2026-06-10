@@ -256,9 +256,9 @@ export default function WebPublica() {
                 }}>
                   {/* Oferta image */}
                   {oferta.imagen_url ? (
-                    <div style={{ height: 180, overflow: "hidden", position: "relative" }}>
+                    <div style={{ aspectRatio: "16 / 9", overflow: "hidden", position: "relative" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={oferta.imagen_url} alt={oferta.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={oferta.imagen_url} alt={oferta.titulo} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.5) 100%)" }} />
                       {oferta.descuento && (
                         <span style={{
@@ -315,9 +315,9 @@ export default function WebPublica() {
                   transition: "transform 0.2s, box-shadow 0.2s",
                 }}>
                   {/* Combo image */}
-                  <div style={{ height: 200, overflow: "hidden", position: "relative" }}>
+                  <div style={{ aspectRatio: "16 / 10", overflow: "hidden", position: "relative" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={combo.imagen_url || "/assets/placeholder-dish.png"} alt={combo.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={combo.imagen_url || "/assets/placeholder-dish.png"} alt={combo.nombre} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.4) 100%)" }} />
                     {combo.popular && (
                       <span style={{ position: "absolute", top: 12, left: 12, padding: "4px 12px", background: "rgba(197,160,89,0.9)", borderRadius: 12, fontSize: 10, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>

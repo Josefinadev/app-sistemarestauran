@@ -155,6 +155,7 @@ router.post('/', async (req, res) => {
 
     const precioMap = {};
     const prepMap = {}; // mapeo id_producto → requiere_preparacion
+    const stockMap = {}; // mapeo id_producto → stock disponible
     for (const p of productos) {
       if (p.id_restaurante !== id_restaurante) {
         return res.status(400).json({ error: true, message: `Producto ${p.id} no pertenece al restaurante.` });
@@ -167,6 +168,23 @@ router.post('/', async (req, res) => {
       }
       precioMap[p.id] = p.precio;
       prepMap[p.id] = p.requiere_preparacion !== false; // default true
+      stockMap[p.id] = p.stock;
+    }
+
+    // Validar que la cantidad pedida no exceda el stock
+    const cantidadPorProducto = {};
+    for (const item of items) {
+      const qty = item.cantidad || 1;
+      cantidadPorProducto[item.id_producto] = (cantidadPorProducto[item.id_producto] || 0) + qty;
+    }
+    for (const [prodId, cantidadTotal] of Object.entries(cantidadPorProducto)) {
+      if (stockMap[prodId] !== undefined && cantidadTotal > stockMap[prodId]) {
+        const prodName = productos.find(p => p.id === prodId)?.nombre || prodId;
+        return res.status(400).json({
+          error: true,
+          message: `Stock insuficiente para "${prodName}". Disponible: ${stockMap[prodId]}, solicitado: ${cantidadTotal}`,
+        });
+      }
     }
 
     // 2. Obtener precios de agregados
@@ -278,6 +296,13 @@ router.post('/', async (req, res) => {
       .eq('id', pedido.id)
       .single();
 
+    // Descontar stock de los productos pedidos
+    for (const [prodId, cantidadTotal] of Object.entries(cantidadPorProducto)) {
+      const currentStock = stockMap[prodId] || 0;
+      const newStock = Math.max(0, currentStock - Number(cantidadTotal));
+      await supabase.from('producto').update({ stock: newStock }).eq('id', prodId);
+    }
+
     res.status(201).json({ data: pedidoCompleto });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });
@@ -316,7 +341,7 @@ router.patch('/:id/pago', authenticate, async (req, res) => {
       return res.status(403).json({ error: true, message: 'Solo caja/admin puede registrar pagos.' });
     }
     const { metodo_pago, comprobante_url } = req.body;
-    const validMetodos = ['EFECTIVO', 'YAPE', 'PLIN', 'TARJETA', 'OTRO'];
+    const validMetodos = ['EFECTIVO', 'YAPE', 'PLIN', 'TARJETA', 'BCP', 'OTRO'];
 
     if (!validMetodos.includes(metodo_pago)) {
       return res.status(400).json({ error: true, message: `Método inválido. Válidos: ${validMetodos.join(', ')}` });
@@ -352,6 +377,80 @@ router.patch('/:id/pago', authenticate, async (req, res) => {
       .neq('estado', 'CANCELADO');
 
     res.json({ data });
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+});
+
+/**
+ * PATCH /api/pedidos/detalle/batch/estado
+ * Actualiza el estado de múltiples detalles en una sola petición.
+ * Body: { ids: string[], estado: string }
+ */
+router.patch('/detalle/batch/estado', authenticate, async (req, res) => {
+  try {
+    const { ids, estado } = req.body;
+    const validEstados = ['PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'CANCELADO'];
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: true, message: 'Se requiere un array de ids.' });
+    }
+    if (!validEstados.includes(estado)) {
+      return res.status(400).json({ error: true, message: `Estado inválido. Válidos: ${validEstados.join(', ')}` });
+    }
+
+    // Actualizar todos los detalles de un golpe
+    const { data, error } = await supabase
+      .from('detalle_pedido')
+      .update({ estado })
+      .in('id', ids)
+      .select('*, id_pedido');
+
+    if (error) throw error;
+
+    // Tenant isolation: verificar que todos los pedidos pertenecen al restaurante
+    const pedidoIds = [...new Set((data || []).map(d => d.id_pedido))];
+    if (pedidoIds.length > 0 && !req.isSuperAdmin) {
+      const { data: pedidos } = await supabase
+        .from('pedido')
+        .select('id, id_restaurante')
+        .in('id', pedidoIds);
+
+      const unauthorized = (pedidos || []).find(p => p.id_restaurante !== req.user.id_restaurante);
+      if (unauthorized) {
+        return res.status(403).json({ error: true, message: 'No tienes acceso a estos pedidos.' });
+      }
+    }
+
+    // Auto-sincronizar estado de los pedidos padre afectados
+    for (const pedidoId of pedidoIds) {
+      const { data: allDetalles } = await supabase
+        .from('detalle_pedido')
+        .select('estado')
+        .eq('id_pedido', pedidoId);
+
+      if (allDetalles && allDetalles.length > 0) {
+        const estados = allDetalles.map(d => d.estado);
+        let nuevoEstadoPedido;
+
+        if (estados.every(e => e === 'ENTREGADO' || e === 'CANCELADO')) {
+          nuevoEstadoPedido = 'ENTREGADO';
+        } else if (estados.some(e => e === 'LISTO')) {
+          nuevoEstadoPedido = 'LISTO';
+        } else if (estados.some(e => e === 'EN_PREPARACION')) {
+          nuevoEstadoPedido = 'EN_PREPARACION';
+        } else {
+          nuevoEstadoPedido = 'PENDIENTE';
+        }
+
+        await supabase
+          .from('pedido')
+          .update({ estado: nuevoEstadoPedido })
+          .eq('id', pedidoId);
+      }
+    }
+
+    res.json({ data, updated: (data || []).length });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });
   }
