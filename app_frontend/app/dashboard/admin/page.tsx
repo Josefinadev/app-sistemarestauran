@@ -88,11 +88,16 @@ export default function AdminDashboard() {
 
   // ── Edit product state ──
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editData, setEditData] = useState({ nombre: "", precio: "", stock: "", descripcion: "", disponible: true, id_categoria: "", es_bebida: false, requiere_preparacion: true });
+  const [editData, setEditData] = useState({ nombre: "", precio: "", stock: "", descripcion: "", disponible: true, id_categoria: "", es_bebida: false, requiere_preparacion: true, imagen_url: "" });
   const [editSaving, setEditSaving] = useState(false);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState("");
+  const editFileRef = useRef<HTMLInputElement | null>(null);
 
   const handleEditProduct = (p: any) => {
     setEditProduct(p);
+    setEditImageFile(null);
+    setEditPreviewUrl(p.imagen_url || "");
     setEditData({
       nombre: p.nombre || "",
       precio: String(p.precio || ""),
@@ -102,6 +107,7 @@ export default function AdminDashboard() {
       id_categoria: p.id_categoria || "",
       es_bebida: p.es_bebida || false,
       requiere_preparacion: p.requiere_preparacion !== false,
+      imagen_url: p.imagen_url || "",
     });
   };
 
@@ -109,7 +115,11 @@ export default function AdminDashboard() {
     if (!editProduct) return;
     setEditSaving(true);
     try {
-      const { actualizarProducto } = await import("@/lib/api");
+      const { actualizarProducto, uploadImage } = await import("@/lib/api");
+      let imagen_url = editData.imagen_url;
+      if (editImageFile) {
+        imagen_url = await uploadImage(editImageFile, "productos");
+      }
       await actualizarProducto(editProduct.id, {
         nombre: editData.nombre,
         precio: parseFloat(editData.precio),
@@ -119,8 +129,11 @@ export default function AdminDashboard() {
         id_categoria: editData.id_categoria,
         es_bebida: editData.es_bebida,
         requiere_preparacion: editData.requiere_preparacion,
+        imagen_url: imagen_url || null,
       });
       setEditProduct(null);
+      setEditImageFile(null);
+      setEditPreviewUrl("");
       vm.loadData();
     } catch (err: any) {
       console.error("Error editing product:", err);
@@ -575,7 +588,7 @@ export default function AdminDashboard() {
             placeholder="Ej: 4 personas"
             inputMode="numeric"
             value={vm.newMesa.capacidad}
-            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: sanitize(e.target.value, "integer") || "4" })}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: sanitize(e.target.value, "integer") })}
             onKeyDown={(e) => {
               if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
             }}
@@ -655,6 +668,31 @@ export default function AdminDashboard() {
           </ModalFooter>
         }
       >
+        {/* Imagen */}
+        <div className="premium-field">
+          <label className="premium-field-label"><ImageIcon size={12} style={{ display: "inline", marginRight: 5 }} />Imagen del producto</label>
+          {editPreviewUrl ? (
+            <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 8, border: "1px solid var(--border)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={editPreviewUrl} alt="Vista previa" style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }} />
+            </div>
+          ) : (
+            <div style={{ display: "grid", placeItems: "center", minHeight: 90, background: "var(--surface)", border: "1px dashed var(--border)", borderRadius: 12, color: "var(--text-muted)", fontSize: 12, marginBottom: 8 }}>
+              Sin imagen
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => editFileRef.current?.click()} className="btn btn-secondary btn-sm" style={{ flex: 1, minWidth: 120 }}>
+              {editPreviewUrl ? "Cambiar imagen" : "Seleccionar imagen"}
+            </button>
+            {editPreviewUrl && (
+              <button type="button" onClick={() => { setEditImageFile(null); setEditPreviewUrl(""); setEditData(d => ({ ...d, imagen_url: "" })); if (editFileRef.current) editFileRef.current.value = ""; }} className="btn btn-ghost btn-sm">
+                Quitar
+              </button>
+            )}
+            <input ref={editFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0] || null; setEditImageFile(f); if (f) setEditPreviewUrl(URL.createObjectURL(f)); }} />
+          </div>
+        </div>
         <div className="premium-field">
           <label className="premium-field-label">Nombre</label>
           <input className="input" value={editData.nombre} onChange={(e) => setEditData({ ...editData, nombre: e.target.value })} />

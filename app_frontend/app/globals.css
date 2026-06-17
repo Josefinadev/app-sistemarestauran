@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
    EL MIJANO — Design System Tokens
@@ -2059,445 +2059,472 @@ canvas {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LOGIN PAGE — Diseño Ordely Premium
-   Mobile-first: solo form + logo.
-   Desktop ≥768px: panel visual izquierda | formulario derecha.
-   ═══════════════════════════════════════════════════════════ */
+/* ================================================================
+   ORDERLY LOGIN v4 -- Layout imgLogin
+   ================================================================ */
 
-.login-page {
-  position: relative;
-  min-height: 100dvh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background: var(--bg);
+/* -- Tokens de color (responden a data-theme) -- */
+:root {
+  --lv-gold:    #C5A028;
+  --lv-gold2:   #A8841A;
+  --lv-gold3:   #E2BA50;
+  --lv-dark:    #1A1408;
+  --lv-text:    #2A2010;
+  --lv-gray:    #6B5F40;
+  --lv-gray-lt: #DDD5C0;
+  --lv-cream:   #F5F0E6;
+  --lv-white:   #FFFFFF;
+  --lv-surface: #FFFFFF;
+}
+[data-theme="dark"] {
+  --lv-cream:   #18160E;
+  --lv-white:   #1C1A12;
+  --lv-surface: #242018;
+  --lv-text:    #F0E8D0;
+  --lv-gray:    #A09070;
+  --lv-gray-lt: #3A3020;
 }
 
-/* Card principal */
-.login-card {
-  position: relative;
-  z-index: 1;
+/* ================================================================
+   ESTRUCTURA RAIZ
+   ================================================================ */
+.lv-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   width: 100%;
-  max-width: 440px;
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.06);
+  background: var(--lv-cream);
+}
+
+/* ================================================================
+   CUERPO: card izquierdo + hero derecho
+   ================================================================ */
+.lv-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   overflow: hidden;
 }
 
-.login-card-inner {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-/* ── Panel visual: OCULTO en móvil ── */
-.login-visual-panel {
-  display: none;
-}
-
-/* ── Panel formulario ── */
-.login-form-panel {
+/* ================================================================
+   CARD DEL FORMULARIO (izquierdo)
+   ================================================================ */
+.lv-card {
+  position: relative;
+  width: 100%;
+  background: var(--lv-surface);
+  padding: 32px 28px 28px;
   display: flex;
   flex-direction: column;
-  padding: 32px 28px 28px;
-  background: var(--surface);
   gap: 0;
 }
 
-/* Logo Ordely (móvil) */
-.login-logo-mobile {
+/* Ornamentos de esquina */
+.lv-corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+}
+.lv-corner--tl {
+  top: 10px;
+  left: 10px;
+  border-top: 1.5px solid var(--lv-gold);
+  border-left: 1.5px solid var(--lv-gold);
+  border-radius: 4px 0 0 0;
+}
+.lv-corner--tr {
+  top: 10px;
+  right: 10px;
+  border-top: 1.5px solid var(--lv-gold);
+  border-right: 1.5px solid var(--lv-gold);
+  border-radius: 0 4px 0 0;
+}
+
+/* Brand (logo + nombre) */
+.lv-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.lv-brand-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-/* — SISTEMA DE GESTIÓN — */
-.login-system-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  margin-top: 8px;
-  white-space: nowrap;
-}
-
-.login-system-label--sm {
-  margin-top: 6px;
-}
-
-.login-system-line {
-  flex: 1;
-  height: 1px;
-  background: var(--primary);
-  opacity: 0.5;
-  max-width: 40px;
-}
-
-/* Heading */
-.login-heading {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.login-heading h1 {
-  font-size: 30px;
-  font-weight: 900;
-  color: var(--text);
-  margin: 0;
   line-height: 1.1;
 }
-
-.login-heading-sub {
+.lv-brand-name {
   font-size: 26px;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--primary);
-  margin: 2px 0 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--lv-text);
+}
+.lv-brand-sub {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--lv-gold);
 }
 
-.login-heading-rule {
-  width: 36px;
-  height: 2px;
-  background: var(--primary);
-  margin: 0 auto;
+/* Intro */
+.lv-intro { margin-bottom: 22px; }
+.lv-sistema {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--lv-gold);
+  margin: 0 0 6px;
+}
+.lv-title {
+  font-family: var(--font-noto-serif), "Noto Serif", Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--lv-text);
+  margin: 0;
 }
 
 /* Formulario */
-.login-form {
+.lv-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.login-field-label {
-  font-size: 9px;
+.lv-field { display: flex; flex-direction: column; gap: 6px; }
+.lv-field > label {
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.13em;
-  color: var(--text-secondary);
+  color: var(--lv-gray);
 }
-
-/* Input wrap */
-.login-input-wrap {
+.lv-input {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1.5px solid var(--border);
+  height: 52px;
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-gray-lt);
   border-radius: 8px;
-  background: var(--bg);
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s;
 }
-
-.login-input-wrap.focused,
-.login-input-wrap:focus-within {
-  border-color: var(--primary);
-  background: var(--surface);
-}
-
-.login-input-icon {
+.lv-input:focus-within { border-color: var(--lv-gold); }
+.lv-input-ico {
   position: absolute;
-  left: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
+  left: 14px;
+  color: #9A9A9A;
   pointer-events: none;
-  z-index: 1;
 }
-
-.login-input {
+.lv-input input {
   width: 100%;
-  padding: 12px 12px 12px 38px;
+  height: 100%;
+  padding: 0 42px 0 42px;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 13.5px;
-  color: var(--text);
+  font-size: 14px;
+  color: var(--lv-text);
 }
-
-.login-input::placeholder {
-  color: var(--text-muted);
+.lv-input input::placeholder { color: #BBBBBB; }
+.lv-input input:-webkit-autofill,
+.lv-input input:-webkit-autofill:hover,
+.lv-input input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 50px var(--lv-surface) inset !important;
+  -webkit-text-fill-color: var(--lv-text) !important;
 }
-
-.login-eye-btn {
+.lv-eye {
   position: absolute;
-  right: 10px;
+  right: 12px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 4px;
-  color: var(--text-muted);
+  color: #9A9A9A;
   display: flex;
   align-items: center;
-  transition: color 0.15s;
 }
+.lv-eye:hover { color: var(--lv-text); }
 
-.login-eye-btn:hover { color: var(--text); }
+/* Fila remember + forgot */
+.lv-row-aux {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lv-remember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--lv-gray);
+  cursor: pointer;
+}
+.lv-remember input[type=checkbox] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--lv-gold);
+  cursor: pointer;
+}
+.lv-forgot {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--lv-gold);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.lv-forgot:hover { color: var(--lv-gold2); }
 
 /* Error */
-.login-error {
+.lv-error {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--error);
+  color: #DC2626;
   padding: 8px 12px;
   background: rgba(220,38,38,0.06);
   border: 1px solid rgba(220,38,38,0.18);
   border-radius: 8px;
   overflow: hidden;
 }
-.login-error svg { flex-shrink: 0; }
+.lv-error svg { flex-shrink: 0; }
 
-/* Botón de envío */
-.login-submit {
+/* Boton */
+.lv-btn {
   width: 100%;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 14px 20px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  background: linear-gradient(135deg, var(--lv-gold3) 0%, var(--lv-gold) 50%, var(--lv-gold2) 100%);
+  color: #1A1000;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
+  transition: filter 0.2s, transform 0.15s;
+  box-shadow: 0 4px 16px rgba(197,160,40,0.35);
+}
+.lv-btn:hover:not(:disabled) { filter: brightness(1.06); }
+.lv-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Nota seguridad */
+.lv-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--lv-gray);
+  margin-top: 12px;
+}
+.lv-secure svg { color: var(--lv-gold); }
+
+/* ================================================================
+   HERO (derecho en desktop, debajo en mobile)
+   ================================================================ */
+.lv-hero {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.login-submit:hover:not(:disabled) { background: var(--primary-dark); }
-.login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* Puntos decorativos */
-.login-dots {
-  text-align: center;
-  color: var(--primary);
-  font-size: 18px;
-  letter-spacing: 8px;
-  margin: 14px 0 4px;
+/* Ornamento top-right */
+.lv-hero-orn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 120px;
+  border-top: 2px solid rgba(197,160,40,0.55);
+  border-right: 2px solid rgba(197,160,40,0.55);
+  border-radius: 0 8px 0 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.lv-hero-orn::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 60px;
+  height: 60px;
+  border-top: 1px solid rgba(197,160,40,0.35);
+  border-right: 1px solid rgba(197,160,40,0.35);
 }
 
-/* Marca de agua */
-.login-watermark {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.35em;
-  color: var(--border);
-  margin: 0 0 4px;
+/* Contenido superpuesto sobre la imagen */
+.lv-hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 32px 24px 24px;
+  justify-content: space-between;
+}
+.lv-hero-top { flex: 1; }
+
+/* Titulo hero */
+.lv-hero-title {
+  font-family: var(--font-noto-serif), "Noto Serif", Georgia, serif;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--lv-text);
+  margin: 0 0 12px;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.4);
 }
 
-/* Footer móvil */
-.login-mobile-footer {
+[data-theme="dark"] .lv-hero-title {
+  color: #FFFFFF;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Fleur ornament */
+.lv-fleur {
+  font-size: 22px;
+  color: var(--lv-gold);
+  margin: 0 0 12px;
+  line-height: 1;
+}
+
+/* Descripcion hero */
+.lv-hero-desc {
+  font-size: 14px;
+  color: var(--lv-gray);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 380px;
+}
+
+/* Stats (dentro del hero) */
+.lv-stats {
+  display: flex;
+  background: rgba(255,255,255,0.92);
+  border-radius: 10px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  max-width: 340px;
+  width: 100%;
+  align-self: center;
+  margin: 0 auto;
+}
+.lv-stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  color: var(--text-muted);
-  margin-top: 12px;
-  letter-spacing: 0.03em;
+  padding: 8px 6px;
+  gap: 1px;
 }
-.login-mobile-footer span {
+.lv-stat-ico { color: var(--lv-gold); width: 14px; height: 14px; }
+.lv-stat strong {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--lv-gold);
+  line-height: 1;
+  font-family: var(--font-noto-serif), "Noto Serif", Georgia, serif;
+}
+.lv-stat > span {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lv-text);
+}
+.lv-stat-div {
+  width: 1px;
+  background: var(--lv-gray-lt);
+  align-self: stretch;
+  margin: 6px 0;
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.lv-footer {
+  background: var(--lv-dark);
+  color: var(--lv-gold3);
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 24px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  flex-shrink: 0;
+}
+.lv-footer-fleur {
+  font-size: 12px;
+  color: var(--lv-gold);
+}
+[data-theme="dark"] .lv-footer {
+  background: #0A0906;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   DESKTOP ≥ 768px — Visual izquierda (56%) | Form derecha (44%)
-   ═══════════════════════════════════════════════════════════ */
+/* ================================================================
+   DESKTOP >= 768px
+   ================================================================ */
 @media (min-width: 768px) {
-  .login-page { padding: 32px 24px; }
-
-  .login-card {
-    max-width: 960px;
-    border-radius: 24px;
-    min-height: 590px;
-  }
-
-  .login-card-inner {
-    grid-template-columns: 56% 44%;
-    min-height: 590px;
-  }
-
-  /* Panel visual — LEFT */
-  .login-visual-panel {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-    border-radius: 24px 0 0 24px;
-  }
-
-  /* Fondo con imagen */
-  .login-visual-bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-  }
-
-  /* Overlay crema sobre la imagen */
-  .login-visual-bg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 248, 230, 0.82);
-  }
-
-  /* Contenido del panel visual */
-  .login-visual-content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 36px;
-    height: 100%;
-    gap: 0;
-  }
-
-  .login-logo {
-    margin-bottom: 6px;
-  }
-
-  .login-system-label {
-    margin-bottom: 14px;
-  }
-
-  /* Titular */
-  .login-visual-headline {
-    font-size: 46px;
-    font-weight: 900;
-    line-height: 1.12;
-    color: var(--text);
-    text-align: center;
-    margin: 0 0 10px;
-  }
-
-  .login-visual-headline span {
-    color: var(--primary);
-  }
-
-  /* Subtítulo */
-  .login-visual-copy {
-    font-size: 12.5px;
-    color: var(--text-secondary);
-    text-align: center;
-    line-height: 1.55;
-    margin: 0 0 16px;
-  }
-
-  /* Línea dorada divisora */
-  .login-gold-rule {
-    width: 55%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--primary), transparent);
-    margin: 0 0 18px;
-  }
-
-  /* Stats */
-  .login-stats {
-    display: flex;
-    align-items: stretch;
-    width: 100%;
-    max-width: 310px;
-    background: rgba(255,255,255,0.75);
-    border: 1px solid rgba(197,160,89,0.28);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 18px;
-  }
-
-  .login-stat {
+  .lv-body {
+    flex-direction: row;
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 12px 8px;
-    gap: 2px;
+    min-height: calc(100dvh - 48px);
   }
 
-  .login-stat-sep {
-    width: 1px;
-    background: rgba(197,160,89,0.22);
-    align-self: stretch;
-  }
-
-  .login-stat-icon { color: var(--primary); margin-bottom: 1px; }
-
-  .login-stat-value {
-    font-size: 18px;
-    font-weight: 900;
-    color: var(--text);
-    line-height: 1;
-  }
-
-  .login-stat-label {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    color: var(--text-muted);
-  }
-
-  /* Footer del panel visual */
-  .login-visual-footer {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
+  /* Card formulario -- izquierdo ~38% */
+  .lv-card {
+    width: 38%;
+    min-width: 340px;
+    max-width: 480px;
+    flex-shrink: 0;
+    padding: 40px 44px;
     justify-content: center;
-    font-size: 9.5px;
-    color: var(--text-muted);
-    letter-spacing: 0.03em;
+    border-right: 1px solid var(--lv-gray-lt);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.06);
   }
 
-  .login-visual-footer span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+  .lv-title { font-size: 44px; }
+
+  /* Hero -- derecho, resto del ancho */
+  .lv-hero {
+    flex: 1;
+    min-height: unset;
   }
-
-  /* Panel formulario — RIGHT */
-  .login-form-panel {
-    padding: 48px 40px;
-    justify-content: center;
-    border-radius: 0 24px 24px 0;
+  .lv-hero-content {
+    padding: 48px 52px 36px;
   }
+  .lv-hero-title { font-size: 64px; }
+  .lv-hero-desc  { font-size: 15px; max-width: 460px; }
+  .lv-fleur      { font-size: 26px; margin-bottom: 16px; }
 
-  /* Ocultar elementos exclusivos de móvil */
-  .login-logo-mobile { display: none; }
-  .login-mobile-footer { display: none; }
-
-  /* Heading alineado a la izquierda en desktop */
-  .login-heading { text-align: left; }
-  .login-heading-rule { margin: 0; }
-  .login-dots { text-align: left; }
+  .lv-stat strong { font-size: 18px; }
+  .lv-stat        { padding: 10px 8px; }
+  .lv-stat > span { font-size: 8px; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Desktop XL ≥ 1200px
-   ═══════════════════════════════════════════════════════════ */
+/* ================================================================
+   XL >= 1200px
+   ================================================================ */
 @media (min-width: 1200px) {
-  .login-card { max-width: 1020px; }
-  .login-form-panel { padding: 56px 52px; }
-  .login-visual-content { padding: 48px 44px; }
-  .login-visual-headline { font-size: 52px; }
+  .lv-card        { padding: 48px 56px; }
+  .lv-title       { font-size: 50px; }
+  .lv-hero-title  { font-size: 76px; }
+  .lv-hero-content { padding: 56px 64px 44px; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3601,34 +3628,6 @@ canvas {
   box-shadow: 0 1px 6px rgba(26, 24, 20, 0.06), 0 1px 2px rgba(26, 24, 20, 0.03);
 }
 
-/* Login page light — fondo cálido */
-:root:not([data-theme="dark"]) .login-page {
-  background: linear-gradient(145deg, #FDFCFA 0%, #F5F0E8 50%, #FAF8F5 100%);
-}
-
-:root:not([data-theme="dark"]) .login-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(197, 160, 89, 0.12);
-  box-shadow:
-    0 24px 60px -10px rgba(197, 160, 89, 0.10),
-    0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-:root:not([data-theme="dark"]) .login-form-panel {
-  background: #FFFFFF;
-}
-
-:root:not([data-theme="dark"]) .login-input-wrap {
-  background: #F7F6F3;
-  border-color: #E5E2DC;
-}
-
-:root:not([data-theme="dark"]) .login-input-wrap.focused,
-:root:not([data-theme="dark"]) .login-input-wrap:focus-within {
-  background: #FFFFFF;
-  border-color: #C5A059;
-}
-
 /* Client menu light — limpio, sencillo, colores que combinan */
 :root:not([data-theme="dark"]) .client-menu-page {
   background: #F5F5F0;
@@ -3899,4 +3898,3 @@ canvas {
 :root:not([data-theme="dark"]) .dashboard-main {
   background: var(--bg);
 }
-

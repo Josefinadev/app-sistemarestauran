@@ -1,8 +1,7 @@
 class AppConfig {
-  // Match the current React Native defaults but allow overriding via --dart-define.
   static const apiUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://192.168.18.17:3001/api',
+    defaultValue: 'https://orderly-delta-cyan.vercel.app/api',
   );
 
   static const supabaseUrl = String.fromEnvironment(
