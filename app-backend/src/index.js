@@ -71,4 +71,4 @@ app.use((err, req, res, next) => {
 // ── Start server ──
 app.listen(PORT, () => {
   console.log(`\n🍷 El Mijano API corriendo en http://localhost:${PORT}\n`);
-});
+});// redeploy mié 17 jun 2026 18:43:44 -05
