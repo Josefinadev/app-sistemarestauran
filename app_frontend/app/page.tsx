@@ -5,14 +5,40 @@ import { useRouter } from "next/navigation";
 import { 
   Wine, Zap, Shield, Smartphone, Globe, 
   ArrowRight, Check, Loader2, Star,
-  Utensils, LayoutDashboard, QrCode, Eye, EyeOff
+  Utensils, LayoutDashboard, QrCode, Eye, EyeOff,
+  CreditCard, AlertCircle, CheckCircle
 } from "lucide-react";
-import { crearRestaurante } from "@/lib/api";
+import { crearPreferenciaPagoRegistro } from "@/lib/api";
 import { ImageUploadInput } from "@/components/ImageUploadInput";
 import { resetRestauranteBranding } from "@/lib/branding";
 
+const PRECIO_MENSUAL = 60; // S/60
+
 export default function SaaSLandingPage() {
   const router = useRouter();
+
+  // Verificar si viene de un pago
+  const [pagoMessage, setPagoMessage] = useState<{ type: 'success' | 'error' | 'pending'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const pagoStatus = urlParams.get('pago');
+    
+    if (pagoStatus === 'fallido') {
+      setPagoMessage({ type: 'error', text: 'El pago no se pudo completar. Intenta nuevamente.' });
+    } else if (pagoStatus === 'pendiente') {
+      setPagoMessage({ type: 'pending', text: 'Tu pago esta pendiente de confirmacion. Te notificaremos cuando se procese.' });
+    }
+    
+    // Limpiar el parametro de la URL
+    if (pagoStatus) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pago');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   // Reset branding para que la landing no muestre colores del restaurante
   useEffect(() => { resetRestauranteBranding(); }, []);
@@ -38,18 +64,44 @@ export default function SaaSLandingPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await crearRestaurante(formData);
-      alert("¡Restaurante creado con éxito! Ahora puedes iniciar sesión.");
-      router.push("/login");
+      // Crear preferencia de pago en Mercado Pago
+      const preferencia = await crearPreferenciaPagoRegistro(formData);
+      
+      // Redirigir al checkout de Mercado Pago
+      // En produccion usar init_point, en sandbox usar sandbox_init_point
+      window.location.href = preferencia.init_point;
+      
     } catch (err: any) {
-      alert(err.message || "Error al registrar restaurante.");
-    } finally {
+      alert(err.message || "Error al procesar el registro.");
       setLoading(false);
     }
   };
 
   return (
     <div style={{ background: "#0C0B0E", color: "#fff", minHeight: "100vh", fontFamily: "var(--font-geist-sans)" }}>
+      {/* Notificacion de estado de pago */}
+      {pagoMessage && (
+        <div style={{ 
+          position: "fixed", 
+          top: 100, 
+          left: "50%", 
+          transform: "translateX(-50%)", 
+          zIndex: 1001,
+          padding: "16px 24px",
+          borderRadius: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          background: pagoMessage.type === 'error' ? 'rgba(239,68,68,0.15)' : pagoMessage.type === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)',
+          border: `1px solid ${pagoMessage.type === 'error' ? 'rgba(239,68,68,0.3)' : pagoMessage.type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(234,179,8,0.3)'}`,
+          color: pagoMessage.type === 'error' ? '#fca5a5' : pagoMessage.type === 'success' ? '#86efac' : '#fde047'
+        }}>
+          {pagoMessage.type === 'error' ? <AlertCircle size={20} /> : pagoMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          <span>{pagoMessage.text}</span>
+          <button onClick={() => setPagoMessage(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', marginLeft: 8 }}>x</button>
+        </div>
+      )}
+
       {/* Navbar */}
       <nav style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 5%", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, background: "rgba(12,11,14,0.8)", backdropFilter: "blur(20px)", zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -122,41 +174,33 @@ export default function SaaSLandingPage() {
       {/* Pricing Section */}
       <section id="pricing" style={{ padding: "100px 5%", background: "rgba(255,255,255,0.01)" }}>
         <div style={{ textAlign: "center", marginBottom: 64 }}>
-          <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16 }}>Planes a tu Medida</h2>
-          <p style={{ color: "rgba(255,255,255,0.5)" }}>Empieza gratis y escala a medida que tu negocio crece.</p>
+          <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16 }}>Precio Simple y Transparente</h2>
+          <p style={{ color: "rgba(255,255,255,0.5)" }}>Sin planes complicados. Paga mensualmente y ten acceso completo.</p>
         </div>
         
-        <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
-          {/* Plan Básico */}
-          <div style={{ padding: 48, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 40, position: "relative" }}>
-            <h4 style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 12 }}>Plan Básico</h4>
+        <div style={{ maxWidth: 500, margin: "0 auto" }}>
+          {/* Plan Unico */}
+          <div style={{ padding: 48, background: "rgba(197,160,89,0.05)", border: "2px solid #C5A059", borderRadius: 40, position: "relative" }}>
+            <span style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", background: "#C5A059", color: "#000", padding: "6px 16px", borderRadius: 100, fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>Todo Incluido</span>
+            <h4 style={{ fontSize: 18, fontWeight: 700, color: "#C5A059", marginBottom: 12 }}>Plan RestaurantOS</h4>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 32 }}>
-              <span style={{ fontSize: 48, fontWeight: 800 }}>$0</span>
+              <span style={{ fontSize: 48, fontWeight: 800 }}>S/{PRECIO_MENSUAL}</span>
               <span style={{ color: "rgba(255,255,255,0.4)" }}>/mes</span>
             </div>
             <ul style={{ listStyle: "none", padding: 0, margin: "0 0 40px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> 1 Restaurante</li>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Menú Digital Básico</li>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> 50 pedidos al mes</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Menu Digital con QR</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Gestion de Pedidos en Tiempo Real</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Panel de Administracion Completo</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Roles: Mesero, Cocinero, Cajero</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Web Publica Personalizada</li>
+              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Soporte Tecnico</li>
             </ul>
-            <button onClick={() => setShowRegModal(true)} className="btn btn-secondary" style={{ width: "100%", height: 54, borderRadius: 16 }}>Elegir Básico</button>
-          </div>
-
-          {/* Plan Premium */}
-          <div style={{ padding: 48, background: "rgba(197,160,89,0.05)", border: "2px solid #C5A059", borderRadius: 40, position: "relative", transform: "scale(1.05)" }}>
-             <span style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", background: "#C5A059", color: "#000", padding: "6px 16px", borderRadius: 100, fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>Más Popular</span>
-            <h4 style={{ fontSize: 18, fontWeight: 700, color: "#C5A059", marginBottom: 12 }}>Plan Premium</h4>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 32 }}>
-              <span style={{ fontSize: 48, fontWeight: 800 }}>$149</span>
-              <span style={{ color: "rgba(255,255,255,0.4)" }}>/mes</span>
-            </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 40px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Todo el básico</li>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Módulos ILIMITADOS</li>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Pedidos ilimitados</li>
-              <li style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}><Check size={18} color="#C5A059" /> Soporte prioritario 24/7</li>
-            </ul>
-            <button onClick={() => setShowRegModal(true)} className="btn btn-primary" style={{ width: "100%", height: 54, borderRadius: 16 }}>Prueba Premium Gratis</button>
+            <button onClick={() => setShowRegModal(true)} className="btn btn-primary" style={{ width: "100%", height: 54, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <CreditCard size={18} /> Comenzar Ahora
+            </button>
+            <p style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+              Paga tu primer mes y activa tu restaurante al instante
+            </p>
           </div>
         </div>
       </section>
@@ -170,9 +214,18 @@ export default function SaaSLandingPage() {
       {showRegModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div className="animate-fade-in-up" style={{ background: "#151419", width: "100%", maxWidth: 760, maxHeight: "92vh", overflowY: "auto", borderRadius: 32, padding: 40, border: "1px solid rgba(255,255,255,0.1)", position: "relative" }}>
-            <button onClick={() => setShowRegModal(false)} style={{ position: "absolute", top: 24, right: 24, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer" }}>✕</button>
-            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Empezar ahora</h2>
-            <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32 }}>Crea tu restaurante y empieza a recibir pedidos en minutos.</p>
+            <button onClick={() => setShowRegModal(false)} style={{ position: "absolute", top: 24, right: 24, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer" }}>x</button>
+            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Registra tu Restaurante</h2>
+            <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 24 }}>Completa los datos y realiza el pago del primer mes para activar tu cuenta.</p>
+            
+            {/* Indicador de precio */}
+            <div style={{ background: "rgba(197,160,89,0.1)", border: "1px solid rgba(197,160,89,0.3)", borderRadius: 16, padding: "16px 20px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <CreditCard size={20} color="#C5A059" />
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>Pago del primer mes</span>
+              </div>
+              <span style={{ fontSize: 24, fontWeight: 700, color: "#C5A059" }}>S/{PRECIO_MENSUAL}</span>
+            </div>
             
             <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
@@ -217,9 +270,12 @@ export default function SaaSLandingPage() {
                 </button>
               </div>
               
-              <button disabled={loading} type="submit" className="btn btn-primary" style={{ height: 60, borderRadius: 16, marginTop: 16, width: "100%" }}>
-                {loading ? <Loader2 className="spin-icon" size={20} /> : "Registrar mi Restaurante"}
+              <button disabled={loading} type="submit" className="btn btn-primary" style={{ height: 60, borderRadius: 16, marginTop: 16, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {loading ? <Loader2 className="spin-icon" size={20} /> : <><CreditCard size={20} /> Pagar S/{PRECIO_MENSUAL} y Crear Restaurante</>}
               </button>
+              <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 8 }}>
+                Seras redirigido a Mercado Pago para completar el pago de forma segura
+              </p>
             </form>
           </div>
         </div>

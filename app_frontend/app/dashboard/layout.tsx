@@ -9,6 +9,8 @@ import { applyRestauranteBranding } from "@/lib/branding";
 import { useRestauranteRealtime } from "@/lib/realtime";
 import { CursorGlow } from "@/components/CursorGlow";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PagoRequerido } from "@/components/PagoRequerido";
+import { obtenerEstadoPagos, EstadoPagos } from "@/lib/api";
 import {
   Crown,
   Flame,
@@ -25,6 +27,9 @@ import {
   Menu,
   ChevronsLeft,
   ChevronsRight,
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -34,9 +39,10 @@ import {
 
 const allNavItems = [
   { href: "/dashboard/admin", label: "Panel Admin", icon: Crown, rol: "admin", modulo: "gestion-pedidos" },
+  { href: "/dashboard/admin/pagos", label: "Pagos", icon: CreditCard, rol: "admin" },
   { href: "/dashboard/admin/reportes", label: "Reportes", icon: BarChart3, rol: "admin", modulo: "marketing-analitico" },
   { href: "/dashboard/admin/usuarios", label: "Usuarios", icon: Users, rol: "admin" },
-  { href: "/dashboard/admin/web", label: "Gestión Web", icon: LayoutDashboard, rol: "admin" },
+  { href: "/dashboard/admin/web", label: "Gestion Web", icon: LayoutDashboard, rol: "admin" },
   { href: "/dashboard/admin/suscripcion", label: "Mi Plan", icon: Gift, rol: "admin" },
   { href: "/dashboard/cocina", label: "Cocina", icon: Flame, rol: "cocina", modulo: "gestion-pedidos" },
   { href: "/dashboard/mesero", label: "Mesero", icon: UtensilsCrossed, rol: "mesero", modulo: "gestion-pedidos" },
@@ -58,6 +64,60 @@ export default function DashboardLayout({
   const [time, setTime] = useState("");
   const [showNotifs, setShowNotifs] = useState(false);
   const [modulosActivos, setModulosActivos] = useState<string[]>([]);
+  
+  // Estado de pagos
+  const [estadoPagos, setEstadoPagos] = useState<EstadoPagos | null>(null);
+  const [loadingPagos, setLoadingPagos] = useState(true);
+  const [pagoNotification, setPagoNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Verificar si viene de un pago exitoso
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const pagoStatus = urlParams.get('pago');
+    
+    if (pagoStatus === 'exitoso') {
+      setPagoNotification({ type: 'success', text: 'Pago realizado con exito!' });
+      // Limpiar el parametro de la URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pago');
+      window.history.replaceState({}, '', url.toString());
+      // Recargar estado de pagos
+      if (restaurante?.id) {
+        cargarEstadoPagos();
+      }
+    } else if (pagoStatus === 'fallido') {
+      setPagoNotification({ type: 'error', text: 'El pago no se pudo completar. Intenta nuevamente.' });
+      // Limpiar el parametro de la URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pago');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [restaurante?.id]);
+
+  // Cargar estado de pagos
+  const cargarEstadoPagos = async () => {
+    if (!restaurante?.id) return;
+    
+    setLoadingPagos(true);
+    try {
+      const estado = await obtenerEstadoPagos(restaurante.id);
+      setEstadoPagos(estado);
+    } catch (err) {
+      console.error("Error al cargar estado de pagos:", err);
+      // Si hay error, asumimos que está al día para no bloquear innecesariamente
+      setEstadoPagos(null);
+    } finally {
+      setLoadingPagos(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessToken && restaurante?.id) {
+      cargarEstadoPagos();
+    }
+  }, [accessToken, restaurante?.id]);
 
   // ── Auth Guard: Redirigir al login si no hay sesión ──
   useEffect(() => {
@@ -212,6 +272,12 @@ export default function DashboardLayout({
 
   if (!accessToken) return null;
 
+  // Determinar si mostrar el bloqueo de pago
+  // No bloquear: superadmin, si está cargando, si está en la página de pagos, o si está al día
+  const isAdminSaas = rol === 'admin_saas';
+  const isOnPagosPage = pathname?.includes('/pagos');
+  const shouldShowPaymentBlock = !isAdminSaas && !loadingPagos && estadoPagos && !estadoPagos.al_dia && !isOnPagosPage;
+
   const roleIcons: Record<string, ReactNode> = {
     admin: <Crown size={14} />,
     cocina: <Flame size={14} />,
@@ -222,6 +288,41 @@ export default function DashboardLayout({
   return (
     <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
       <CursorGlow />
+      
+      {/* Notificacion de pago */}
+      {pagoNotification && (
+        <div style={{ 
+          position: "fixed", 
+          top: 20, 
+          left: "50%", 
+          transform: "translateX(-50%)", 
+          zIndex: 10001,
+          padding: "16px 24px",
+          borderRadius: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          background: pagoNotification.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+          border: `1px solid ${pagoNotification.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+          color: pagoNotification.type === 'error' ? '#fca5a5' : '#86efac',
+          boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
+        }}>
+          {pagoNotification.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+          <span>{pagoNotification.text}</span>
+          <button 
+            onClick={() => setPagoNotification(null)} 
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', marginLeft: 8, fontSize: 18 }}
+          >
+            x
+          </button>
+        </div>
+      )}
+
+      {/* Bloqueo por falta de pago */}
+      {shouldShowPaymentBlock && estadoPagos && restaurante?.id && (
+        <PagoRequerido estadoPagos={estadoPagos} idRestaurante={restaurante.id} />
+      )}
+
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
