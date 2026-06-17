@@ -25,6 +25,11 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
   String notasPedido = '';
   bool sending = false;
 
+  // Success overlay state
+  bool _showSuccess = false;
+  int _successMesa = 0;
+  double _successTotal = 0;
+
   @override
   void initState() {
     super.initState();
@@ -36,22 +41,24 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
     if (rest == null) return;
     setState(() => loading = true);
     try {
-      final mesasData = await ApiClient.getJson('/mesas?id_restaurante=${rest.id}') as List<dynamic>?;
-      final prodsData = await ApiClient.getJson('/productos?id_restaurante=${rest.id}&disponible=true') as List<dynamic>?;
-      final catsData = await ApiClient.getJson('/categorias?id_restaurante=${rest.id}') as List<dynamic>?;
+      final results = await Future.wait([
+        ApiClient.getJson('/mesas?id_restaurante=${rest.id}'),
+        ApiClient.getJson('/productos?id_restaurante=${rest.id}&disponible=true'),
+        ApiClient.getJson('/categorias?id_restaurante=${rest.id}'),
+      ]);
 
       mesas
         ..clear()
-        ..addAll((mesasData ?? const []).map((m) => Mesa.fromJson(Map<String, dynamic>.from(m as Map))));
+        ..addAll(((results[0] as List<dynamic>?) ?? const []).map((m) => Mesa.fromJson(Map<String, dynamic>.from(m as Map))));
       mesas.sort((a, b) => a.numero.compareTo(b.numero));
 
       productos
         ..clear()
-        ..addAll((prodsData ?? const []).map((p) => Producto.fromJson(Map<String, dynamic>.from(p as Map))));
+        ..addAll(((results[1] as List<dynamic>?) ?? const []).map((p) => Producto.fromJson(Map<String, dynamic>.from(p as Map))));
 
       categorias
         ..clear()
-        ..addAll((catsData ?? const []).map((c) => Categoria.fromJson(Map<String, dynamic>.from(c as Map))));
+        ..addAll(((results[2] as List<dynamic>?) ?? const []).map((c) => Categoria.fromJson(Map<String, dynamic>.from(c as Map))));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -113,6 +120,9 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
     final user = context.read<MeseroAuthState>().usuario;
     if (rest == null || selectedMesa == null || cart.isEmpty) return;
 
+    final mesaNumero = selectedMesa!.numero;
+    final total = _total;
+
     setState(() => sending = true);
     try {
       await ApiClient.postJson('/pedidos', {
@@ -130,25 +140,25 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
       });
 
       if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          title: const Text('Pedido enviado'),
-          content: const Text('El pedido fue registrado correctamente.'),
-        ),
-      );
 
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
+      // Cierra el bottom sheet del carrito
       Navigator.of(context).pop();
 
+      // Resetea estado y muestra el overlay de éxito
       setState(() {
         cart.clear();
         notasPedido = '';
         selectedMesa = null;
         selectedCategoria = null;
         searchText = '';
+        _showSuccess = true;
+        _successMesa = mesaNumero;
+        _successTotal = total;
+      });
+
+      // Auto-descarta el overlay tras 2 segundos
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSuccess = false);
       });
     } catch (e) {
       if (!mounted) return;
@@ -189,10 +199,7 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
+  Widget _buildScreen(BuildContext context, ColorScheme cs) {
     if (loading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Tomar Pedido')),
@@ -202,14 +209,14 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
             children: [
               CircularProgressIndicator(color: cs.primary),
               const SizedBox(height: 10),
-              Text('Cargando menu...', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+              Text('Cargando menú...', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
             ],
           ),
         ),
       );
     }
 
-    // Step 1: mesas
+    // Paso 1: selección de mesa
     if (selectedMesa == null) {
       return Scaffold(
         appBar: AppBar(
@@ -261,7 +268,7 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
       );
     }
 
-    // Step 2: productos
+    // Paso 2: selección de productos
     final filtered = _filtered;
     return Scaffold(
       appBar: AppBar(
@@ -412,7 +419,23 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
             ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        _buildScreen(context, cs),
+        if (_showSuccess)
+          _SuccessOverlay(mesaNumero: _successMesa, total: _successTotal),
+      ],
+    );
+  }
 }
+
+// ─────────────────────────────────────────────
+// Widgets auxiliares
+// ─────────────────────────────────────────────
 
 class _CatChip extends StatelessWidget {
   final String label;
@@ -469,7 +492,9 @@ class _CartItem {
       );
 }
 
-class _CartSheet extends StatelessWidget {
+// ── Cart Sheet ──────────────────────────────────
+
+class _CartSheet extends StatefulWidget {
   final int mesaNumero;
   final List<_CartItem> cart;
   final String notasPedido;
@@ -495,6 +520,25 @@ class _CartSheet extends StatelessWidget {
   });
 
   @override
+  State<_CartSheet> createState() => _CartSheetState();
+}
+
+class _CartSheetState extends State<_CartSheet> {
+  late TextEditingController _notasPedidoCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _notasPedidoCtrl = TextEditingController(text: widget.notasPedido);
+  }
+
+  @override
+  void dispose() {
+    _notasPedidoCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
@@ -508,7 +552,7 @@ class _CartSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                 child: Row(
                   children: [
-                    Expanded(child: Text('Pedido — Mesa $mesaNumero', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: cs.onSurface))),
+                    Expanded(child: Text('Pedido — Mesa ${widget.mesaNumero}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: cs.onSurface))),
                     IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
                   ],
                 ),
@@ -517,7 +561,13 @@ class _CartSheet extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   children: [
-                    for (final item in cart) _CartRow(item: item, onUpdateQty: onUpdateQty, onRemove: onRemove, onUpdateNotasItem: onUpdateNotasItem),
+                    for (final item in widget.cart)
+                      _CartRow(
+                        item: item,
+                        onUpdateQty: widget.onUpdateQty,
+                        onRemove: widget.onRemove,
+                        onUpdateNotasItem: widget.onUpdateNotasItem,
+                      ),
                     const SizedBox(height: 10),
                     Text('Notas del pedido', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontWeight: FontWeight.w900, fontSize: 12)),
                     const SizedBox(height: 8),
@@ -525,8 +575,8 @@ class _CartSheet extends StatelessWidget {
                       minLines: 2,
                       maxLines: 5,
                       decoration: const InputDecoration(hintText: 'Notas generales...'),
-                      onChanged: onUpdateNotasPedido,
-                      controller: TextEditingController(text: notasPedido),
+                      controller: _notasPedidoCtrl,
+                      onChanged: widget.onUpdateNotasPedido,
                     ),
                   ],
                 ),
@@ -539,20 +589,22 @@ class _CartSheet extends StatelessWidget {
                       children: [
                         Text('Total', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
                         const Spacer(),
-                        Text('S/ ${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: cs.primary)),
+                        Text('S/ ${widget.total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: cs.primary)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: sending ? null : () async {
-                          await onSend();
-                          if (context.mounted) Navigator.pop(context);
-                        },
+                        onPressed: widget.sending
+                            ? null
+                            : () async {
+                                await widget.onSend();
+                                // El cierre del sheet lo maneja _send() en caso de éxito
+                              },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: sending
+                          child: widget.sending
                               ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
                               : const Text('Enviar pedido', style: TextStyle(fontWeight: FontWeight.w900)),
                         ),
@@ -569,13 +621,42 @@ class _CartSheet extends StatelessWidget {
   }
 }
 
-class _CartRow extends StatelessWidget {
+// ── Cart Row ──────────────────────────────────
+
+class _CartRow extends StatefulWidget {
   final _CartItem item;
   final void Function(String id, int delta) onUpdateQty;
   final void Function(String id) onRemove;
   final void Function(String id, String notas) onUpdateNotasItem;
 
   const _CartRow({required this.item, required this.onUpdateQty, required this.onRemove, required this.onUpdateNotasItem});
+
+  @override
+  State<_CartRow> createState() => _CartRowState();
+}
+
+class _CartRowState extends State<_CartRow> {
+  late TextEditingController _notasCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _notasCtrl = TextEditingController(text: widget.item.notas);
+  }
+
+  @override
+  void didUpdateWidget(_CartRow old) {
+    super.didUpdateWidget(old);
+    if (old.item.notas != widget.item.notas && _notasCtrl.text != widget.item.notas) {
+      _notasCtrl.text = widget.item.notas;
+    }
+  }
+
+  @override
+  void dispose() {
+    _notasCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -591,22 +672,22 @@ class _CartRow extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(item.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 18, color: item.esBebida ? cs.tertiary : cs.primary),
+                Icon(widget.item.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 18, color: widget.item.esBebida ? cs.tertiary : cs.primary),
                 const SizedBox(width: 8),
-                Expanded(child: Text(item.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface))),
-                IconButton(onPressed: () => onRemove(item.idProducto), icon: Icon(Icons.delete_outline, color: cs.error)),
+                Expanded(child: Text(widget.item.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface))),
+                IconButton(onPressed: () => widget.onRemove(widget.item.idProducto), icon: Icon(Icons.delete_outline, color: cs.error)),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                IconButton.filledTonal(onPressed: () => onUpdateQty(item.idProducto, -1), icon: const Icon(Icons.remove, size: 18)),
+                IconButton.filledTonal(onPressed: () => widget.onUpdateQty(widget.item.idProducto, -1), icon: const Icon(Icons.remove, size: 18)),
                 const SizedBox(width: 6),
-                Text('${item.cantidad}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
+                Text('${widget.item.cantidad}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
                 const SizedBox(width: 6),
-                IconButton.filledTonal(onPressed: () => onUpdateQty(item.idProducto, 1), icon: const Icon(Icons.add, size: 18)),
+                IconButton.filledTonal(onPressed: () => widget.onUpdateQty(widget.item.idProducto, 1), icon: const Icon(Icons.add, size: 18)),
                 const Spacer(),
-                Text('S/ ${(item.precio * item.cantidad).toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary)),
+                Text('S/ ${(widget.item.precio * widget.item.cantidad).toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary)),
               ],
             ),
             const SizedBox(height: 6),
@@ -614,8 +695,50 @@ class _CartRow extends StatelessWidget {
               minLines: 1,
               maxLines: 3,
               decoration: const InputDecoration(hintText: 'Notas (sin sal, extra picante...)'),
-              onChanged: (v) => onUpdateNotasItem(item.idProducto, v),
-              controller: TextEditingController(text: item.notas),
+              controller: _notasCtrl,
+              onChanged: (v) => widget.onUpdateNotasItem(widget.item.idProducto, v),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Success Overlay ──────────────────────────────────
+
+class _SuccessOverlay extends StatelessWidget {
+  final int mesaNumero;
+  final double total;
+
+  const _SuccessOverlay({required this.mesaNumero, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black87,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.green,
+              ),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 46),
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              '¡Pedido Enviado!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Mesa $mesaNumero · S/ ${total.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.8)),
             ),
           ],
         ),

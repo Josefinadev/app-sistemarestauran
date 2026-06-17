@@ -41,7 +41,7 @@ class MeseroApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'El Mijano - Mesero',
+      title: 'Ordely',
       theme: theme.lightTheme(primaryHex: auth.restaurante?.colorPrimario),
       darkTheme: theme.darkTheme(primaryHex: auth.restaurante?.colorPrimario),
       themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,

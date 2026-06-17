@@ -132,10 +132,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   _InfoRow(icon: Icons.restaurant, iconBg: cs.primary.withOpacity(0.12), iconColor: cs.primary, label: 'Nombre', value: rest?.nombre ?? '—'),
                   if ((rest?.direccion ?? '').trim().isNotEmpty) const SizedBox(height: 10),
                   if ((rest?.direccion ?? '').trim().isNotEmpty)
-                    _InfoRow(icon: Icons.location_on, iconBg: cs.tertiary.withOpacity(0.12), iconColor: cs.tertiary, label: 'Direccion', value: rest!.direccion!),
+                    _InfoRow(icon: Icons.location_on, iconBg: cs.tertiary.withOpacity(0.12), iconColor: cs.tertiary, label: 'Dirección', value: rest!.direccion!),
                   if ((rest?.telefono ?? '').trim().isNotEmpty) const SizedBox(height: 10),
                   if ((rest?.telefono ?? '').trim().isNotEmpty)
-                    _InfoRow(icon: Icons.call, iconBg: Colors.green.withOpacity(0.12), iconColor: Colors.green, label: 'Telefono', value: rest!.telefono!),
+                    _InfoRow(icon: Icons.call, iconBg: Colors.green.withOpacity(0.12), iconColor: Colors.green, label: 'Teléfono', value: rest!.telefono!),
                 ],
               ),
             ),
@@ -165,7 +165,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _SectionTitle('Configuracion'),
+          _SectionTitle('Configuración'),
           Card(
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: cs.outlineVariant.withOpacity(0.35))),
@@ -198,25 +198,41 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          _SectionTitle('Aplicación'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: cs.outlineVariant.withOpacity(0.35))),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: [
+                  _InfoRow(icon: Icons.info_outline, iconBg: cs.surfaceContainerHighest, iconColor: cs.onSurface.withOpacity(0.6), label: 'Versión', value: '1.0.0'),
+                  const SizedBox(height: 10),
+                  _InfoRow(icon: Icons.circle, iconBg: Colors.green.withOpacity(0.12), iconColor: Colors.green, label: 'Estado del servidor', value: 'Conectado'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           FilledButton.tonalIcon(
             onPressed: () async {
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
-                  title: const Text('Cerrar sesion'),
-                  content: const Text('¿Estas seguro de que deseas salir?'),
+                  title: const Text('Cerrar sesión'),
+                  content: const Text('¿Estás seguro de que deseas salir?'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
                     FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cerrar')),
                   ],
                 ),
               );
-              if (ok == true) {
+              if (ok == true && mounted) {
                 await context.read<MeseroAuthState>().logout();
               }
             },
             icon: Icon(Icons.logout, color: cs.error),
-            label: Text('Cerrar sesion', style: TextStyle(color: cs.error, fontWeight: FontWeight.w900)),
+            label: Text('Cerrar sesión', style: TextStyle(color: cs.error, fontWeight: FontWeight.w900)),
           ),
         ],
       ),

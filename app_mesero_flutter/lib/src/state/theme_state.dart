@@ -3,12 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeState extends ChangeNotifier {
   static const _key = 'mesero-theme-mode';
-  bool isDark = true;
+  bool isDark = false;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final val = prefs.getString(_key);
-    isDark = val != 'light';
+    isDark = val == 'dark';
     notifyListeners();
   }
 
@@ -20,7 +20,7 @@ class ThemeState extends ChangeNotifier {
   }
 
   ThemeData darkTheme({String? primaryHex}) {
-    final primary = _parseHex(primaryHex) ?? const Color(0xFF8578F6);
+    final primary = _parseHex(primaryHex) ?? const Color(0xFFC5A059);
     return ThemeData(
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
@@ -34,7 +34,7 @@ class ThemeState extends ChangeNotifier {
   }
 
   ThemeData lightTheme({String? primaryHex}) {
-    final primary = _parseHex(primaryHex) ?? const Color(0xFF7061EA);
+    final primary = _parseHex(primaryHex) ?? const Color(0xFFC5A059);
     return ThemeData(
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(

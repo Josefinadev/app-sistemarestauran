@@ -2060,10 +2060,9 @@ canvas {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LOGIN PAGE — Fase 2 (premium con glassmorphism + Aurora)
-   Mobile-first: en celular, panel visual compacto arriba
-   + form full-width abajo. En desktop, layout 2 columnas
-   con TiltedCard 3D.
+   LOGIN PAGE — Diseño Ordely Premium
+   Mobile-first: solo form + logo.
+   Desktop ≥768px: panel visual izquierda | formulario derecha.
    ═══════════════════════════════════════════════════════════ */
 
 .login-page {
@@ -2075,58 +2074,17 @@ canvas {
   justify-content: center;
   padding: 24px 16px;
   background: var(--bg);
-  overflow: hidden;
-  isolation: isolate;
 }
 
-/* Orbes de fondo (drift orgánico) */
-.login-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  z-index: 0;
-  will-change: transform;
-}
-
-.login-orb--1 {
-  top: 8%;
-  right: -8%;
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(197, 160, 89, 0.16) 0%, transparent 70%);
-}
-
-.login-orb--2 {
-  bottom: 6%;
-  left: -10%;
-  width: 340px;
-  height: 340px;
-  background: radial-gradient(circle, rgba(226, 114, 91, 0.12) 0%, transparent 70%);
-}
-
-.login-orb--3 {
-  top: 45%;
-  left: 35%;
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(116, 199, 236, 0.08) 0%, transparent 70%);
-}
-
-/* Card principal — glass + premium shadow */
+/* Card principal */
 .login-card {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 960px;
-  border-radius: 28px;
-  background: rgba(18, 18, 18, 0.7);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid var(--border);
-  box-shadow:
-    0 24px 60px -10px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  max-width: 440px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.06);
   overflow: hidden;
 }
 
@@ -2135,93 +2093,158 @@ canvas {
   grid-template-columns: 1fr;
 }
 
-/* ── Panel del Form ── */
+/* ── Panel visual: OCULTO en móvil ── */
+.login-visual-panel {
+  display: none;
+}
+
+/* ── Panel formulario ── */
 .login-form-panel {
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 28px 24px 24px;
+  padding: 32px 28px 28px;
+  background: var(--surface);
+  gap: 0;
 }
 
-/* Brand (visible solo en mobile dentro del form) */
-.login-brand {
-  display: inline-flex;
+/* Logo Ordely (móvil) */
+.login-logo-mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+/* — SISTEMA DE GESTIÓN — */
+.login-system-label {
+  display: flex;
   align-items: center;
   gap: 10px;
-  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-top: 8px;
+  white-space: nowrap;
 }
 
-.login-brand--desktop { display: none; }
-
-.login-brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  display: grid;
-  place-items: center;
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
+.login-system-label--sm {
+  margin-top: 6px;
 }
 
-.login-brand-text {
-  font-family: var(--font-noto-serif), "Noto Serif", serif;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 17px;
-  letter-spacing: 0.06em;
-  color: var(--primary);
+.login-system-line {
+  flex: 1;
+  height: 1px;
+  background: var(--primary);
+  opacity: 0.5;
+  max-width: 40px;
 }
 
-/* Headline */
-.login-headline {
-  font-family: var(--font-noto-serif), "Noto Serif", serif;
-  font-weight: 400;
-  font-size: clamp(30px, 7vw, 42px);
-  line-height: 1.08;
+/* Heading */
+.login-heading {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-heading h1 {
+  font-size: 30px;
+  font-weight: 900;
   color: var(--text);
   margin: 0;
+  line-height: 1.1;
 }
 
-.login-headline em {
+.login-heading-sub {
+  font-size: 26px;
+  font-weight: 400;
   font-style: italic;
   color: var(--primary);
+  margin: 2px 0 12px;
 }
 
-.login-headline-rule {
+.login-heading-rule {
   width: 36px;
-  height: 1px;
-  background: var(--border);
-  margin-top: 16px;
+  height: 2px;
+  background: var(--primary);
+  margin: 0 auto;
 }
 
-/* Form */
+/* Formulario */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  color: var(--text-secondary);
+}
+
+/* Input wrap */
 .login-input-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.login-input-wrap.focused,
+.login-input-wrap:focus-within {
+  border-color: var(--primary);
+  background: var(--surface);
 }
 
 .login-input-icon {
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 12px;
+  color: var(--text-muted);
   display: flex;
+  align-items: center;
   pointer-events: none;
   z-index: 1;
 }
 
-.login-input-wrap .input-underline {
-  padding-left: 26px;
+.login-input {
+  width: 100%;
+  padding: 12px 12px 12px 38px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  color: var(--text);
 }
 
-.login-input-wrap:has(input:focus) .input-underline {
-  border-bottom-color: var(--primary);
+.login-input::placeholder {
+  color: var(--text-muted);
 }
+
+.login-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.login-eye-btn:hover { color: var(--text); }
 
 /* Error */
 .login-error {
@@ -2229,232 +2252,252 @@ canvas {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--secondary);
+  color: var(--error);
   padding: 8px 12px;
-  background: rgba(226, 114, 91, 0.08);
-  border: 1px solid rgba(226, 114, 91, 0.22);
-  border-radius: var(--radius-sm);
+  background: rgba(220,38,38,0.06);
+  border: 1px solid rgba(220,38,38,0.18);
+  border-radius: 8px;
   overflow: hidden;
 }
+.login-error svg { flex-shrink: 0; }
 
-.login-error svg {
-  flex-shrink: 0;
-}
-
-/* Submit */
+/* Botón de envío */
 .login-submit {
   width: 100%;
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 14px 20px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
 }
 
-/* Footer text */
-.login-footer-text {
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin: 0;
-  opacity: 0.5;
+.login-submit:hover:not(:disabled) { background: var(--primary-dark); }
+.login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Puntos decorativos */
+.login-dots {
   text-align: center;
+  color: var(--primary);
+  font-size: 18px;
+  letter-spacing: 8px;
+  margin: 14px 0 4px;
 }
 
-/* ── Panel Visual (mobile-first: oculto en mobile) ── */
-.login-visual-panel {
-  display: none;
+/* Marca de agua */
+.login-watermark {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  color: var(--border);
+  margin: 0 0 4px;
+}
+
+/* Footer móvil */
+.login-mobile-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  letter-spacing: 0.03em;
+}
+.login-mobile-footer span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   DESKTOP ≥ 768px
-   Layout 2 columnas: form izquierda (1fr) | visual derecha (1fr)
+   DESKTOP ≥ 768px — Visual izquierda (56%) | Form derecha (44%)
    ═══════════════════════════════════════════════════════════ */
 @media (min-width: 768px) {
-  .login-page {
-    padding: 32px 24px;
-  }
-
-  .login-orb--1 { width: 480px; height: 480px; top: 4%; right: -8%; }
-  .login-orb--2 { width: 420px; height: 420px; bottom: -2%; left: -8%; }
-  .login-orb--3 { width: 360px; height: 360px; top: 35%; left: 28%; }
+  .login-page { padding: 32px 24px; }
 
   .login-card {
-    min-height: 580px;
+    max-width: 960px;
+    border-radius: 24px;
+    min-height: 590px;
   }
 
   .login-card-inner {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 56% 44%;
+    min-height: 590px;
   }
 
-  .login-form-panel {
-    padding: 48px 44px;
-    gap: 32px;
-  }
-
-  .login-brand--mobile { display: none; }
-
-  /* Panel visual con gradiente cálido + textura */
+  /* Panel visual — LEFT */
   .login-visual-panel {
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #1A1610 0%, #0E0C08 100%);
-    border-left: 1px solid var(--border);
+    border-radius: 24px 0 0 24px;
   }
 
-  .login-visual-panel::before {
-    content: "";
+  /* Fondo con imagen */
+  .login-visual-bg {
     position: absolute;
-    top: 15%;
-    right: 10%;
-    width: 280px;
-    height: 280px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(197, 160, 89, 0.10) 0%, transparent 70%);
-    pointer-events: none;
+    inset: 0;
+    z-index: 0;
   }
 
-  .login-visual-panel::after {
-    content: "";
+  /* Overlay crema sobre la imagen */
+  .login-visual-bg::after {
+    content: '';
     position: absolute;
-    bottom: 18%;
-    left: 5%;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(226, 114, 91, 0.08) 0%, transparent 70%);
-    pointer-events: none;
+    inset: 0;
+    background: rgba(255, 248, 230, 0.82);
   }
 
-  .login-visual-tilt {
+  /* Contenido del panel visual */
+  .login-visual-content {
     position: relative;
     z-index: 1;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-  }
-
-  .login-visual-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    text-align: center;
-    max-width: 320px;
+    justify-content: center;
+    padding: 40px 36px;
+    height: 100%;
+    gap: 0;
   }
 
-  .login-brand--desktop {
-    display: inline-flex;
-    align-self: center;
-    margin-bottom: 4px;
+  .login-logo {
+    margin-bottom: 6px;
   }
 
-  .login-visual-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    display: grid;
-    place-items: center;
-    box-shadow: 0 12px 36px rgba(197, 160, 89, 0.32);
+  .login-system-label {
+    margin-bottom: 14px;
   }
 
-  .login-visual-title {
-    font-family: var(--font-noto-serif), "Noto Serif", serif;
-    font-size: 30px;
-    font-weight: 400;
+  /* Titular */
+  .login-visual-headline {
+    font-size: 46px;
+    font-weight: 900;
+    line-height: 1.12;
     color: var(--text);
-    margin: 0;
-    line-height: 1.2;
+    text-align: center;
+    margin: 0 0 10px;
   }
 
-  .login-visual-title span {
+  .login-visual-headline span {
     color: var(--primary);
   }
 
+  /* Subtítulo */
   .login-visual-copy {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 0;
+    text-align: center;
+    line-height: 1.55;
+    margin: 0 0 16px;
   }
 
+  /* Línea dorada divisora */
+  .login-gold-rule {
+    width: 55%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    margin: 0 0 18px;
+  }
+
+  /* Stats */
   .login-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
+    display: flex;
+    align-items: stretch;
     width: 100%;
-    margin-top: 8px;
+    max-width: 310px;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(197,160,89,0.28);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 18px;
   }
 
   .login-stat {
-    padding: 12px 8px;
-    background: rgba(197, 160, 89, 0.06);
-    border: 1px solid rgba(197, 160, 89, 0.12);
-    border-radius: var(--radius-md);
+    flex: 1;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    gap: 2px;
+  }
+
+  .login-stat-sep {
+    width: 1px;
+    background: rgba(197,160,89,0.22);
+    align-self: stretch;
+  }
+
+  .login-stat-icon { color: var(--primary); margin-bottom: 1px; }
+
+  .login-stat-value {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .login-stat-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+  }
+
+  /* Footer del panel visual */
+  .login-visual-footer {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+  }
+
+  .login-visual-footer span {
+    display: flex;
     align-items: center;
     gap: 4px;
   }
 
-  .login-stat-icon {
-    color: var(--primary);
+  /* Panel formulario — RIGHT */
+  .login-form-panel {
+    padding: 48px 40px;
+    justify-content: center;
+    border-radius: 0 24px 24px 0;
   }
 
-  .login-stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--primary);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-  }
+  /* Ocultar elementos exclusivos de móvil */
+  .login-logo-mobile { display: none; }
+  .login-mobile-footer { display: none; }
 
-  .login-stat-label {
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-
-  .login-trust {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    margin-top: 6px;
-  }
-
-  .login-trust svg {
-    color: var(--primary);
-  }
-
-  .login-footer-text {
-    text-align: left;
-  }
+  /* Heading alineado a la izquierda en desktop */
+  .login-heading { text-align: left; }
+  .login-heading-rule { margin: 0; }
+  .login-dots { text-align: left; }
 }
 
 /* ═══════════════════════════════════════════════════════════
    Desktop XL ≥ 1200px
-   Más aireado
    ═══════════════════════════════════════════════════════════ */
 @media (min-width: 1200px) {
-  .login-card {
-    max-width: 1040px;
-  }
-  .login-form-panel {
-    padding: 56px 52px;
-  }
-  .login-visual-inner {
-    max-width: 340px;
-  }
+  .login-card { max-width: 1020px; }
+  .login-form-panel { padding: 56px 52px; }
+  .login-visual-content { padding: 48px 44px; }
+  .login-visual-headline { font-size: 52px; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3558,30 +3601,32 @@ canvas {
   box-shadow: 0 1px 6px rgba(26, 24, 20, 0.06), 0 1px 2px rgba(26, 24, 20, 0.03);
 }
 
-/* Login page light — gradiente calido */
+/* Login page light — fondo cálido */
 :root:not([data-theme="dark"]) .login-page {
   background: linear-gradient(145deg, #FDFCFA 0%, #F5F0E8 50%, #FAF8F5 100%);
 }
 
 :root:not([data-theme="dark"]) .login-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px);
-  border-color: rgba(197, 160, 89, 0.15);
+  background: #FFFFFF;
+  border: 1px solid rgba(197, 160, 89, 0.12);
   box-shadow:
-    0 24px 60px -10px rgba(197, 160, 89, 0.12),
-    0 0 0 1px rgba(197, 160, 89, 0.05);
+    0 24px 60px -10px rgba(197, 160, 89, 0.10),
+    0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
-:root:not([data-theme="dark"]) .login-visual-panel {
-  background: linear-gradient(135deg, #FAF7F2 0%, #F0EAE0 100%);
-  border-left-color: rgba(197, 160, 89, 0.12);
+:root:not([data-theme="dark"]) .login-form-panel {
+  background: #FFFFFF;
 }
 
-:root:not([data-theme="dark"]) .login-orb--1 {
-  background: radial-gradient(circle, rgba(197, 160, 89, 0.12) 0%, transparent 70%);
+:root:not([data-theme="dark"]) .login-input-wrap {
+  background: #F7F6F3;
+  border-color: #E5E2DC;
 }
-:root:not([data-theme="dark"]) .login-orb--2 {
-  background: radial-gradient(circle, rgba(226, 114, 91, 0.08) 0%, transparent 70%);
+
+:root:not([data-theme="dark"]) .login-input-wrap.focused,
+:root:not([data-theme="dark"]) .login-input-wrap:focus-within {
+  background: #FFFFFF;
+  border-color: #C5A059;
 }
 
 /* Client menu light — limpio, sencillo, colores que combinan */

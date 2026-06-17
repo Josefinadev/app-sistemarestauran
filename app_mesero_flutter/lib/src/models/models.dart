@@ -123,6 +123,7 @@ class Producto {
   final bool esBebida;
   final bool disponible;
   final String idCategoria;
+  final String? imagenUrl;
 
   Producto({
     required this.id,
@@ -131,6 +132,7 @@ class Producto {
     required this.esBebida,
     required this.disponible,
     required this.idCategoria,
+    this.imagenUrl,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -143,6 +145,7 @@ class Producto {
       esBebida: json['es_bebida'] == true,
       disponible: json['disponible'] == true,
       idCategoria: (json['id_categoria'] ?? '').toString(),
+      imagenUrl: json['imagen_url']?.toString(),
     );
   }
 }

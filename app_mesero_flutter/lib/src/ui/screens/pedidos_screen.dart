@@ -196,6 +196,11 @@ class _PedidosScreenState extends State<PedidosScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
+    final listosCount = items.where((i) => i.estado == 'LISTO').length;
+    final platosListosCount = items.where((i) => i.estado == 'LISTO' && !i.esBebida).length;
+    final bebidasListasCount = items.where((i) => i.estado == 'LISTO' && i.esBebida).length;
+
     final filtered = items.where((i) {
       if (filtro == 'platos') return !i.esBebida;
       if (filtro == 'bebidas') return i.esBebida;
@@ -218,6 +223,16 @@ class _PedidosScreenState extends State<PedidosScreen> {
       appBar: AppBar(
         title: const Text('Pedidos'),
         centerTitle: false,
+        actions: [
+          if (listosCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Badge(
+                label: Text('$listosCount'),
+                child: const Icon(Icons.notifications_outlined),
+              ),
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -227,6 +242,16 @@ class _PedidosScreenState extends State<PedidosScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
           children: [
+            Row(
+              children: [
+                Expanded(child: _PedidoStatCard(label: 'Por servir', value: '$listosCount', color: cs.primary, icon: Icons.flash_on_outlined)),
+                const SizedBox(width: 10),
+                Expanded(child: _PedidoStatCard(label: 'Platos', value: '$platosListosCount', color: cs.secondary, icon: Icons.restaurant_outlined)),
+                const SizedBox(width: 10),
+                Expanded(child: _PedidoStatCard(label: 'Bebidas', value: '$bebidasListasCount', color: cs.tertiary, icon: Icons.local_bar_outlined)),
+              ],
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               children: [
@@ -244,7 +269,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Center(
-                  child: Text('Sin items listos para servir', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+                  child: Text('¡Todo servido! Sin items pendientes', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
                 ),
               ),
             for (final pedidoId in pedidoIds)
@@ -535,6 +560,46 @@ class _AggRow extends StatelessWidget {
             )
           else
             Icon(Icons.check_circle, color: cs.onSurface.withOpacity(0.25)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PedidoStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+  const _PedidoStatCard({required this.label, required this.value, required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: cs.surfaceContainerHighest,
+        border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(color: color.withOpacity(0.14), borderRadius: BorderRadius.circular(8)),
+                child: Icon(icon, size: 14, color: color),
+              ),
+              const Spacer(),
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cs.onSurface)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );

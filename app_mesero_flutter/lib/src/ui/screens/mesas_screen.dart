@@ -77,8 +77,12 @@ class _MesasScreenState extends State<MesasScreen> {
     });
 
     try {
-      final mesasData = await ApiClient.getJson('/mesas?id_restaurante=${rest.id}') as List<dynamic>?;
-      final pedidosData = await ApiClient.getJson('/pedidos?id_restaurante=${rest.id}') as List<dynamic>?;
+      final results = await Future.wait([
+        ApiClient.getJson('/mesas?id_restaurante=${rest.id}'),
+        ApiClient.getJson('/pedidos?id_restaurante=${rest.id}'),
+      ]);
+      final mesasData = results[0] as List<dynamic>?;
+      final pedidosData = results[1] as List<dynamic>?;
 
       final map = <String, _MesaEstado>{};
       for (final m in (mesasData ?? const [])) {
@@ -273,7 +277,7 @@ class _MesaCard extends StatelessWidget {
       color = cs.tertiary;
       icon = Icons.verified;
     } else {
-      label = 'En preparacion';
+      label = 'En preparación';
       color = cs.secondary;
       icon = Icons.local_fire_department;
     }
