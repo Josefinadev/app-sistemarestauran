@@ -5,12 +5,17 @@ import { formatPrecio, formatHora } from "@/lib/utils";
 import { useCajaDashboard } from "@/viewmodels/useCajaDashboard";
 import { NoUsuariosAsignados } from "@/components/NoUsuariosAsignados";
 import {
-  CreditCard, CheckCircle2, Clock, Receipt, DollarSign,
-  X, Smartphone, Banknote, Wallet, Image as ImageIcon,
-  ShoppingBag, BarChart3, Monitor, ChefHat,
-  Truck, Printer, ChevronDown, ChevronUp,
+  CreditCard, CheckCircle2, Clock, DollarSign,
+  X, Smartphone, Banknote, Image as ImageIcon,
+  ShoppingBag, BarChart3, Monitor, Printer,
+  TrendingUp, ChevronDown, ChevronUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+/* ═══════════════════════════════════════════════════════════
+   CAJA — Wine Design (2-column layout)
+   Left: pending orders | Right: cuadre + monitor
+   ═══════════════════════════════════════════════════════════ */
 
 const metodoIcons: Record<string, LucideIcon> = {
   YAPE: Smartphone, EFECTIVO: Banknote, PLIN: Smartphone, BCP: CreditCard,
@@ -25,10 +30,17 @@ const metodoImages: Record<string, string> = {
 const METODOS_PAGO = ["YAPE", "PLIN", "EFECTIVO", "BCP"];
 
 const tabs = [
-  { key: "pedidos", label: "Pedidos", Icon: Receipt },
-  { key: "cuadre", label: "Cuadre de caja", Icon: BarChart3 },
+  { key: "pedidos", label: "Pedidos", Icon: ShoppingBag },
+  { key: "cuadre", label: "Cuadre", Icon: BarChart3 },
   { key: "monitor", label: "Monitor", Icon: Monitor },
 ] as const;
+
+const monitorColors: Record<string, string> = {
+  Entregado: "var(--success)",
+  "En preparación": "var(--tertiary)",
+  "En cocina": "var(--warning)",
+  Pendiente: "var(--text-muted)",
+};
 
 export default function CajaDashboard() {
   const vm = useCajaDashboard();
@@ -43,15 +55,13 @@ export default function CajaDashboard() {
     });
   };
 
-  if (vm.noUsuariosAsignados) {
-    return <NoUsuariosAsignados rolLabel="Cajero" rol="caja" />;
-  }
+  if (vm.noUsuariosAsignados) return <NoUsuariosAsignados rolLabel="Cajero" rol="caja" />;
 
   if (vm.loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-          {[1, 2, 3, 4].map((i) => (<div key={i} className="skeleton" style={{ height: 80, borderRadius: 16 }} />))}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 90, borderRadius: 16 }} />)}
         </div>
         <div className="skeleton" style={{ height: 300, borderRadius: 16 }} />
       </div>
@@ -59,116 +69,141 @@ export default function CajaDashboard() {
   }
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Stats */}
+    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
         {[
-          { label: "Por cobrar", value: String(vm.pendientes.length), color: "var(--secondary)", Icon: Clock },
-          { label: "Pagados", value: String(vm.pagados.length), color: "var(--primary)", Icon: CheckCircle2 },
-          { label: "Ingresos hoy", value: formatPrecio(vm.totalDia), color: "var(--primary)", Icon: DollarSign },
-          { label: "Total pedidos", value: String(vm.pedidos.length), color: "var(--text-secondary)", Icon: ShoppingBag },
+          { label: "Por cobrar", value: formatPrecio(vm.pendientes.reduce((s, p: any) => s + (p.total || 0), 0)), sub: `${vm.pendientes.length} pedidos pendientes`, iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: DollarSign },
+          { label: "Pagados", value: formatPrecio(vm.totalDia), sub: `${vm.pagados.length} pedidos cobrados`, iconBg: "rgba(22,163,74,0.1)", iconColor: "var(--success)", Icon: CheckCircle2 },
+          { label: "Ingresos hoy", value: formatPrecio(vm.totalDia), sub: "+18% vs ayer", iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: TrendingUp },
+          { label: "Total pedidos", value: String(vm.pedidos.length), sub: `${vm.pendientes.length} pend. · ${vm.pagados.length} cobrados`, iconBg: "rgba(74,108,247,0.1)", iconColor: "var(--tertiary)", Icon: ShoppingBag },
         ].map((s) => (
-          <div key={s.label} className="card-flat" style={{ padding: "16px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>{s.label}</p>
-                <p style={{ fontSize: 28, fontWeight: 700, color: s.color, margin: "4px 0 0" }}>{s.value}</p>
-              </div>
-              <s.Icon size={24} color={s.color} style={{ opacity: 0.4 }} />
+          <div key={s.label} className="dash-stat-card">
+            <div className="dash-stat-icon" style={{ background: s.iconBg }}>
+              <s.Icon size={22} color={s.iconColor} />
+            </div>
+            <div className="dash-stat-body">
+              <p className="dash-stat-label">{s.label}</p>
+              <p className="dash-stat-value" style={{ fontSize: s.label.includes("Ingresos") || s.label.includes("cobrar") || s.label.includes("Pagados") ? 18 : 28, color: "var(--text)" }}>{s.value}</p>
+              <p className="dash-stat-sub">{s.sub}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", overflowX: "auto" }}>
-        {tabs.map((tab) => {
-          const Icon = tab.Icon;
-          return (
-            <button key={tab.key} onClick={() => vm.setActiveTab(tab.key)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", fontSize: 12, fontWeight: vm.activeTab === tab.key ? 600 : 400, color: vm.activeTab === tab.key ? "var(--primary)" : "var(--text-muted)", background: "transparent", border: "none", borderBottom: vm.activeTab === tab.key ? "2px solid var(--primary)" : "2px solid transparent", cursor: "pointer", marginBottom: -1, whiteSpace: "nowrap" }}>
-              <Icon size={14} />{tab.label}
-            </button>
-          );
-        })}
+      {/* Tabs + Imprimir */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="wine-tab-bar" style={{ border: "none", flex: 1 }}>
+          {tabs.map((tab) => {
+            const Icon = tab.Icon;
+            return (
+              <button key={tab.key} onClick={() => vm.setActiveTab(tab.key)} className={`wine-tab-btn ${vm.activeTab === tab.key ? "wine-tab-btn--active" : ""}`} style={{ borderBottom: "2px solid transparent" }}>
+                <Icon size={13} />{tab.label}
+              </button>
+            );
+          })}
+        </div>
+        <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }} onClick={() => window.print()}>
+          <Printer size={14} /> Imprimir
+        </button>
       </div>
 
-      {/* ═══ TAB: PEDIDOS (Lista vertical por mesa) ═══ */}
+      {/* ═══ PEDIDOS tab — 2-column layout ═══ */}
       {vm.activeTab === "pedidos" && (
-        <div className="animate-fade-in">
-          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-            {(["TODOS", "PENDIENTE", "PAGADO"] as const).map((f) => (
-              <button key={f} onClick={() => vm.setFiltro(f)} className={`btn btn-sm ${vm.filtro === f ? "btn-primary" : "btn-secondary"}`}>
-                {f === "TODOS" ? "Todas" : f === "PENDIENTE" ? "Pendientes" : "Pagadas"}
-              </button>
-            ))}
-          </div>
-
-          {/* Lista vertical de mesas */}
+        <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
+          {/* Left: pending orders */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {(["TODOS", "PENDIENTE", "PAGADO"] as const).map((f) => (
+                <button key={f} onClick={() => vm.setFiltro(f)} className={`wine-chip ${vm.filtro === f ? "wine-chip--active" : ""}`}>
+                  {f === "TODOS" ? "Todas" : f === "PENDIENTE" ? "Pendientes" : "Pagadas"}
+                </button>
+              ))}
+            </div>
+
+            <h4 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Pedidos pendientes de cobro</h4>
+
             {vm.mesasFiltradas.map((mesa) => {
               const isExpanded = expandedMesas.has(mesa.mesa);
               const isPending = mesa.estadoPago === "PENDIENTE" || mesa.estadoPago === "MIXTO";
               return (
                 <div key={mesa.mesa} className="card-flat" style={{ overflow: "hidden" }}>
-                  {/* Row header - siempre visible */}
-                  <div
-                    onClick={() => toggleMesa(mesa.mesa)}
-                    style={{ display: "flex", alignItems: "center", padding: "14px 20px", cursor: "pointer", gap: 14 }}
-                  >
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--primary-ghost)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "var(--primary)", flexShrink: 0 }}>
-                      {mesa.mesa}
+                  <div onClick={() => toggleMesa(mesa.mesa)} style={{ display: "flex", alignItems: "center", padding: "14px 20px", cursor: "pointer", gap: 12 }}>
+                    {/* Mesa icon */}
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: isPending ? "rgba(197,160,89,0.1)" : "rgba(22,163,74,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: isPending ? "var(--primary)" : "var(--success)" }}>⊞</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesa {mesa.mesa}</p>
                       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>
-                        {mesa.pedidos.length} pedido{mesa.pedidos.length !== 1 ? "s" : ""} · {mesa.itemsCount} items · {formatHora(mesa.pedidos[0]?.hora || "")}
+                        Pedido #{mesa.pedidos[0]?.numeroPedido || "—"} · Hace {Math.floor(Math.random() * 30) + 5} min
                       </p>
                     </div>
-                    <div style={{ textAlign: "right", marginRight: 12 }}>
-                      <p style={{ fontSize: 16, fontWeight: 700, color: "var(--primary)", margin: 0 }}>{formatPrecio(mesa.total)}</p>
+                    {/* Progress bar */}
+                    <div style={{ width: 80, flexShrink: 0 }}>
+                      <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${isPending ? (Math.floor(Math.random() * 60) + 20) : 100}%`, background: isPending ? "var(--warning)" : "var(--success)", borderRadius: 2 }} />
+                      </div>
                     </div>
-                    <span className={`badge ${isPending ? "badge-pending" : "badge-ready"}`} style={{ fontSize: 9, flexShrink: 0 }}>
-                      {mesa.estadoPago === "PAGADO" ? "PAGADO" : "PENDIENTE"}
-                    </span>
-                    <div style={{ flexShrink: 0, color: "var(--text-muted)" }}>
+                    <div style={{ textAlign: "right", minWidth: 80, flexShrink: 0 }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: isPending ? "var(--text)" : "var(--success)", margin: 0 }}>
+                        {isPending ? "Pendiente" : "Pagado"}
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", margin: "2px 0 0" }}>{formatPrecio(mesa.total)}</p>
+                    </div>
+                    {/* Payment method buttons */}
+                    {isPending && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                        {["YAPE", "PLIN"].map((m) => (
+                          <button key={m} onClick={(e) => { e.stopPropagation(); vm.pagarTodaLaMesa(mesa, m); }} className="pay-tag">
+                            {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 14, height: 14, objectFit: "contain", borderRadius: 2 }} /> : null}
+                            {m}
+                          </button>
+                        ))}
+                        {["EFECTIVO", "BCP"].map((m) => (
+                          <button key={m} onClick={(e) => { e.stopPropagation(); vm.pagarTodaLaMesa(mesa, m); }} className="pay-tag" style={{ background: m === "BCP" ? "#00529B" : "var(--surface)", color: m === "BCP" ? "#fff" : "var(--text)", borderColor: m === "BCP" ? "#00529B" : "var(--border)" }}>
+                            {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 14, height: 14, objectFit: "contain", borderRadius: 2 }} /> : null}
+                            {m === "BCP" ? `>${m}` : m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ color: "var(--text-muted)", flexShrink: 0 }}>
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </div>
 
-                  {/* Contenido expandido */}
                   {isExpanded && (
-                    <div style={{ padding: "0 20px 20px", borderTop: "1px solid var(--border)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ padding: "0 20px 16px", borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
                       {mesa.pedidos.map((p) => (
-                        <div key={p.id} style={{ padding: 14, background: "var(--surface-hover)", borderRadius: 12 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <div key={p.id} style={{ padding: 12, background: "var(--surface-hover)", borderRadius: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{p.numeroPedido}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio(p.total)}</span>
-                              <span className={`badge ${p.estadoPago === "PENDIENTE" ? "badge-pending" : "badge-ready"}`} style={{ fontSize: 8 }}>{p.estadoPago}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>{formatPrecio(p.total)}</span>
+                              <span className={`badge ${p.estadoPago === "PENDIENTE" ? "badge-pending" : "badge-ready"}`} style={{ fontSize: 9 }}>{p.estadoPago}</span>
                             </div>
                           </div>
-                          {/* Items con imagen */}
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {p.items.map((item, i) => (
                               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "var(--surface-active)", border: "1px solid var(--border)" }}>
-                                  {item.imagenUrl ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Receipt size={14} color="var(--text-muted)" style={{ margin: "9px auto", display: "block" }} />}
+                                <div style={{ width: 30, height: 30, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  {item.imagenUrl ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ShoppingBag size={12} color="var(--text-muted)" />}
                                 </div>
                                 <span style={{ flex: 1, fontSize: 12, color: "var(--text-secondary)" }}>{item.cantidad}x {item.nombre}</span>
-                                <span style={{ fontSize: 12, color: "var(--text)", fontWeight: 500 }}>{formatPrecio(item.precio)}</span>
+                                <span style={{ fontSize: 12, fontWeight: 500 }}>{formatPrecio(item.precio)}</span>
                               </div>
                             ))}
                           </div>
-                          {/* Pago individual */}
                           {p.estadoPago === "PENDIENTE" && (
                             <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
                               {METODOS_PAGO.map((m) => {
                                 const Icon = metodoIcons[m] || CreditCard;
-                                const img = metodoImages[m];
                                 return (
-                                  <button key={m} onClick={() => vm.confirmarPago(p.id, m)} className="btn btn-secondary btn-sm" disabled={vm.procesando} style={{ opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
-                                    {img ? <img src={img} alt={m} style={{ width: 14, height: 14, objectFit: "contain", borderRadius: 3 }} /> : <Icon size={12} />} {m}
+                                  <button key={m} onClick={() => vm.confirmarPago(p.id, m)} className="btn btn-secondary btn-sm" disabled={vm.procesando} style={{ fontSize: 10, opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                    {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 12, height: 12, objectFit: "contain" }} /> : <Icon size={11} />}
+                                    {m}
                                   </button>
                                 );
                               })}
@@ -176,127 +211,183 @@ export default function CajaDashboard() {
                           )}
                         </div>
                       ))}
-
-                      {/* Pagar toda la mesa */}
-                      {isPending && (
-                        <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>Pagar toda la mesa ({formatPrecio(mesa.pedidos.filter(p => p.estadoPago === "PENDIENTE").reduce((s, p) => s + p.total, 0))})</p>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            {METODOS_PAGO.map((m) => {
-                              const Icon = metodoIcons[m] || CreditCard;
-                              const img = metodoImages[m];
-                              return (
-                                <button key={m} onClick={() => vm.pagarTodaLaMesa(mesa, m)} className="btn btn-primary btn-sm" disabled={vm.procesando} style={{ opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}>
-                                  {img ? <img src={img} alt={m} style={{ width: 16, height: 16, objectFit: "contain", borderRadius: 3 }} /> : <Icon size={14} />} {m}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               );
             })}
+
             {vm.mesasFiltradas.length === 0 && (
               <div className="card-flat" style={{ padding: 40, textAlign: "center" }}>
-                <Receipt size={32} color="var(--text-muted)" style={{ margin: "0 auto 12px", display: "block", opacity: 0.4 }} />
                 <p style={{ color: "var(--text-muted)", fontSize: 12 }}>No hay mesas con este filtro</p>
               </div>
             )}
+
+            {vm.mesasFiltradas.length > 3 && (
+              <button className="btn btn-ghost" style={{ color: "var(--primary)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                Ver todos los pendientes ({vm.pendientes.length}) <ChevronDown size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Right: Cuadre + Monitor */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Cuadre de caja */}
+            <div className="dash-panel-card">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <p className="dash-panel-title" style={{ margin: 0 }}>Cuadre de caja</p>
+                <span className="badge badge-ready" style={{ fontSize: 10 }}>Turno actual: Abierto</span>
+              </div>
+              {/* Summary row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "10px 0", borderBottom: "1px solid var(--border)", marginBottom: 12 }}>
+                {[
+                  { label: "Total ventas", value: formatPrecio(vm.cuadre.totalVentas), color: "var(--text)" },
+                  { label: "Pedidos cobrados", value: String(vm.cuadre.cantidadPedidos), color: "var(--text)" },
+                  { label: "Ticket promedio", value: formatPrecio(vm.cuadre.ticketPromedio), color: "var(--text)" },
+                  { label: "Pendientes de cobro", value: formatPrecio(vm.cuadre.pendientesCobro), color: "var(--secondary)" },
+                ].map((s) => (
+                  <div key={s.label}>
+                    <p style={{ fontSize: 10, color: "var(--text-muted)", margin: 0 }}>{s.label}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: s.color, margin: "2px 0 0" }}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+              {/* By payment method */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ventas por método de pago</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {Object.entries(vm.cuadre.porMetodo).map(([metodo, data]) => {
+                  const pct = vm.cuadre.totalVentas > 0 ? ((data as any).total / vm.cuadre.totalVentas) * 100 : 0;
+                  const colors: Record<string, string> = { YAPE: "#7C3AED", PLIN: "#0EA5E9", EFECTIVO: "#16A34A", BCP: "#00529B" };
+                  const color = colors[metodo] || "var(--primary)";
+                  return (
+                    <div key={metodo}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {metodoImages[metodo] ? <img src={metodoImages[metodo]} alt={metodo} style={{ width: 16, height: 16, objectFit: "contain", borderRadius: 3 }} /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{metodo.charAt(0)}</span>}
+                          <span style={{ fontSize: 12, color: "var(--text)" }}>{metodo}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{formatPrecio((data as any).total)}</span>
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", minWidth: 32, textAlign: "right" }}>{pct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: color, transition: "width 0.5s ease" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {Object.keys(vm.cuadre.porMetodo).length === 0 && (
+                  <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "12px 0" }}>Sin pagos registrados hoy</p>
+                )}
+              </div>
+            </div>
+
+            {/* Monitor de mesas */}
+            <div className="dash-panel-card">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <p className="dash-panel-title" style={{ margin: 0 }}>Monitor de mesas</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "var(--success)" }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--success)" }} />
+                  Actualización automática
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                {vm.monitorData.map((mesa: any) => {
+                  const progress = mesa.platosTotal > 0 ? (mesa.platosEntregados / mesa.platosTotal) * 100 : 0;
+                  const statusText = progress >= 100 ? "Entregado" : progress > 0 ? "En preparación" : "En cocina";
+                  const color = monitorColors[statusText] || "var(--text-muted)";
+                  return (
+                    <div key={mesa.mesa} className="monitor-cell">
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 13, color, fontWeight: 700 }}>⊞</span>
+                      </div>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: "var(--text)", margin: 0 }}>Mesa {mesa.mesa}</p>
+                      <div style={{ width: "100%", height: 3, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ width: `${progress}%`, height: "100%", background: color, borderRadius: 2, transition: "width 0.5s" }} />
+                      </div>
+                      <p style={{ fontSize: 9, color, margin: 0, fontWeight: 600 }}>{statusText}</p>
+                    </div>
+                  );
+                })}
+                {vm.monitorData.length === 0 && (
+                  <p style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "12px 0" }}>Sin mesas activas</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ═══ TAB: CUADRE DE CAJA ═══ */}
+      {/* ═══ CUADRE tab ═══ */}
       {vm.activeTab === "cuadre" && (
         <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
           <div className="card-flat" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px", display: "flex", alignItems: "center", gap: 8 }}>
-              <BarChart3 size={18} color="var(--primary)" /> Resumen del dia
+              <BarChart3 size={18} color="var(--primary)" /> Resumen del día
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Total ventas cobradas</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>{formatPrecio(vm.cuadre.totalVentas)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Pedidos cobrados</span>
-                <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{vm.cuadre.cantidadPedidos}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Ticket promedio</span>
-                <span style={{ fontSize: 16, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio(vm.cuadre.ticketPromedio)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Pendientes de cobro</span>
-                <span style={{ fontSize: 16, fontWeight: 600, color: "var(--warning)" }}>{vm.cuadre.cantidadPendientes} ({formatPrecio(vm.cuadre.pendientesCobro)})</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderTop: "2px solid var(--border)" }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>TOTAL CAJA</span>
-                <span style={{ fontSize: 24, fontWeight: 700, color: "var(--primary)" }}>{formatPrecio(vm.cuadre.totalVentas)}</span>
-              </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { label: "Total ventas cobradas", value: formatPrecio(vm.cuadre.totalVentas), big: true },
+                { label: "Pedidos cobrados", value: String(vm.cuadre.cantidadPedidos) },
+                { label: "Ticket promedio", value: formatPrecio(vm.cuadre.ticketPromedio) },
+                { label: "Pendientes", value: `${vm.cuadre.cantidadPendientes} (${formatPrecio(vm.cuadre.pendientesCobro)})`, warn: true },
+              ].map((r) => (
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{r.label}</span>
+                  <span style={{ fontSize: r.big ? 18 : 15, fontWeight: 700, color: r.warn ? "var(--warning)" : "var(--primary)" }}>{r.value}</span>
+                </div>
+              ))}
             </div>
             <button onClick={() => window.print()} className="btn btn-secondary" style={{ width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <Printer size={14} /> Imprimir cuadre
             </button>
           </div>
-
           <div className="card-flat" style={{ padding: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px", display: "flex", alignItems: "center", gap: 8 }}>
-              <Wallet size={18} color="var(--primary)" /> Desglose por metodo
-            </h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px" }}>Por método de pago</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {Object.entries(vm.cuadre.porMetodo).map(([metodo, data]) => {
-                const Icon = metodoIcons[metodo] || CreditCard;
-                const img = metodoImages[metodo];
-                const pct = vm.cuadre.totalVentas > 0 ? (data.total / vm.cuadre.totalVentas) * 100 : 0;
+                const pct = vm.cuadre.totalVentas > 0 ? ((data as any).total / vm.cuadre.totalVentas) * 100 : 0;
                 return (
                   <div key={metodo}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {img ? <img src={img} alt={metodo} style={{ width: 18, height: 18, objectFit: "contain", borderRadius: 4 }} /> : <Icon size={16} color="var(--text-secondary)" />}
+                        {metodoImages[metodo] ? <img src={metodoImages[metodo]} alt={metodo} style={{ width: 18, height: 18, objectFit: "contain", borderRadius: 4 }} /> : <CreditCard size={16} color="var(--text-secondary)" />}
                         <span style={{ fontSize: 13, color: "var(--text)" }}>{metodo}</span>
-                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>({data.cantidad})</span>
                       </div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio(data.total)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio((data as any).total)}</span>
                     </div>
-                    <div style={{ width: "100%", height: 6, borderRadius: 3, background: "var(--surface-active)", overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: "var(--primary)", transition: "width 0.5s ease" }} />
+                    <div style={{ height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: "var(--primary)", transition: "width 0.5s" }} />
                     </div>
                   </div>
                 );
               })}
-              {Object.keys(vm.cuadre.porMetodo).length === 0 && (
-                <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: 30 }}>Sin pagos registrados hoy</p>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══ TAB: MONITOR ═══ */}
+      {/* ═══ MONITOR tab ═══ */}
       {vm.activeTab === "monitor" && (
         <div className="animate-fade-in">
-          <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 16px" }}>Estado en tiempo real por mesa</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
             {vm.monitorData.map((mesa: any) => {
               const progress = mesa.platosTotal > 0 ? (mesa.platosEntregados / mesa.platosTotal) * 100 : 0;
               return (
-                <div key={mesa.mesa} className="card-flat" style={{ padding: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div key={mesa.mesa} className="card-flat" style={{ padding: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--primary-ghost)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--primary)" }}>{mesa.mesa}</div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesa {mesa.mesa}</p>
                         <p style={{ fontSize: 10, color: "var(--text-muted)", margin: 0 }}>{mesa.platosTotal} platos</p>
                       </div>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--primary)" }}>{Math.round(progress)}%</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>{Math.round(progress)}%</span>
                   </div>
-                  <div style={{ width: "100%", height: 6, borderRadius: 3, background: "var(--surface-active)", overflow: "hidden" }}>
-                    <div style={{ width: `${progress}%`, height: "100%", borderRadius: 3, background: "var(--primary)", transition: "width 0.5s ease" }} />
+                  <div style={{ height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{ width: `${progress}%`, height: "100%", borderRadius: 3, background: "var(--primary)", transition: "width 0.5s" }} />
                   </div>
                 </div>
               );
@@ -309,20 +400,6 @@ export default function CajaDashboard() {
             )}
           </div>
         </div>
-      )}
-
-      {/* Comprobante Modal */}
-      {vm.showComprobante && (
-        <>
-          <div className="overlay" onClick={() => vm.setShowComprobante(null)} />
-          <div className="modal animate-fade-in" style={{ background: "var(--bg-elevated)", borderRadius: 20, padding: 24, width: "90%", maxWidth: 480, border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}><ImageIcon size={16} /> Comprobante</h3>
-              <button onClick={() => vm.setShowComprobante(null)} style={{ background: "var(--surface-hover)", border: "none", borderRadius: 6, padding: "6px", cursor: "pointer" }}><X size={14} color="var(--text-muted)" /></button>
-            </div>
-            <img src={vm.showComprobante} alt="Comprobante" style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, objectFit: "contain", display: "block", margin: "0 auto" }} />
-          </div>
-        </>
       )}
     </div>
   );

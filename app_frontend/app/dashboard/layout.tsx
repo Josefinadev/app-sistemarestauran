@@ -10,38 +10,52 @@ import { useRestauranteRealtime } from "@/lib/realtime";
 import { CursorGlow } from "@/components/CursorGlow";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
-  Crown,
-  Flame,
-  UtensilsCrossed,
-  Wallet,
+  ChefHat,
   Bell,
   LogOut,
   Wine,
   LayoutDashboard,
   Users,
   BarChart3,
-  Gift,
-  CircleDot,
+  Globe,
+  Crown,
+  User,
   Menu,
+  Settings,
+  CreditCard,
   ChevronsLeft,
   ChevronsRight,
+  CircleDot,
+  ChevronDown,
+  Clock,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   DASHBOARD LAYOUT — Sidebar inteligente por rol
-   Cada rol solo ve su sección. Admin ve todo.
+   DASHBOARD LAYOUT — Wine Design v2
+   Sidebar con nuevo diseño, header con título+subtítulo
    ═══════════════════════════════════════════════════════════ */
 
 const allNavItems = [
-  { href: "/dashboard/admin", label: "Panel Admin", icon: Crown, rol: "admin", modulo: "gestion-pedidos" },
+  { href: "/dashboard/admin", label: "Dashboard", icon: LayoutDashboard, rol: "admin", modulo: "gestion-pedidos" },
   { href: "/dashboard/admin/reportes", label: "Reportes", icon: BarChart3, rol: "admin", modulo: "marketing-analitico" },
   { href: "/dashboard/admin/usuarios", label: "Usuarios", icon: Users, rol: "admin" },
-  { href: "/dashboard/admin/web", label: "Gestión Web", icon: LayoutDashboard, rol: "admin" },
-  { href: "/dashboard/admin/suscripcion", label: "Mi Plan", icon: Gift, rol: "admin" },
-  { href: "/dashboard/cocina", label: "Cocina", icon: Flame, rol: "cocina", modulo: "gestion-pedidos" },
-  { href: "/dashboard/mesero", label: "Mesero", icon: UtensilsCrossed, rol: "mesero", modulo: "gestion-pedidos" },
-  { href: "/dashboard/caja", label: "Caja", icon: Wallet, rol: "caja", modulo: "gestion-pedidos" },
+  { href: "/dashboard/admin/web", label: "Gestión Web", icon: Globe, rol: "admin" },
+  { href: "/dashboard/admin/suscripcion", label: "Suscripción", icon: Crown, rol: "admin" },
+  { href: "/dashboard/cocina", label: "Cocina", icon: ChefHat, rol: "cocina", modulo: "gestion-pedidos" },
+  { href: "/dashboard/caja", label: "Caja", icon: CreditCard, rol: "caja", modulo: "gestion-pedidos" },
+  { href: "/dashboard/mesero", label: "Mesero", icon: User, rol: "mesero", modulo: "gestion-pedidos" },
 ];
+
+const pageInfo: Record<string, { title: string; subtitle: string }> = {
+  "/dashboard/admin": { title: "Panel Administrativo", subtitle: "Resumen general de tu restaurante" },
+  "/dashboard/admin/reportes": { title: "Reportes", subtitle: "Analiza el rendimiento de tu restaurante" },
+  "/dashboard/admin/usuarios": { title: "Usuarios", subtitle: "Gestiona los usuarios y permisos del sistema" },
+  "/dashboard/admin/web": { title: "Gestión Web", subtitle: "Administra el contenido visible en tu sitio web" },
+  "/dashboard/admin/suscripcion": { title: "Suscripción", subtitle: "Gestiona tu plan, facturación y preferencias" },
+  "/dashboard/cocina": { title: "Cocina", subtitle: "Gestiona y prepara los pedidos en tiempo real" },
+  "/dashboard/caja": { title: "Caja", subtitle: "Panel de cobros y control de pedidos" },
+  "/dashboard/mesero": { title: "Panel Mesero", subtitle: "Gestiona y entrega pedidos a tus mesas" },
+};
 
 export default function DashboardLayout({
   children,
@@ -52,36 +66,34 @@ export default function DashboardLayout({
   const router = useRouter();
   const { rol, usuario, logout, accessToken, _hasHydrated, restaurante } = useAuth();
   const { unreadCount, items: notifItems, markAllRead } = useNotificaciones();
-  
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
   const [showNotifs, setShowNotifs] = useState(false);
   const [modulosActivos, setModulosActivos] = useState<string[]>([]);
 
-  // ── Auth Guard: Redirigir al login si no hay sesión ──
+  // ── Auth Guard ──
   useEffect(() => {
     if (_hasHydrated && !accessToken) {
       router.push("/login");
     }
   }, [_hasHydrated, accessToken, router]);
 
-  // ── Role Guard: evitar navegación por URL a módulos no permitidos ──
+  // ── Role Guard ──
   useEffect(() => {
     if (!_hasHydrated || !accessToken || !rol) return;
 
-     const allowedPrefixesByRole: Record<string, string[]> = {
-       admin: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
-       propietario: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
-       cocina: ["/dashboard/cocina"],
-       caja: ["/dashboard/caja"],
-       mesero: ["/dashboard/mesero"],
-       // Superadmin can access the SaaS panel and the tenant admin dashboard.
-       // This prevents surprising redirects to /superadmin when a superadmin refreshes
-       // a tenant dashboard URL (common while configuring a newly created tenant).
-       admin_saas: ["/superadmin", "/dashboard/admin"],
-       cliente: ["/"],
-     };
+    const allowedPrefixesByRole: Record<string, string[]> = {
+      admin: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
+      propietario: ["/dashboard/admin", "/dashboard/cocina", "/dashboard/mesero", "/dashboard/caja"],
+      cocina: ["/dashboard/cocina"],
+      caja: ["/dashboard/caja"],
+      mesero: ["/dashboard/mesero"],
+      admin_saas: ["/superadmin", "/dashboard/admin"],
+      cliente: ["/"],
+    };
 
     const allowed = allowedPrefixesByRole[rol] || ["/dashboard/admin"];
     const isAllowed = allowed.some((p) => pathname?.startsWith(p));
@@ -90,24 +102,28 @@ export default function DashboardLayout({
     }
   }, [_hasHydrated, accessToken, rol, pathname, router]);
 
+  // ── Clock ──
   useEffect(() => {
     const update = () => {
       const now = new Date();
       setTime(
-        now.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
+        now.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      );
+      setDate(
+        now.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })
       );
     };
     update();
-    const id = setInterval(update, 30000);
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, []);
 
-  // ── Close mobile menu when route changes ──
+  // ── Close mobile menu on route change ──
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // ── Mobile drawer: cerrar con Esc + bloquear scroll del body ──
+  // ── Mobile drawer: Esc + scroll lock ──
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -122,27 +138,24 @@ export default function DashboardLayout({
     };
   }, [mobileMenuOpen]);
 
-  // Fetch active modules for tenant
+  // ── Load active modules ──
   useEffect(() => {
     async function loadModulos() {
       if (!restaurante?.id) return;
-      
       try {
-        // Obtenemos la suscripción activa
         const { data: subData } = await (supabase
           .from("restaurante_suscripcion") as any)
           .select("id_plan")
           .eq("id_restaurante", restaurante.id)
           .eq("estado", "activa")
           .maybeSingle();
-          
+
         if (subData?.id_plan) {
-          // Obtenemos los módulos habilitados para ese plano
           const { data: modsData } = await (supabase
             .from("suscripcion_plan_modulo") as any)
             .select("id_modulo, modulo:suscripcion_modulo(slug)")
             .eq("id_plan", subData.id_plan);
-            
+
           if (modsData) {
             const slugs = (modsData as any[]).map((m: any) => m.modulo?.slug).filter(Boolean);
             setModulosActivos(slugs);
@@ -157,7 +170,7 @@ export default function DashboardLayout({
     }
   }, [restaurante?.id, accessToken]);
 
-  // Refrescar restaurante (branding) desde DB para no depender del snapshot del login.
+  // ── Refresh restaurante branding ──
   useEffect(() => {
     async function refreshRestaurante() {
       if (!accessToken || !restaurante?.id) return;
@@ -166,25 +179,23 @@ export default function DashboardLayout({
         .eq("id", restaurante.id)
         .maybeSingle();
       if (!error && data) {
-        // Evita perder datos existentes si la fila no trae algún campo.
         useAuth.getState().setRestaurante({ ...useAuth.getState().restaurante, ...data });
       }
     }
     refreshRestaurante();
   }, [accessToken, restaurante?.id]);
 
-  // Branding en tiempo real
+  // ── Real-time branding ──
   useRestauranteRealtime(restaurante?.id || null, (r) => {
-    // Mantener el objeto local en sync para que el resto de UI use lo último.
     useAuth.getState().setRestaurante({ ...useAuth.getState().restaurante, ...r });
   });
 
-  // ── Dynamic Theming: Inject CSS Variables ──
+  // ── Apply CSS Variables ──
   useEffect(() => {
     applyRestauranteBranding(restaurante);
   }, [restaurante?.color_primario, restaurante?.color_secundario]);
 
-  // Filter nav items by role and active modules
+  // ── Filter nav by role & modules ──
   const navItems = allNavItems.filter((item) => {
     const isAdminLike = rol === "admin" || rol === "admin_saas" || rol === "propietario";
     if (!isAdminLike && item.rol !== rol) return false;
@@ -197,12 +208,16 @@ export default function DashboardLayout({
     router.push("/login");
   };
 
+  // ── Get current page info ──
+  const currentInfo = Object.entries(pageInfo).find(([key]) => pathname?.startsWith(key))?.[1]
+    || { title: "Dashboard", subtitle: "Panel de administración" };
+
   if (!_hasHydrated) {
     return (
       <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", animation: "pulse 1.5s ease-in-out infinite" }}>
-            <Wine size={24} color="var(--text-inverse)" />
+            <Wine size={24} color="var(--text-inverse, #fff)" />
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Cargando...</p>
         </div>
@@ -212,16 +227,13 @@ export default function DashboardLayout({
 
   if (!accessToken) return null;
 
-  const roleIcons: Record<string, ReactNode> = {
-    admin: <Crown size={14} />,
-    cocina: <Flame size={14} />,
-    mesero: <UtensilsCrossed size={14} />,
-    caja: <Wallet size={14} />,
-  };
+  const isAdminLike = rol === "admin" || rol === "admin_saas" || rol === "propietario";
 
   return (
     <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
       <CursorGlow />
+
+      {/* Mobile backdrop */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -235,6 +247,8 @@ export default function DashboardLayout({
           />
         )}
       </AnimatePresence>
+
+      {/* ── Sidebar ── */}
       <aside
         id="premium-sidebar"
         className={[
@@ -246,6 +260,7 @@ export default function DashboardLayout({
         role={mobileMenuOpen ? "dialog" : undefined}
         aria-modal={mobileMenuOpen ? true : undefined}
       >
+        {/* Logo header */}
         <div className="premium-sidebar-header">
           <div className="premium-sidebar-logo" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
             <div className="premium-sidebar-logo-img">
@@ -255,7 +270,12 @@ export default function DashboardLayout({
                 <Wine size={16} color="var(--text-inverse, #fff)" />
               )}
             </div>
-            <span className="premium-sidebar-brand">{restaurante?.nombre || "Cargando..."}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="premium-sidebar-brand">{restaurante?.nombre || "Restaurante"}</div>
+              <div style={{ fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 1 }}>
+                Restaurante
+              </div>
+            </div>
           </div>
           <button
             className="premium-sidebar-collapse"
@@ -266,9 +286,11 @@ export default function DashboardLayout({
             <ChevronsLeft size={14} />
           </button>
         </div>
+
+        {/* Main navigation */}
         <nav className="premium-sidebar-nav">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (pathname?.startsWith(item.href + "/") && item.href !== "/dashboard/admin") || (item.href === "/dashboard/admin" && pathname === "/dashboard/admin");
             const Icon = item.icon;
             return (
               <button
@@ -287,14 +309,67 @@ export default function DashboardLayout({
                 )}
                 <Icon size={18} className="premium-sidebar-item-icon" />
                 <span className="premium-sidebar-item-label">{item.label}</span>
-                {isActive && (
-                  <div className="premium-sidebar-item-dot" />
-                )}
               </button>
             );
           })}
         </nav>
+
+        {/* Bottom section */}
         <div className="premium-sidebar-footer">
+          <div className="sidebar-divider" />
+
+          {/* Notificaciones */}
+          <button
+            onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }}
+            className="sidebar-config-item"
+            title="Notificaciones"
+            style={{ position: "relative" }}
+          >
+            <Bell size={18} />
+            <span className="premium-sidebar-item-label">Notificaciones</span>
+            {unreadCount() > 0 && (
+              <span style={{
+                marginLeft: "auto",
+                background: "var(--primary)",
+                color: "#fff",
+                fontSize: 9,
+                fontWeight: 700,
+                padding: "2px 6px",
+                borderRadius: 99,
+                minWidth: 18,
+                textAlign: "center",
+              }}>
+                {unreadCount()}
+              </span>
+            )}
+          </button>
+
+          {/* Configuración */}
+          {isAdminLike && (
+            <button
+              onClick={() => router.push("/dashboard/admin/web")}
+              className={`sidebar-config-item ${pathname?.startsWith("/dashboard/admin/web") ? "premium-sidebar-item--active" : ""}`}
+              title="Configuración"
+            >
+              <Settings size={18} />
+              <span className="premium-sidebar-item-label">Configuración</span>
+            </button>
+          )}
+
+          <div className="sidebar-divider" />
+
+          {/* Cerrar sesión */}
+          <button
+            onClick={handleLogout}
+            className="sidebar-logout-item"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          >
+            <LogOut size={18} />
+            <span>Cerrar sesión</span>
+          </button>
+
+          {/* User card */}
           <div className="premium-sidebar-user" title={`${usuario?.nombre || "Usuario"} · ${rol || ""}`}>
             <div className="premium-sidebar-avatar">
               {usuario?.nombre?.charAt(0).toUpperCase() || "?"}
@@ -302,15 +377,13 @@ export default function DashboardLayout({
             </div>
             <div className="premium-sidebar-user-info">
               <div className="premium-sidebar-user-name">{usuario?.nombre || "Usuario"}</div>
-              <div className="premium-sidebar-user-role">
-                {roleIcons[rol || ""] || null}
-                {rol || "Sin rol"}
+              <div className="premium-sidebar-user-role" style={{ textTransform: "capitalize" }}>
+                {rol === "admin" ? "Administrador" : rol === "cocina" ? "Cocinero" : rol === "mesero" ? "Mesero" : rol === "caja" ? "Cajero" : rol || "Sin rol"}
               </div>
             </div>
           </div>
-          <button onClick={handleLogout} className="premium-sidebar-logout" aria-label="Cerrar sesión" title="Cerrar sesión">
-            <LogOut size={12} /><span>Cerrar sesión</span>
-          </button>
+
+          {/* Expand button (collapsed state) */}
           <button
             className="premium-sidebar-expand"
             onClick={() => setSidebarCollapsed(false)}
@@ -321,7 +394,11 @@ export default function DashboardLayout({
           </button>
         </div>
       </aside>
+
+      {/* ── Main content area ── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+        {/* Header */}
         <header className="dashboard-header">
           <div className="dashboard-header-left">
             <button
@@ -333,24 +410,129 @@ export default function DashboardLayout({
             >
               <Menu size={18} />
             </button>
-            <h2 className="dashboard-header-title">{navItems.find((n) => pathname?.startsWith(n.href))?.label || "Dashboard"}</h2>
-            <span className="badge badge-delivered dashboard-header-status" style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 4 }}><CircleDot size={8} /> En línea</span>
+            <div style={{ minWidth: 0 }}>
+              <h2 className="dashboard-header-title">{currentInfo.title}</h2>
+              <p className="dashboard-header-subtitle">{currentInfo.subtitle}</p>
+            </div>
           </div>
-          <div className="dashboard-header-right">
-            <span className="dashboard-header-time" style={{ fontSize: 12, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
+
+          <div className="dashboard-header-right" style={{ gap: 12 }}>
+            {/* Status */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--success)", fontWeight: 600 }} className="dashboard-header-status">
+              <CircleDot size={8} />
+              <span>En línea</span>
+            </div>
+
+            {/* Time + Date */}
+            <div className="header-time-display" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Clock size={12} color="var(--text-muted)" />
+                <span className="header-time">{time}</span>
+              </div>
+              <span className="header-date">{date}</span>
+            </div>
+
+            {/* Theme toggle */}
             <ThemeToggle />
+
+            {/* Notifications bell */}
             <div style={{ position: "relative", zIndex: 9999 }}>
-              <button onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Bell size={16} color="var(--text-secondary)" /></button>
-              {unreadCount() > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--secondary)", color: "white", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount()}</span>}
+              <button
+                onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }}
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  position: "relative",
+                }}
+              >
+                <Bell size={16} color="var(--text-secondary)" />
+                {unreadCount() > 0 && (
+                  <span style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: "var(--primary)",
+                    color: "white",
+                    fontSize: 9,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px solid var(--bg-elevated)",
+                  }}>
+                    {unreadCount()}
+                  </span>
+                )}
+              </button>
               {showNotifs && (
-                <div className="dashboard-notif-dropdown" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, maxHeight: 400, overflowY: "auto", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", zIndex: 9999, padding: "8px" }}>
-                  <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}><p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0 }}>Notificaciones</p></div>
-                  {notifItems.length === 0 ? <div style={{ padding: "24px", textAlign: "center" }}><Bell size={24} color="var(--text-muted)" style={{ marginBottom: 8 }} /><p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Sin notificaciones</p></div> : notifItems.slice(0, 10).map((n) => (<div key={n.id} style={{ padding: "10px 12px", borderRadius: "var(--radius-sm)", background: n.leida ? "transparent" : "var(--primary-ghost)", marginBottom: 2 }}><p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: "0 0 2px" }}>{n.titulo}</p><p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{n.mensaje}</p></div>))}
+                <div className="dashboard-notif-dropdown" style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  maxHeight: 400,
+                  overflowY: "auto",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-lg)",
+                  boxShadow: "var(--shadow-lg)",
+                  zIndex: 9999,
+                  padding: "8px",
+                  minWidth: 280,
+                }}>
+                  <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0 }}>Notificaciones</p>
+                  </div>
+                  {notifItems.length === 0 ? (
+                    <div style={{ padding: "24px", textAlign: "center" }}>
+                      <Bell size={24} color="var(--text-muted)" style={{ marginBottom: 8 }} />
+                      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Sin notificaciones</p>
+                    </div>
+                  ) : (
+                    notifItems.slice(0, 10).map((n) => (
+                      <div key={n.id} style={{
+                        padding: "10px 12px",
+                        borderRadius: "var(--radius-sm)",
+                        background: n.leida ? "transparent" : "var(--primary-ghost)",
+                        marginBottom: 2,
+                      }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: "0 0 2px" }}>{n.titulo}</p>
+                        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{n.mensaje}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
+
+            {/* User display */}
+            <div className="header-user-display">
+              <div className="header-user-avatar">
+                {restaurante?.logo_url ? (
+                  <img src={restaurante.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                ) : (
+                  usuario?.nombre?.charAt(0).toUpperCase() || "?"
+                )}
+              </div>
+              <div className="header-user-info">
+                <span className="header-user-name">{usuario?.nombre || "Usuario"}</span>
+                <span className="header-user-role">
+                  {rol === "admin" ? "Administrador" : rol === "cocina" ? "Cocinero" : rol === "mesero" ? "Mesero" : rol === "caja" ? "Cajero" : rol || "Sin rol"}
+                </span>
+              </div>
+              <ChevronDown size={14} color="var(--text-muted)" />
+            </div>
           </div>
         </header>
+
         <main className="dashboard-main">{children}</main>
       </div>
     </div>

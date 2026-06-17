@@ -2456,24 +2456,28 @@ canvas {
    FOOTER
    ================================================================ */
 .lv-footer {
-  background: var(--lv-dark);
-  color: var(--lv-gold3);
+  background: #FFFFFF;
+  color: var(--lv-dark);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 24px;
+  padding: 10px 24px;
   font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   flex-shrink: 0;
+  border-top: 1px solid rgba(197,160,40,0.25);
+  box-shadow: 0 -2px 12px rgba(197,160,40,0.08);
 }
 .lv-footer-fleur {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--lv-gold);
 }
 [data-theme="dark"] .lv-footer {
-  background: #0A0906;
+  background: #1C1A12;
+  color: #F0E8D0;
+  border-top-color: rgba(197,160,40,0.18);
 }
 
 /* ================================================================
@@ -3897,4 +3901,601 @@ canvas {
 /* Dashboard main area light — fondo diferente a cards */
 :root:not([data-theme="dark"]) .dashboard-main {
   background: var(--bg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WINE DESIGN SYSTEM v2 — Dashboard Components
+   Stat cards, right panels, filter chips, activity items
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Updated dashboard header — taller with subtitle ── */
+.dashboard-header {
+  height: auto !important;
+  min-height: 72px !important;
+  padding: 12px clamp(14px, 3vw, 28px) !important;
+  align-items: center !important;
+}
+
+.dashboard-header-title {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-manrope), system-ui, sans-serif !important;
+  letter-spacing: -0.01em !important;
+}
+
+.dashboard-header-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  line-height: 1.3;
+}
+
+/* ── Stat cards — Wine design with colored icon box ── */
+.dash-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+  transition: box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.dash-stat-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.dash-stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-stat-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.dash-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 4px 0 0;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.dash-stat-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.dash-stat-trend {
+  font-size: 11px;
+  color: var(--success);
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+}
+
+/* ── Right panel ── */
+.dash-panel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.dash-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+/* ── Activity items ── */
+.dash-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dash-activity-item:last-child {
+  border-bottom: none;
+}
+
+.dash-activity-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dash-activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-activity-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-activity-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.dash-activity-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* ── Quick access buttons ── */
+.dash-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dash-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.dash-quick-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-ghost);
+  color: var(--primary);
+}
+
+.dash-quick-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Wine filter chips ── */
+.wine-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.wine-chip:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.wine-chip--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.wine-chip--active:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #fff;
+}
+
+/* ── Sidebar bottom config item ── */
+.sidebar-config-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.sidebar-config-item:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.sidebar-logout-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 200ms var(--ease-out);
+}
+
+.sidebar-logout-item:hover {
+  background: rgba(226, 114, 91, 0.08);
+}
+
+/* ── Plan cards (Suscripción) ── */
+.plan-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.plan-card--current {
+  border-color: var(--primary);
+}
+
+.plan-card--current:hover {
+  border-color: var(--primary);
+}
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.page-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.page-btn--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.page-btn--active:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #fff;
+}
+
+/* ── Table row pagination info ── */
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-pagination-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Kitchen item row ── */
+.kitchen-item-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+/* ── Monitor table cell (caja monitor) ── */
+.monitor-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+/* ── Header user display ── */
+.header-user-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.header-user-display:hover {
+  background: var(--surface-hover);
+}
+
+.header-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-inverse, #fff);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.header-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.header-user-role {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+  line-height: 1.2;
+}
+
+/* ── Header time display ── */
+.header-time-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.header-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.header-date {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ── Delivery button (mesero) ── */
+.deliver-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--success);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.deliver-btn:hover {
+  background: #15803d;
+}
+
+.deliver-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delivered-badge {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  color: var(--success);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* ── Payment method tags (caja) ── */
+.pay-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pay-tag:hover {
+  border-color: var(--primary);
+  background: var(--primary-ghost);
+  color: var(--primary);
+}
+
+/* ── Sidebar divider ── */
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
+
+/* ── Tab bar (wine tabs without bottom border bleed) ── */
+.wine-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.wine-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.wine-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  margin-bottom: -1px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wine-tab-btn:hover {
+  color: var(--text);
+}
+
+.wine-tab-btn--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* ── Section label ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+/* Ensure sidebar-logout shows properly with new approach */
+.premium-sidebar--collapsed .sidebar-config-item .premium-sidebar-item-label,
+.premium-sidebar--collapsed .sidebar-logout-item span {
+  display: none;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .sidebar-config-item .premium-sidebar-item-label,
+  .sidebar-logout-item span {
+    display: none;
+  }
+  .sidebar-config-item,
+  .sidebar-logout-item {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 1023px) {
+  .sidebar-config-item .premium-sidebar-item-label,
+  .sidebar-logout-item span {
+    display: flex !important;
+  }
 }

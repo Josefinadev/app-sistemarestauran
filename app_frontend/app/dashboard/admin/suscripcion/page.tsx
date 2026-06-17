@@ -2,132 +2,259 @@
 
 import { useSuscripcion } from "@/viewmodels/useSuscripcion";
 import { formatPrecio } from "@/lib/utils";
-import { Crown, Palette, CheckCircle2 } from "lucide-react";
+import { Crown, CheckCircle2, Palette, Leaf, Rocket, Diamond, Pencil, Calendar, CreditCard, FileText, Save } from "lucide-react";
+
+/* ═══════════════════════════════════════════════════════════
+   SUSCRIPCIÓN — Wine Design
+   Plan actual, planes disponibles, colores de marca
+   ═══════════════════════════════════════════════════════════ */
+
+const planIcons: Record<string, any> = {
+  basico: Leaf,
+  profesional: Crown,
+  avanzado: Rocket,
+  empresarial: Diamond,
+};
+
+const planIconColors: Record<string, string> = {
+  basico: "#16a34a",
+  profesional: "var(--primary)",
+  avanzado: "var(--tertiary)",
+  empresarial: "#9333ea",
+};
+
+const planIconBgs: Record<string, string> = {
+  basico: "rgba(22,163,74,0.1)",
+  profesional: "rgba(197,160,89,0.1)",
+  avanzado: "rgba(74,108,247,0.1)",
+  empresarial: "rgba(147,51,234,0.1)",
+};
+
+function getPlanKey(nombre: string): string {
+  const n = nombre?.toLowerCase() || "";
+  if (n.includes("básico") || n.includes("basico")) return "basico";
+  if (n.includes("profesional")) return "profesional";
+  if (n.includes("avanzado")) return "avanzado";
+  if (n.includes("empresarial")) return "empresarial";
+  return "profesional";
+}
 
 export default function SuscripcionDashboard() {
   const vm = useSuscripcion();
 
   if (vm.loading) {
-    return (
-      <div className="skeleton" style={{ height: 400, borderRadius: 16 }} />
-    );
+    return <div className="skeleton" style={{ height: 400, borderRadius: 16 }} />;
   }
 
+  const currentPlanKey = getPlanKey(vm.suscripcionActual?.plan?.nombre || "");
+
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      
-      {/* SECCIÓN: 1. PLAN ACTUAL */}
-      <section>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <Crown size={20} color="var(--primary)" />
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text)", margin: 0 }}>Suscripción</h2>
-        </div>
-        
-        <div className="card-flat" style={{ padding: 24, background: "var(--primary-ghost)", border: "1px solid rgba(197, 160, 89, 0.2)"}}>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px 0" }}>Plan Actual</p>
-          <h3 style={{ fontSize: 32, fontWeight: 700, color: "var(--primary)", margin: "0 0 8px 0" }}>
-            {vm.suscripcionActual?.plan?.nombre || "Ninguno"}
-          </h3>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>
-            {vm.suscripcionActual ? `Estado: ${vm.suscripcionActual.estado.toUpperCase()}` : "Sin suscripción activa"}
-          </p>
-        </div>
-        
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 16 }}>
-          {vm.planes.map((plan) => (
-            <div key={plan.id} className="card-flat" style={{ padding: 24, display: "flex", flexDirection: "column" }}>
-              <h4 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", margin: "0 0 8px 0" }}>{plan.nombre}</h4>
-              <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 16px 0", flex: 1 }}>{plan.descripcion}</p>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", marginBottom: 16 }}>
-                {formatPrecio(plan.precio_mensual)} <span style={{ fontSize: 12, color: "var(--text-muted)" }}>/ mes</span>
+    <div className="animate-fade-in" style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      {/* ── Main column ── */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 24 }}>
+
+        {/* Current plan banner */}
+        {vm.suscripcionActual && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(197,160,89,0.08) 0%, rgba(197,160,89,0.04) 100%)",
+            border: "2px solid rgba(197,160,89,0.3)",
+            borderRadius: "var(--radius-xl)",
+            padding: "28px 32px",
+            position: "relative",
+            overflow: "hidden",
+          }}>
+            <div style={{ position: "absolute", top: 0, right: 0, width: 200, height: 200, background: "radial-gradient(circle, rgba(197,160,89,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: 20, right: 32, opacity: 0.06 }}>
+              <Crown size={120} color="var(--primary)" />
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 24, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: "var(--primary)", color: "#fff", borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>
+                  Plan Actual
+                </span>
+                <h2 style={{ fontSize: 36, fontWeight: 800, color: "var(--text)", margin: "0 0 4px", display: "flex", alignItems: "center", gap: 12 }}>
+                  {vm.suscripcionActual.plan?.nombre || "Plan"}
+                  <Crown size={28} color="var(--primary)" />
+                </h2>
+                <p style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 20px" }}>
+                  {vm.suscripcionActual.plan?.descripcion || "Ideal para restaurantes en crecimiento"}
+                </p>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 20 }}>
+                  <span style={{ fontSize: 40, fontWeight: 800, color: "var(--primary)" }}>
+                    {formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)}
+                  </span>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>por mes + IGV</span>
+                </div>
               </div>
-              <button 
-                className={`btn ${vm.suscripcionActual?.id_plan === plan.id ? "btn-secondary" : "btn-primary"}`}
-                onClick={() => vm.handleCambiarPlan(plan.id)}
-                disabled={vm.suscripcionActual?.id_plan === plan.id || vm.saving}
-                style={{ width: "100%" }}
-              >
-                {vm.suscripcionActual?.id_plan === plan.id ? (
-                  <><CheckCircle2 size={16}/> Plan Actual</>
-                ) : (
-                  "Seleccionar Plan"
-                )}
+              <div style={{ minWidth: 200 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", margin: "0 0 10px" }}>Incluye:</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 20px" }}>
+                  {["Productos ilimitados", "Mesas y QR ilimitados", "Usuarios ilimitados", "Reportes avanzados", "Integraciones", "Soporte prioritario"].map((f) => (
+                    <div key={f} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
+                      <CheckCircle2 size={13} color="var(--success)" /> {f}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Available plans */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}>Planes disponibles</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "2px" }}>
+              <button style={{ padding: "5px 14px", borderRadius: 6, background: "var(--primary)", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Mensual</button>
+              <button style={{ padding: "5px 14px", borderRadius: 6, background: "transparent", border: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer", position: "relative" }}>
+                Anual
+                <span style={{ position: "absolute", top: -8, right: -4, background: "var(--success)", color: "#fff", fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 99 }}>Ahorra 20%</span>
               </button>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+            {vm.planes.map((plan) => {
+              const isCurrent = vm.suscripcionActual?.id_plan === plan.id;
+              const planKey = getPlanKey(plan.nombre);
+              const PlanIcon = planIcons[planKey] || Crown;
+              const iconColor = planIconColors[planKey] || "var(--primary)";
+              const iconBg = planIconBgs[planKey] || "rgba(197,160,89,0.1)";
 
-      {/* SECCIÓN: 2. PERSONALIZACION */}
-      <section>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <Palette size={20} color="var(--tertiary)" />
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text)", margin: 0 }}>Personalización</h2>
+              return (
+                <div key={plan.id} className={`plan-card ${isCurrent ? "plan-card--current" : ""}`} style={{ position: "relative" }}>
+                  {isCurrent && (
+                    <span style={{ position: "absolute", top: -1, left: "50%", transform: "translateX(-50%)", background: "var(--primary)", color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 12px", borderRadius: "0 0 8px 8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      Plan Actual
+                    </span>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, marginTop: isCurrent ? 16 : 0 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <PlanIcon size={22} color={iconColor} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0 }}>{plan.nombre}</p>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{plan.descripcion}</p>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", margin: "0 0 4px" }}>
+                    {formatPrecio(plan.precio_mensual)}
+                  </div>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 16px" }}>por mes + IGV</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20, flex: 1 }}>
+                    {(planKey === "basico"
+                      ? ["Hasta 200 productos", "Hasta 10 mesas", "2 usuarios", "Reportes básicos", "Soporte por correo"]
+                      : planKey === "avanzado"
+                      ? ["Todo en Profesional", "Sucursales ilimitadas", "Control de inventario", "Reportes personalizados", "API y Webhooks"]
+                      : planKey === "empresarial"
+                      ? ["Todo en Avanzado", "Múltiples compañías", "Permisos avanzados", "Consultor dedicado", "SLA garantizado"]
+                      : ["Productos ilimitados", "Mesas y QR ilimitados", "Usuarios ilimitados", "Reportes avanzados", "Soporte prioritario"]
+                    ).map((f: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
+                        <CheckCircle2 size={12} color="var(--success)" /> {f}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    className={`btn ${isCurrent ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => vm.handleCambiarPlan(plan.id)}
+                    disabled={isCurrent || vm.saving}
+                    style={{ width: "100%", background: isCurrent ? "var(--primary)" : "transparent", color: isCurrent ? "#fff" : "var(--primary)", border: `1px solid ${isCurrent ? "var(--primary)" : "var(--primary)"}` }}
+                  >
+                    {isCurrent ? <><CheckCircle2 size={14} /> Plan Actual</> : "Cambiar plan"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        
+
+        {/* Color preview + brand colors */}
         <div className="card-flat" style={{ padding: 24 }}>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
-            Configura los colores principales de tu app para los clientes. Tus clientes verán estos colores cuando escaneen tu QR.
-          </p>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 8 }}>Color Primario</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <input 
-                  type="color" 
-                  value={vm.colorPrimario} 
-                  onChange={(e) => vm.setColorPrimario(e.target.value)}
-                  style={{ width: 44, height: 44, padding: 0, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }}
-                />
-                <input 
-                  type="text" 
-                  className="input" 
-                  value={vm.colorPrimario} 
-                  onChange={(e) => vm.setColorPrimario(e.target.value)}
-                  style={{ flex: 1, fontFamily: "monospace" }}
-                />
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", margin: 0 }}>Colores de marca</h3>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 0" }}>Elige los colores que representan tu marca en el sistema.</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, alignItems: "flex-start" }}>
+            {/* Preview buttons */}
+            <div>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Vista previa de colores</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button style={{ padding: "8px 16px", background: vm.colorPrimario, color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "default" }}>Botón primario</button>
+                <button style={{ padding: "8px 16px", background: "transparent", color: vm.colorPrimario, border: `1.5px solid ${vm.colorPrimario}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "default" }}>Botón outline</button>
+                <button style={{ padding: "8px 16px", background: vm.colorSecundario, color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "default" }}>Botón secundario</button>
               </div>
             </div>
-            
+            {/* Color primary */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 8 }}>Color Secundario</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <input 
-                  type="color" 
-                  value={vm.colorSecundario} 
-                  onChange={(e) => vm.setColorSecundario(e.target.value)}
-                  style={{ width: 44, height: 44, padding: 0, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }}
-                />
-                <input 
-                  type="text" 
-                  className="input" 
-                  value={vm.colorSecundario} 
-                  onChange={(e) => vm.setColorSecundario(e.target.value)}
-                  style={{ flex: 1, fontFamily: "monospace" }}
-                />
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Color primario</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)" }}>
+                <input type="color" value={vm.colorPrimario} onChange={(e) => vm.setColorPrimario(e.target.value)} style={{ width: 28, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", padding: 0 }} />
+                <span style={{ fontSize: 13, fontFamily: "monospace", color: "var(--text)" }}>{vm.colorPrimario}</span>
+                <Pencil size={12} color="var(--text-muted)" style={{ marginLeft: "auto" }} />
+              </div>
+            </div>
+            {/* Color secondary */}
+            <div>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Color secundario</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)" }}>
+                <input type="color" value={vm.colorSecundario} onChange={(e) => vm.setColorSecundario(e.target.value)} style={{ width: 28, height: 28, border: "none", borderRadius: 6, cursor: "pointer", background: "transparent", padding: 0 }} />
+                <span style={{ fontSize: 13, fontFamily: "monospace", color: "var(--text)" }}>{vm.colorSecundario}</span>
+                <Pencil size={12} color="var(--text-muted)" style={{ marginLeft: "auto" }} />
               </div>
             </div>
           </div>
-          
-          {/* Vista Previa */}
-          <div style={{ marginTop: 32, padding: 24, borderRadius: 16, background: "var(--surface-hover)", border: "1px dashed var(--border)"}}>
-            <h5 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", margin: "0 0 16px 0" }}>Vista Previa</h5>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button className="btn" style={{ background: vm.colorPrimario, color: "#fff", border: "none" }}>Botón Primario</button>
-              <button className="btn" style={{ background: "transparent", color: vm.colorPrimario, border: `1px solid ${vm.colorPrimario}` }}>Botón Outline</button>
-              <button className="btn" style={{ background: vm.colorSecundario, color: "#fff", border: "none" }}>Botón Secundario</button>
-            </div>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
-            <button className="btn btn-primary" onClick={vm.handleUpdateColors} disabled={vm.saving}>
-              {vm.saving ? "Guardando..." : "Guardar Apariencia"}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+            <button className="btn btn-primary" onClick={vm.handleUpdateColors} disabled={vm.saving} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Save size={14} /> {vm.saving ? "Guardando..." : "Guardar cambios"}
             </button>
           </div>
         </div>
-      </section>
 
+        {/* Footer security note */}
+        <p style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          🔒 Tus pagos están protegidos con cifrado de 256 bits y procesados de forma segura.
+        </p>
+      </div>
+
+      {/* ── Right billing summary ── */}
+      <div style={{ width: 260, flexShrink: 0 }}>
+        <div className="card-flat" style={{ padding: 20 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: "0 0 16px" }}>Resumen de facturación</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}><Calendar size={12} /> Próximo pago</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                {vm.suscripcionActual?.fecha_fin ? new Date(vm.suscripcionActual.fecha_fin).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Importe</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                {vm.suscripcionActual ? `${formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)} + IGV` : "—"}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Estado</span>
+              <span className="badge badge-ready" style={{ fontSize: 10 }}>
+                {vm.suscripcionActual?.estado === "activa" ? "Activa" : vm.suscripcionActual?.estado || "—"}
+              </span>
+            </div>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>Método de pago</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CreditCard size={14} color="var(--text-muted)" />
+                <span style={{ fontSize: 12, color: "var(--text)" }}>•••• 4242</span>
+                <button style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer" }}>Cambiar</button>
+              </div>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}>
+              <FileText size={13} /> Ver historial de facturación
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
