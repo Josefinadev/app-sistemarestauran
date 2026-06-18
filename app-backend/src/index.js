@@ -33,6 +33,7 @@ const usuariosRoutes = require('./routes/usuarios');
 const webRoutes = require('./routes/web');
 const uploadRoutes = require('./routes/upload');
 const authRoutes = require('./routes/auth');
+const pagosRoutes = require('./routes/pagos');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
@@ -43,6 +44,7 @@ app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/web', webRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/pagos', pagosRoutes);
 
 // ── Health check ──
 app.get('/', (req, res) => {
@@ -69,4 +71,4 @@ app.use((err, req, res, next) => {
 // ── Start server ──
 app.listen(PORT, () => {
   console.log(`\n🍷 El Mijano API corriendo en http://localhost:${PORT}\n`);
-});
+});// redeploy mié 17 jun 2026 18:43:44 -05

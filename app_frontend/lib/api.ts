@@ -333,3 +333,80 @@ export const getWebOfertas = (id_restaurante: string) => apiFetch(`/web/ofertas/
 export const crearWebOferta = (data: any) => apiFetch("/web/ofertas", { method: "POST", body: JSON.stringify(data) });
 export const actualizarWebOferta = (id: string, data: any) => apiFetch(`/web/ofertas/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const eliminarWebOferta = (id: string) => apiFetch(`/web/ofertas/${id}`, { method: "DELETE" });
+
+// ── Pagos (Mercado Pago) ──
+
+export interface DatosRestauranteRegistro {
+  nombre: string;
+  slug: string;
+  propietario_nombre: string;
+  propietario_email: string;
+  propietario_password: string;
+  color_primario?: string;
+  color_secundario?: string;
+  logo_url?: string;
+  hero_banner_url?: string;
+  latitud?: number;
+  longitud?: number;
+  radio_permitido_metros?: number;
+}
+
+export interface PreferenciaResponse {
+  init_point: string;
+  sandbox_init_point: string;
+  preference_id: string;
+}
+
+export interface EstadoPagos {
+  restaurante: string;
+  fecha_inicio: string;
+  meses_requeridos: string[];
+  meses_pagados: string[];
+  meses_pendientes: string[];
+  deuda_total: number;
+  precio_mensual: number;
+  al_dia: boolean;
+  mes_actual: string;
+}
+
+export interface PagoMensualidad {
+  id: string;
+  id_restaurante: string;
+  mes_anio: string;
+  monto: number;
+  estado: 'pendiente' | 'pagado' | 'fallido';
+  preference_id?: string;
+  payment_id?: string;
+  pagado_en?: string;
+  created_at: string;
+}
+
+/** Crear preferencia de pago para registro de nuevo restaurante */
+export const crearPreferenciaPagoRegistro = (datosRestaurante: DatosRestauranteRegistro): Promise<PreferenciaResponse> =>
+  apiFetch("/pagos/crear-preferencia", {
+    method: "POST",
+    body: JSON.stringify({ es_registro: true, datos_restaurante: datosRestaurante }),
+  });
+
+/** Crear preferencia de pago para mensualidades pendientes */
+export const crearPreferenciaPagoMensual = (id_restaurante: string, meses_a_pagar: string[]): Promise<PreferenciaResponse> =>
+  apiFetch("/pagos/crear-preferencia", {
+    method: "POST",
+    body: JSON.stringify({ id_restaurante, meses_a_pagar }),
+  });
+
+/** Obtener estado de pagos de un restaurante */
+export const obtenerEstadoPagos = (id_restaurante: string): Promise<EstadoPagos> =>
+  apiFetch(`/pagos/estado/${id_restaurante}`);
+
+/** Obtener historial de pagos de un restaurante */
+export const obtenerHistorialPagos = (id_restaurante: string): Promise<PagoMensualidad[]> =>
+  apiFetch(`/pagos/historial/${id_restaurante}`);
+
+/** Verificar si un restaurante tiene acceso (público, sin auth) */
+export const verificarAccesoRestaurante = async (id_restaurante: string): Promise<{ tiene_acceso: boolean; motivo?: string }> => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+  const res = await fetch(`${API_URL}/pagos/verificar-acceso/${id_restaurante}`);
+  return res.json();
+};
+// trigger deploy mié 17 jun 2026 18:25:44 -05
