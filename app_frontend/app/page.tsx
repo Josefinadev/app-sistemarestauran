@@ -68,8 +68,8 @@ export default function SaaSLandingPage() {
       const preferencia = await crearPreferenciaPagoRegistro(formData);
       
       // Redirigir al checkout de Mercado Pago
-      // En produccion usar init_point, en sandbox usar sandbox_init_point
-      window.location.href = preferencia.init_point;
+      // TODO: Cambiar a init_point cuando MP esté en producción
+      window.location.href = preferencia.sandbox_init_point;
       
     } catch (err: any) {
       alert(err.message || "Error al procesar el registro.");
