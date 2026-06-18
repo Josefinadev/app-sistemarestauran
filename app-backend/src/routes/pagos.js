@@ -131,7 +131,12 @@ router.post('/crear-preferencia', async (req, res) => {
       },
       auto_return: 'approved',
       notification_url: `${BACKEND_URL}/api/pagos/webhook`,
-      statement_descriptor: 'RestaurantOS'
+      statement_descriptor: 'RestaurantOS',
+      // Forzar pago de contado (sin cuotas)
+      payment_methods: {
+        installments: 1,
+        default_installments: 1
+      }
     };
     
     const response = await preference.create({ body: preferenceData });
