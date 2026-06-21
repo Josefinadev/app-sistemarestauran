@@ -233,7 +233,7 @@ export default function UsuariosPage() {
               style={{ cursor: "pointer", outline: isActive ? `2px solid var(--primary)` : "none", outlineOffset: 2 }}
             >
               <div className="dash-stat-icon" style={{ background: cfg.iconBg }}>
-                <Icon size={22} color={cfg.color} />
+                <Icon size={17} color={cfg.color} />
               </div>
               <div className="dash-stat-body">
                 <p className="dash-stat-label">{cfg.label}</p>

@@ -306,20 +306,6 @@ export default function DashboardLayout({
             <span>Cerrar sesión</span>
           </button>
 
-          {/* User card */}
-          <div className="premium-sidebar-user" title={`${usuario?.nombre || "Usuario"} · ${rol || ""}`}>
-            <div className="premium-sidebar-avatar">
-              {usuario?.nombre?.charAt(0).toUpperCase() || "?"}
-              <div className="premium-sidebar-avatar-pulse" />
-            </div>
-            <div className="premium-sidebar-user-info">
-              <div className="premium-sidebar-user-name">{usuario?.nombre || "Usuario"}</div>
-              <div className="premium-sidebar-user-role" style={{ textTransform: "capitalize" }}>
-                {rol === "admin" ? "Administrador" : rol === "cocina" ? "Cocinero" : rol === "mesero" ? "Mesero" : rol === "caja" ? "Cajero" : rol || "Sin rol"}
-              </div>
-            </div>
-          </div>
-
           {/* Expand button (collapsed state) */}
           <button
             className="premium-sidebar-expand"

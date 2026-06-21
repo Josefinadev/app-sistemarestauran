@@ -185,35 +185,35 @@ export default function ReportesPage() {
       </div>
 
       {/* Stat Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
         <div className="dash-stat-card">
           <div className="dash-stat-icon" style={{ background: "rgba(197,160,89,0.1)" }}>
-            <DollarSign size={22} color="var(--primary)" />
+            <DollarSign size={17} color="var(--primary)" />
           </div>
           <div className="dash-stat-body">
-            <p className="dash-stat-label">Ingresos Totales <Info size={10} style={{ display: "inline", verticalAlign: "middle", opacity: 0.5 }} /></p>
-            <p className="dash-stat-value" style={{ fontSize: 22, color: "var(--text)" }}>{formatPrecio(stats.totalIngresos)}</p>
-            <p className="dash-stat-trend"><TrendingUp size={10} /> +18% vs. período anterior</p>
+            <p className="dash-stat-label">Ingresos Totales</p>
+            <p className="dash-stat-value">{formatPrecio(stats.totalIngresos)}</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> +18% vs. período anterior</p>
           </div>
         </div>
         <div className="dash-stat-card">
           <div className="dash-stat-icon" style={{ background: "rgba(22,163,74,0.1)" }}>
-            <ShoppingBag size={22} color="var(--success)" />
+            <ShoppingBag size={17} color="var(--success)" />
           </div>
           <div className="dash-stat-body">
-            <p className="dash-stat-label">Total Pedidos <Info size={10} style={{ display: "inline", verticalAlign: "middle", opacity: 0.5 }} /></p>
-            <p className="dash-stat-value" style={{ color: "var(--text)" }}>{stats.totalPedidos}</p>
-            <p className="dash-stat-trend" style={{ color: "var(--success)" }}><TrendingUp size={10} /> +15% vs. período anterior</p>
+            <p className="dash-stat-label">Total Pedidos</p>
+            <p className="dash-stat-value">{stats.totalPedidos}</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> +15% vs. período anterior</p>
           </div>
         </div>
         <div className="dash-stat-card">
           <div className="dash-stat-icon" style={{ background: "rgba(197,160,89,0.1)" }}>
-            <Download size={22} color="var(--primary)" />
+            <Download size={17} color="var(--primary)" />
           </div>
           <div className="dash-stat-body">
-            <p className="dash-stat-label">Ticket Promedio <Info size={10} style={{ display: "inline", verticalAlign: "middle", opacity: 0.5 }} /></p>
-            <p className="dash-stat-value" style={{ fontSize: 22, color: "var(--text)" }}>{formatPrecio(stats.ticketPromedio)}</p>
-            <p className="dash-stat-trend"><TrendingUp size={10} /> +2% vs. período anterior</p>
+            <p className="dash-stat-label">Ticket Promedio</p>
+            <p className="dash-stat-value">{formatPrecio(stats.ticketPromedio)}</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> +2% vs. período anterior</p>
           </div>
         </div>
       </div>

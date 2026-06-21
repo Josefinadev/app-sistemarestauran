@@ -214,19 +214,30 @@ export default function AdminDashboard() {
       {/* ── Main content column ── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {/* Stat Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+        {/* Stat Cards — compact row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {statCards.map((s) => (
-            <div key={s.label} className="dash-stat-card">
-              <div className="dash-stat-icon" style={{ background: s.iconBg }}>
-                <s.Icon size={22} color={s.iconColor} />
+            <div key={s.label} style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: "12px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: 9,
+                background: s.iconBg, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <s.Icon size={17} color={s.iconColor} />
               </div>
-              <div className="dash-stat-body">
-                <p className="dash-stat-label">{s.label}</p>
-                <p className="dash-stat-value" style={{ fontSize: s.label === "Ingresos hoy" ? 20 : 28, color: "var(--text)" }}>{s.value}</p>
-                <p className="dash-stat-sub">{s.sub}</p>
-                <p className="dash-stat-trend">
-                  <TrendingUp size={10} /> {s.trend}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 10, color: "var(--text-muted)", margin: 0, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</p>
+                <p style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "1px 0", lineHeight: 1.1 }}>{s.value}</p>
+                <p style={{ fontSize: 9, color: "var(--success)", margin: 0, display: "flex", alignItems: "center", gap: 2, lineHeight: 1.2 }}>
+                  <TrendingUp size={8} /> {s.trend}
                 </p>
               </div>
             </div>

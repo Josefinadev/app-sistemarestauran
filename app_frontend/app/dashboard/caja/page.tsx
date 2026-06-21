@@ -72,7 +72,7 @@ export default function CajaDashboard() {
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         {[
           { label: "Por cobrar", value: formatPrecio(vm.pendientes.reduce((s, p: any) => s + (p.total || 0), 0)), sub: `${vm.pendientes.length} pedidos pendientes`, iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: DollarSign },
           { label: "Pagados", value: formatPrecio(vm.totalDia), sub: `${vm.pagados.length} pedidos cobrados`, iconBg: "rgba(22,163,74,0.1)", iconColor: "var(--success)", Icon: CheckCircle2 },
@@ -81,11 +81,11 @@ export default function CajaDashboard() {
         ].map((s) => (
           <div key={s.label} className="dash-stat-card">
             <div className="dash-stat-icon" style={{ background: s.iconBg }}>
-              <s.Icon size={22} color={s.iconColor} />
+              <s.Icon size={17} color={s.iconColor} />
             </div>
             <div className="dash-stat-body">
               <p className="dash-stat-label">{s.label}</p>
-              <p className="dash-stat-value" style={{ fontSize: s.label.includes("Ingresos") || s.label.includes("cobrar") || s.label.includes("Pagados") ? 18 : 28, color: "var(--text)" }}>{s.value}</p>
+              <p className="dash-stat-value">{s.value}</p>
               <p className="dash-stat-sub">{s.sub}</p>
             </div>
           </div>

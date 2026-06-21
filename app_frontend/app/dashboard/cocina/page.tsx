@@ -68,13 +68,13 @@ export default function CocinaDashboard() {
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         {statCards.map((s) => {
           const Icon = estadoConfig[s.key].Icon;
           return (
             <div key={s.key} className="dash-stat-card">
               <div className="dash-stat-icon" style={{ background: s.iconBg }}>
-                <Icon size={22} color={s.iconColor} />
+                <Icon size={17} color={s.iconColor} />
               </div>
               <div className="dash-stat-body">
                 <p className="dash-stat-label">{s.label}</p>
@@ -86,7 +86,7 @@ export default function CocinaDashboard() {
         })}
         <div className="dash-stat-card">
           <div className="dash-stat-icon" style={{ background: "rgba(74,108,247,0.1)" }}>
-            <CheckCircle2 size={22} color="var(--tertiary)" />
+            <CheckCircle2 size={17} color="var(--tertiary)" />
           </div>
           <div className="dash-stat-body">
             <p className="dash-stat-label">Entregados (24h)</p>

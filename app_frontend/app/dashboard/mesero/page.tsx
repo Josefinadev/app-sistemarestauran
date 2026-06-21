@@ -51,7 +51,7 @@ export default function MeseroDashboard() {
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
         {[
           { label: "Por servir", value: vm.listosCount, sub: "items listos", iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: Truck, trend: "+20% vs ayer" },
           { label: "Bebidas pendientes", value: vm.bebidasCount, sub: "bebidas", iconBg: "rgba(74,108,247,0.1)", iconColor: "var(--tertiary)", Icon: Coffee, trend: "+12% vs ayer" },
@@ -59,12 +59,12 @@ export default function MeseroDashboard() {
         ].map((s) => (
           <div key={s.label} className="dash-stat-card">
             <div className="dash-stat-icon" style={{ background: s.iconBg }}>
-              <s.Icon size={22} color={s.iconColor} />
+              <s.Icon size={17} color={s.iconColor} />
             </div>
             <div className="dash-stat-body">
               <p className="dash-stat-label">{s.label}</p>
-              <p className="dash-stat-value" style={{ color: "var(--text)" }}>{s.value} <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)" }}>{s.sub}</span></p>
-              <p className="dash-stat-trend"><CheckCircle2 size={10} /> {s.trend}</p>
+              <p className="dash-stat-value">{s.value}</p>
+              <p className="dash-stat-trend"><CheckCircle2 size={8} /> {s.trend}</p>
             </div>
           </div>
         ))}
