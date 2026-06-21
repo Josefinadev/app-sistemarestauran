@@ -71,17 +71,16 @@ export default function SaaSLandingPage() {
       {/* NAVBAR */}
       <nav style={{ height: 68, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 6%", position: "sticky", top: 0, zIndex: 100, background: navBg, backdropFilter: "blur(16px)", borderBottom: `1px solid ${border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="/assets/Ordely.png" alt="Ordely" style={{ height: 36, width: "auto", objectFit: "contain" }} />
+          <img src="/assets/Ordely.png" alt="Ordely" style={{ height: 54, width: "auto", objectFit: "contain" }} />
           <span style={{ fontSize: 22, fontWeight: 800, color: textMain, letterSpacing: "-0.02em" }}>Ordely</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
           <a href="#features" style={{ color: textGray, textDecoration: "none", fontSize: 15, fontWeight: 500 }}>Caracteristicas</a>
           <a href="#pricing" style={{ color: textGray, textDecoration: "none", fontSize: 15, fontWeight: 500 }}>Precios</a>
+          <button onClick={() => router.push("/login")} style={{ background: "none", border: "none", cursor: "pointer", color: textGray, fontSize: 15, fontWeight: 600, padding: "8px 16px", letterSpacing: "0.02em" }}>INGRESAR</button>
           <button onClick={() => setDarkMode(!darkMode)} style={{ width: 36, height: 36, borderRadius: 8, background: "transparent", border: `1px solid ${border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: textGray }}>
             {darkMode ? <Sun size={16} color={PRIMARY} /> : <Moon size={16} />}
           </button>
-          <button onClick={() => router.push("/login")} style={{ background: "none", border: "none", cursor: "pointer", color: textGray, fontSize: 15, fontWeight: 600, padding: "8px 16px", letterSpacing: "0.02em" }}>INGRESAR</button>
-          <button onClick={() => setShowRegModal(true)} style={{ background: PRIMARY, color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>EMPEZAR GRATIS</button>
         </div>
       </nav>
 
@@ -112,9 +111,7 @@ export default function SaaSLandingPage() {
             </div>
           </div>
           <div>
-            <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(197,160,89,0.15), 0 8px 24px rgba(0,0,0,0.06)", border: `1px solid ${border}` }}>
-              <img src="/assets/img_web.png" alt="Ordely Dashboard" style={{ width: "100%", height: "auto", display: "block" }} />
-            </div>
+            <img src="/assets/img_web.png" alt="Ordely Dashboard" style={{ width: "115%", maxWidth: 700, height: "auto", display: "block", filter: "drop-shadow(0 20px 48px rgba(197,160,89,0.18))" }} />
           </div>
         </div>
       </section>
@@ -250,4 +247,5 @@ export default function SaaSLandingPage() {
     </div>
   );
 }
+
 
