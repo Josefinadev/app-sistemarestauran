@@ -86,26 +86,23 @@ function StatCard({ icon, label, target, suffix = "", desc, extra, dark }: any) 
   );
 }
 
-/* ══ FEATURE CARD — no default hover state ══ */
+/* ══ FEATURE CARD — Image-1 style: vertical centered, 4 columns ══ */
 function FeatureCard({ icon, title, desc, delay, dark, dir = "up" }: any) {
-  const bg = dark ? "#1A1A1C" : "rgba(255,255,255,0.92)";
+  const bg = dark ? "rgba(30,28,24,0.9)" : "rgba(255,255,255,0.92)";
   const br = dark ? "#2A2118" : BD;
   const tm = dark ? "#F0E6D0" : TD;
   const tg = dark ? "#9B9386" : TG;
   const init = dir === "left" ? { opacity: 0, x: -40 } : dir === "right" ? { opacity: 0, x: 40 } : { opacity: 0, y: 30 };
   return (
     <motion.div initial={init} whileInView={{ opacity: 1, x: 0, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.65, delay, ease }}
-      whileHover={{ y: -7, boxShadow: `0 20px 44px rgba(197,160,89,0.16), 0 4px 12px rgba(0,0,0,0.06)`, borderColor: `rgba(197,160,89,0.5)` }}
-      style={{ display: "flex", alignItems: "flex-start", gap: 18, padding: "26px 24px", background: bg, border: `1px solid ${br}`, borderRadius: 18, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", cursor: "default" }}>
-      <motion.div whileHover={{ scale: 1.12, rotate: 5 }} transition={{ type: "spring", stiffness: 400 }}
-        style={{ width: 64, height: 64, borderRadius: "50%", background: dark ? "rgba(197,160,89,0.1)" : "#FFF5E0", border: `2px solid ${dark ? "rgba(197,160,89,0.25)" : "#F0DEB0"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      whileHover={{ y: -8, boxShadow: `0 20px 44px rgba(197,160,89,0.18), 0 4px 12px rgba(0,0,0,0.06)`, borderColor: `rgba(197,160,89,0.5)` }}
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 16, padding: "32px 24px 28px", background: bg, border: `1px solid ${br}`, borderRadius: 20, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", cursor: "default" }}>
+      <motion.div whileHover={{ scale: 1.1, rotate: 5 }} transition={{ type: "spring", stiffness: 400 }}
+        style={{ width: 68, height: 68, borderRadius: "50%", background: dark ? "rgba(197,160,89,0.12)" : "#FFF5E0", border: `2px solid ${dark ? "rgba(197,160,89,0.25)" : "#F0DEB0"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {icon}
       </motion.div>
-      <div style={{ flex: 1 }}>
-        <h3 style={{ fontSize: 17, fontWeight: 800, color: tm, margin: "0 0 8px", letterSpacing: "-0.01em" }}>{title}</h3>
-        <p style={{ fontSize: 14, color: tg, lineHeight: 1.7, margin: "0 0 12px" }}>{desc}</p>
-        <motion.span whileHover={{ x: 5 }} transition={{ type: "spring", stiffness: 400 }} style={{ color: P, fontSize: 18, fontWeight: 700, display: "inline-block", cursor: "pointer" }}>→</motion.span>
-      </div>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: tm, margin: 0, letterSpacing: "-0.01em", lineHeight: 1.3 }}>{title}</h3>
+      <p style={{ fontSize: 13, color: tg, lineHeight: 1.65, margin: 0 }}>{desc}</p>
     </motion.div>
   );
 }
@@ -336,7 +333,7 @@ export default function SaaSLandingPage() {
           <motion.div initial={{ opacity:0, x:50 }} animate={{ opacity:1, x:0 }} transition={{ duration:1.0, delay:0.25, ease }}
             style={{ x:imgTiltX, y:imgTiltY, display:"flex", justifyContent:"center", minWidth:0 }}>
             <motion.img src="/assets/image_web.png" alt="Ordely Dashboard"
-              style={{ width:"115%", maxWidth:820, height:"auto", display:"block", filter:"drop-shadow(0 28px 60px rgba(197,160,89,0.22)) drop-shadow(0 8px 20px rgba(0,0,0,0.07))" } as any}
+              style={{ width:"140%", maxWidth:920, height:"auto", display:"block", filter:"drop-shadow(0 28px 60px rgba(197,160,89,0.22)) drop-shadow(0 8px 20px rgba(0,0,0,0.07))" } as any}
               animate={{ y:[0,-12,0] }} transition={{ duration:5, repeat:Infinity, ease:"easeInOut" }}/>
           </motion.div>
         </motion.div>
@@ -368,11 +365,11 @@ export default function SaaSLandingPage() {
             <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", color:P, textTransform:"uppercase" as const, margin:"0 0 10px" }}>Caracteristicas</p>
             <h2 style={{ fontSize:"clamp(26px,3.5vw,40px)", fontWeight:900, color: dark ? "#F0E6D0" : TD, margin:0, letterSpacing:"-0.02em" }}>Todo lo que necesitas para crecer</h2>
           </motion.div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:16, maxWidth:1240, margin:"0 auto" }}>
-            <FeatureCard dark={dark} delay={0} dir="left" icon={<QrCode size={30} color={P}/>} title="Menu Digital Inteligente" desc="Pedidos desde la mesa con validacion de geolocalizacion. Reduce tiempos y mejora la experiencia del cliente."/>
-            <FeatureCard dark={dark} delay={0.08} dir="up" icon={<Users size={30} color={P}/>} title="Control Total Multi-Tenant" desc="Gestiona multiples locales, roles (Cocinero, Mesero, Cajero) y analiticas avanzadas en un panel unificado."/>
-            <FeatureCard dark={dark} delay={0.16} dir="up" icon={<Zap size={30} color={P}/>} title="Real-Time de Verdad" desc="La cocina recibe pedidos al instante. Sincronizacion perfecta entre todos los dispositivos del staff."/>
-            <FeatureCard dark={dark} delay={0.24} dir="right" icon={<ShieldCheck size={30} color={P}/>} title="Precio Simple y Transparente" desc="Sin planes complicados. Paga mensualmente y ten acceso completo."/>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16, maxWidth:1240, margin:"0 auto" }}>
+            <FeatureCard dark={dark} delay={0} dir="left" icon={<QrCode size={28} color={P}/>} title="Menu Digital Inteligente" desc="Pedidos desde la mesa con QR y validacion de geolocalizacion. Reduce tiempos y mejora la experiencia del cliente."/>
+            <FeatureCard dark={dark} delay={0.1} dir="up" icon={<Zap size={28} color={P}/>} title="Tiempo Real De Verdad" desc="La cocina recibe pedidos al instante. Sincronizacion perfecta entre todos los dispositivos del staff."/>
+            <FeatureCard dark={dark} delay={0.18} dir="up" icon={<Users size={28} color={P}/>} title="Control Total Multi-Tenant" desc="Gestiona multiples locales, roles y analiticas avanzadas en un panel unificado."/>
+            <FeatureCard dark={dark} delay={0.26} dir="right" icon={<ShieldCheck size={28} color={P}/>} title="Seguro y Confiable" desc="Tus datos y los de tus clientes siempre protegidos con cifrado de nivel bancario."/>
           </div>
         </section>
       </div>
@@ -394,11 +391,12 @@ export default function SaaSLandingPage() {
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:40, alignItems:"start", maxWidth:1000, margin:"0 auto", position:"relative", zIndex:1 }}>
 
           {/* Left col */}
-          <motion.div initial={{ opacity:0, x:-30 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ duration:0.7, ease }} style={{ display:"flex", flexDirection:"column", gap:24 }}>
-            <motion.div whileHover={{ scale:1.06, rotate:3 }} transition={{ type:"spring", stiffness:300 }}
-              style={{ width:80, height:80, borderRadius:"50%", background: dark ? "rgba(197,160,89,0.1)" : "#FFF5E0", border:`2px solid ${dark ? "rgba(197,160,89,0.3)" : "#F0DEB0"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <img src="/assets/Ordely.png" alt="Ordely" style={{ width:50, height:50, objectFit:"contain" }}/>
-            </motion.div>
+          <motion.div initial={{ opacity:0, x:-30 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ duration:0.7, ease }} style={{ display:"flex", flexDirection:"column", gap:20 }}>
+            {/* Big logo — no circle, free floating */}
+            <motion.img src="/assets/Ordely.png" alt="Ordely"
+              whileHover={{ scale:1.05 }}
+              style={{ width:160, height:160, objectFit:"contain", filter: dark ? "brightness(0.9)" : "none" }}
+              animate={{ y:[0,-6,0] }} transition={{ duration:4, repeat:Infinity, ease:"easeInOut" }}/>
             <div>
               <h2 style={{ fontSize:"clamp(34px,4vw,52px)", fontWeight:900, color:tm, margin:0, letterSpacing:"-0.03em", lineHeight:1.05 }}>Todo<br/>Incluido</h2>
               <motion.div initial={{ width:0 }} whileInView={{ width:44 }} viewport={{ once:true }} transition={{ duration:0.7, delay:0.3 }} style={{ height:3, background:P, borderRadius:2, margin:"14px 0 18px" }}/>
@@ -414,38 +412,38 @@ export default function SaaSLandingPage() {
             </div>
           </motion.div>
 
-          {/* Right col — Plan card */}
+          {/* Right col — Smaller Plan card */}
           <motion.div initial={{ opacity:0, y:40 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.7, delay:0.15, ease }}
-            animate={{ boxShadow:["0 8px 40px rgba(197,160,89,0.1)","0 12px 56px rgba(197,160,89,0.25)","0 8px 40px rgba(197,160,89,0.1)"] } as any}
-            style={{ background:bgCard, border:`1px solid ${br}`, borderRadius:24, overflow:"hidden" }}>
+            animate={{ boxShadow:["0 8px 32px rgba(197,160,89,0.1)","0 12px 48px rgba(197,160,89,0.24)","0 8px 32px rgba(197,160,89,0.1)"] } as any}
+            style={{ background:bgCard, border:`1px solid ${br}`, borderRadius:20, overflow:"hidden", maxWidth:360, width:"100%", justifySelf:"center" }}>
             {/* Card header */}
-            <div style={{ background:`linear-gradient(135deg, ${P}, ${PD})`, padding:"16px 32px", textAlign:"center" }}>
-              <p style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.75)", margin:"0 0 2px", textTransform:"uppercase" as const, letterSpacing:"0.1em" }}>Plan Ordely</p>
-              <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:6 }}>
-                <span style={{ fontSize:64, fontWeight:900, color:"#fff", letterSpacing:"-0.04em", lineHeight:1 }}>S/60</span>
-                <span style={{ fontSize:18, color:"rgba(255,255,255,0.7)", fontWeight:400 }}>/mes</span>
+            <div style={{ background:`linear-gradient(135deg, ${P}, ${PD})`, padding:"14px 28px", textAlign:"center" }}>
+              <p style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.8)", margin:"0 0 2px", textTransform:"uppercase" as const, letterSpacing:"0.1em" }}>Plan Ordely</p>
+              <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:4 }}>
+                <span style={{ fontSize:52, fontWeight:900, color:"#fff", letterSpacing:"-0.04em", lineHeight:1 }}>S/60</span>
+                <span style={{ fontSize:15, color:"rgba(255,255,255,0.75)", fontWeight:400 }}>/mes</span>
               </div>
             </div>
             {/* Features list */}
-            <div style={{ padding:"28px 32px" }}>
-              <div style={{ display:"flex", flexDirection:"column", gap:13, marginBottom:24 }}>
+            <div style={{ padding:"22px 26px" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:11, marginBottom:20 }}>
                 {["Menu Digital con QR","Gestion de Pedidos en Tiempo Real","Panel de Administracion Completo","Roles: Mesero, Cocinero, Cajero","Web Publica Personalizada","Soporte Tecnico"].map((f,i)=>(
                   <motion.div key={f} initial={{ opacity:0, x:-10 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ delay:i*0.06 }}
-                    style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    style={{ display:"flex", alignItems:"center", gap:10 }}>
                     <motion.div initial={{ scale:0 }} whileInView={{ scale:1 }} viewport={{ once:true }} transition={{ delay:i*0.06+0.2, type:"spring", stiffness:400 }}
-                      style={{ width:20, height:20, borderRadius:"50%", background:P, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      <Check size={11} color="#fff" strokeWidth={3}/>
+                      style={{ width:18, height:18, borderRadius:"50%", background:P, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      <Check size={10} color="#fff" strokeWidth={3}/>
                     </motion.div>
-                    <span style={{ fontSize:14, color:tm, fontWeight:500 }}>{f}</span>
+                    <span style={{ fontSize:13, color:tm, fontWeight:500 }}>{f}</span>
                   </motion.div>
                 ))}
               </div>
-              <div style={{ background: dark ? "rgba(197,160,89,0.08)" : "#FFFBF0", border:`1px solid ${dark ? "rgba(197,160,89,0.2)" : "#F0DEB0"}`, borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-                <Star size={18} fill={P} color={P}/>
-                <p style={{ fontSize:13, color:tm, margin:0, lineHeight:1.4 }}><strong>Paga tu primer mes</strong><br/><span style={{ color:tg }}>y activa tu restaurante al instante</span></p>
+              <div style={{ background: dark ? "rgba(197,160,89,0.08)" : "#FFFBF0", border:`1px solid ${dark ? "rgba(197,160,89,0.2)" : "#F0DEB0"}`, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <Star size={16} fill={P} color={P}/>
+                <p style={{ fontSize:12, color:tm, margin:0, lineHeight:1.4 }}><strong>Paga tu primer mes</strong><br/><span style={{ color:tg }}>y activa tu restaurante al instante</span></p>
               </div>
               <motion.button onClick={() => setShowReg(true)} whileHover={{ background:PD, scale:1.02 }} whileTap={{ scale:0.98 }} transition={{ type:"spring", stiffness:400, damping:20 }}
-                style={{ width:"100%", padding:"15px 0", background:P, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer" }}>
+                style={{ width:"100%", padding:"13px 0", background:P, color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer" }}>
                 Empezar ahora
               </motion.button>
             </div>
@@ -527,4 +525,5 @@ export default function SaaSLandingPage() {
     </div>
   );
 }
+
 
