@@ -3890,12 +3890,11 @@ canvas {
   display: none;
 }
 
-/* Dashboard header light */
+/* Dashboard header light — transparent */
 :root:not([data-theme="dark"]) .dashboard-header {
-  background: #FFFFFF;
-  backdrop-filter: blur(12px);
-  border-bottom-color: var(--border);
-  box-shadow: 0 1px 4px rgba(26, 24, 20, 0.04);
+  background: transparent !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* Dashboard main area light — fondo diferente a cards */
@@ -3908,16 +3907,20 @@ canvas {
    Stat cards, right panels, filter chips, activity items
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Updated dashboard header — taller with subtitle ── */
+/* ── Updated dashboard header — transparent, no bg ── */
 .dashboard-header {
   height: auto !important;
-  min-height: 72px !important;
-  padding: 12px clamp(14px, 3vw, 28px) !important;
+  min-height: 60px !important;
+  padding: 10px clamp(14px, 3vw, 28px) !important;
   align-items: center !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 
 .dashboard-header-title {
-  font-size: 22px !important;
+  font-size: 20px !important;
   font-weight: 700 !important;
   font-family: var(--font-manrope), system-ui, sans-serif !important;
   letter-spacing: -0.01em !important;
@@ -3930,27 +3933,27 @@ canvas {
   line-height: 1.3;
 }
 
-/* ── Stat cards — Wine design with colored icon box ── */
+/* ── Stat cards — compact version ── */
 .dash-stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 12px;
   position: relative;
   transition: box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .dash-stat-card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .dash-stat-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3963,30 +3966,30 @@ canvas {
 }
 
 .dash-stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .dash-stat-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   line-height: 1.1;
   color: var(--text);
 }
 
 .dash-stat-sub {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin: 2px 0 0;
+  margin: 1px 0 0;
 }
 
 .dash-stat-trend {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--success);
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   display: flex;
   align-items: center;
   gap: 3px;

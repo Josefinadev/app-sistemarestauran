@@ -21,13 +21,10 @@ import {
   Crown,
   User,
   Menu,
-  Settings,
   CreditCard,
   ChevronsLeft,
   ChevronsRight,
-  CircleDot,
   ChevronDown,
-  Clock,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -69,8 +66,6 @@ export default function DashboardLayout({
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [time, setTime] = useState("");
-  const [date, setDate] = useState("");
   const [showNotifs, setShowNotifs] = useState(false);
   const [modulosActivos, setModulosActivos] = useState<string[]>([]);
 
@@ -101,22 +96,6 @@ export default function DashboardLayout({
       router.replace(allowed[0] || "/dashboard/admin");
     }
   }, [_hasHydrated, accessToken, rol, pathname, router]);
-
-  // ── Clock ──
-  useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      setTime(
-        now.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-      );
-      setDate(
-        now.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })
-      );
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // ── Close mobile menu on route change ──
   useEffect(() => {
@@ -227,8 +206,6 @@ export default function DashboardLayout({
 
   if (!accessToken) return null;
 
-  const isAdminLike = rol === "admin" || rol === "admin_saas" || rol === "propietario";
-
   return (
     <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
       <CursorGlow />
@@ -318,46 +295,6 @@ export default function DashboardLayout({
         <div className="premium-sidebar-footer">
           <div className="sidebar-divider" />
 
-          {/* Notificaciones */}
-          <button
-            onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }}
-            className="sidebar-config-item"
-            title="Notificaciones"
-            style={{ position: "relative" }}
-          >
-            <Bell size={18} />
-            <span className="premium-sidebar-item-label">Notificaciones</span>
-            {unreadCount() > 0 && (
-              <span style={{
-                marginLeft: "auto",
-                background: "var(--primary)",
-                color: "#fff",
-                fontSize: 9,
-                fontWeight: 700,
-                padding: "2px 6px",
-                borderRadius: 99,
-                minWidth: 18,
-                textAlign: "center",
-              }}>
-                {unreadCount()}
-              </span>
-            )}
-          </button>
-
-          {/* Configuración */}
-          {isAdminLike && (
-            <button
-              onClick={() => router.push("/dashboard/admin/web")}
-              className={`sidebar-config-item ${pathname?.startsWith("/dashboard/admin/web") ? "premium-sidebar-item--active" : ""}`}
-              title="Configuración"
-            >
-              <Settings size={18} />
-              <span className="premium-sidebar-item-label">Configuración</span>
-            </button>
-          )}
-
-          <div className="sidebar-divider" />
-
           {/* Cerrar sesión */}
           <button
             onClick={handleLogout}
@@ -416,22 +353,7 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="dashboard-header-right" style={{ gap: 12 }}>
-            {/* Status */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--success)", fontWeight: 600 }} className="dashboard-header-status">
-              <CircleDot size={8} />
-              <span>En línea</span>
-            </div>
-
-            {/* Time + Date */}
-            <div className="header-time-display" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <Clock size={12} color="var(--text-muted)" />
-                <span className="header-time">{time}</span>
-              </div>
-              <span className="header-date">{date}</span>
-            </div>
-
+          <div className="dashboard-header-right" style={{ gap: 10 }}>
             {/* Theme toggle */}
             <ThemeToggle />
 
@@ -440,10 +362,10 @@ export default function DashboardLayout({
               <button
                 onClick={() => { setShowNotifs(!showNotifs); if (!showNotifs) markAllRead(); }}
                 style={{
-                  background: "var(--surface)",
+                  background: "transparent",
                   border: "1px solid var(--border)",
                   borderRadius: "var(--radius-sm)",
-                  padding: "8px",
+                  padding: "7px",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -457,8 +379,8 @@ export default function DashboardLayout({
                     position: "absolute",
                     top: -4,
                     right: -4,
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     borderRadius: "50%",
                     background: "var(--primary)",
                     color: "white",
@@ -467,7 +389,7 @@ export default function DashboardLayout({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    border: "2px solid var(--bg-elevated)",
+                    border: "2px solid var(--bg)",
                   }}>
                     {unreadCount()}
                   </span>
