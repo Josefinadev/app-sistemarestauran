@@ -55,6 +55,22 @@ function StatCard({ icon, label, target, suffix = "", desc, dark }: any) {
   );
 }
 
+function NavLink({ href, label, dark }: { href: string; label: string; dark: boolean }) {
+  const [hov, setHov] = useState(false);
+  const tg = dark ? "#9B9386" : TG;
+  return (
+    <a href={href} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ color: hov ? P : tg, textDecoration: "none", fontSize: 15, fontWeight: 500, position: "relative", padding: "4px 0", transition: "color 200ms ease", display: "inline-block" }}>
+      {label}
+      <motion.span
+        animate={{ scaleX: hov ? 1 : 0, opacity: hov ? 1 : 0 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        style={{ position: "absolute", bottom: -2, left: 0, right: 0, height: 2, background: P, borderRadius: 1, transformOrigin: "left", display: "block" }}
+      />
+    </a>
+  );
+}
+
 function FeatureCard({ icon, title, desc, delay, dark }: any) {
   const bg = dark ? "#1A1A1C" : "#FFFFFF";
   const br = dark ? "#2A2118" : BD;
@@ -94,8 +110,8 @@ export default function SaaSLandingPage() {
 
   useEffect(() => { resetRestauranteBranding(); }, []);
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", fn);
+    const fn = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
   useEffect(() => {
@@ -123,7 +139,6 @@ export default function SaaSLandingPage() {
   const tm = dark ? "#F0E6D0" : TD;
   const tg = dark ? "#9B9386" : TG;
   const br = dark ? "#2A2118" : BD;
-  const navBg = scrolled ? (dark ? "rgba(12,11,14,0.92)" : "rgba(255,253,247,0.94)") : (dark ? "rgba(12,11,14,0.5)" : "rgba(255,253,247,0.5)");
 
   const hi = { hidden:{ opacity:0, y:30 }, show:{ opacity:1, y:0, transition:{ duration:0.65, ease:[0.22,1,0.36,1] as any } } };
 
@@ -137,26 +152,85 @@ export default function SaaSLandingPage() {
         </div>
       )}
 
-      {/* NAVBAR */}
-      <motion.nav initial={{ y:-80, opacity:0 }} animate={{ y:0, opacity:1 }} transition={{ duration:0.6, ease:[0.22,1,0.36,1] as any }}
-        style={{ height:68, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 6%", position:"sticky", top:0, zIndex:100, backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", background:navBg, transition:"background 0.3s, box-shadow 0.3s", boxShadow: scrolled ? (dark ? "0 1px 24px rgba(0,0,0,0.4)" : "0 1px 20px rgba(197,160,89,0.1)") : "none", borderBottom:`1px solid ${scrolled ? br : "transparent"}` }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <motion.img src="/assets/Ordely.png" alt="Ordely" style={{ height:68, width:"auto", objectFit:"contain" }} whileHover={{ scale:1.05 }} />
-          <span style={{ fontSize:22, fontWeight:800, color:tm, letterSpacing:"-0.02em" }}>Ordely</span>
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:28 }}>
-          {[["Caracteristicas","#features"],["Precios","#pricing"]].map(([l,h]) => (
-            <motion.a key={l} href={h} style={{ color:tg, textDecoration:"none", fontSize:15, fontWeight:500 }} whileHover={{ color:P }} transition={{ duration:0.2 }}>{l}</motion.a>
-          ))}
-          <motion.button onClick={() => router.push("/login")} style={{ background:"none", border:"none", cursor:"pointer", color:tg, fontSize:15, fontWeight:600, padding:"8px 14px" }} whileHover={{ color:P }} transition={{ duration:0.2 }}>INGRESAR</motion.button>
-          <motion.button onClick={() => setDark(!dark)} style={{ width:36, height:36, borderRadius:8, background:"transparent", border:`1px solid ${br}`, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:tg }} whileHover={{ borderColor:P, color:P }} transition={{ duration:0.2 }}>
-            {dark ? <Sun size={16} color={P}/> : <Moon size={16}/>}
-          </motion.button>
-        </div>
-      </motion.nav>
+      {/* ════ FLOATING GLASSMORPHISM NAVBAR ════ */}
+      <div style={{
+        position: "fixed",
+        top: 12,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "calc(100% - 40px)",
+        maxWidth: 1240,
+        zIndex: 200,
+        pointerEvents: "none",
+      }}>
+        <motion.nav
+          initial={{ y: -110, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            pointerEvents: "all",
+            height: scrolled ? 72 : 88,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 32px",
+            background: scrolled
+              ? (dark ? "rgba(15,14,18,0.84)" : "rgba(255,253,247,0.82)")
+              : "transparent",
+            backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+            WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+            borderRadius: scrolled ? 18 : 20,
+            border: scrolled
+              ? `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(197,160,89,0.18)"}`
+              : "1px solid transparent",
+            boxShadow: scrolled
+              ? (dark
+                ? "0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset"
+                : "0 8px 40px rgba(197,160,89,0.13), 0 2px 0 rgba(255,255,255,0.9) inset")
+              : "none",
+            transition: "height 300ms cubic-bezier(0.4,0,0.2,1), background 300ms ease, backdrop-filter 300ms ease, border 300ms ease, box-shadow 300ms ease, border-radius 300ms ease",
+          }}
+        >
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <motion.img src="/assets/Ordely.png" alt="Ordely"
+              style={{ height: scrolled ? 56 : 68, width: "auto", objectFit: "contain", transition: "height 300ms ease" }}
+              whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 400 }} />
+            <motion.span
+              style={{ fontSize: 22, fontWeight: 800, color: scrolled ? tm : tm, letterSpacing: "-0.02em", transition: "color 300ms ease" }}>
+              Ordely
+            </motion.span>
+          </div>
+
+          {/* Links + actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            <NavLink href="#features" label="Caracteristicas" dark={dark} />
+            <NavLink href="#pricing" label="Precios" dark={dark} />
+
+            <motion.button onClick={() => router.push("/login")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: tg, fontSize: 15, fontWeight: 600, padding: "8px 14px", letterSpacing: "0.02em", transition: "color 200ms ease" }}
+              whileHover={{ color: P }} transition={{ duration: 0.2 }}>
+              INGRESAR
+            </motion.button>
+
+            <motion.button onClick={() => setDark(!dark)}
+              style={{
+                width: 36, height: 36, borderRadius: 9,
+                background: scrolled ? (dark ? "rgba(255,255,255,0.06)" : "rgba(197,160,89,0.08)") : "rgba(255,255,255,0.15)",
+                border: `1px solid ${scrolled ? br : "rgba(197,160,89,0.25)"}`,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: tg,
+                transition: "all 300ms ease",
+              }}
+              whileHover={{ borderColor: P, color: P, scale: 1.05 }}
+              transition={{ duration: 0.2 }}>
+              {dark ? <Sun size={15} color={P} /> : <Moon size={15} />}
+            </motion.button>
+          </div>
+        </motion.nav>
+      </div>
 
       {/* HERO */}
-      <section style={{ padding:"72px 6% 60px", position:"relative", overflow:"hidden", background:bg }} onMouseMove={onMouseMove}>
+      <section style={{ padding:"116px 6% 60px", position:"relative", overflow:"hidden", background:bg }} onMouseMove={onMouseMove}>
         <div style={{ position:"absolute", bottom:-40, left:-40, width:320, height:320, pointerEvents:"none", opacity: dark ? 0.1 : 0.32 }}>
           <svg viewBox="0 0 320 320" fill="none">{[60,100,140,180,220,260,300].map((r,i)=>(<circle key={i} cx="0" cy="320" r={r} stroke={P} strokeWidth="0.8" fill="none" opacity={0.7-i*0.08}/>))}</svg>
         </div>
