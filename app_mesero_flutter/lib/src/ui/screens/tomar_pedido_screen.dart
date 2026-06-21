@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_state.dart';
+import '../widgets/supabase_image_widget.dart';
 
 class TomarPedidoScreen extends StatefulWidget {
   const TomarPedidoScreen({super.key});
@@ -43,22 +44,36 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
     try {
       final results = await Future.wait([
         ApiClient.getJson('/mesas?id_restaurante=${rest.id}'),
-        ApiClient.getJson('/productos?id_restaurante=${rest.id}&disponible=true'),
+        ApiClient.getJson(
+          '/productos?id_restaurante=${rest.id}&disponible=true',
+        ),
         ApiClient.getJson('/categorias?id_restaurante=${rest.id}'),
       ]);
 
       mesas
         ..clear()
-        ..addAll(((results[0] as List<dynamic>?) ?? const []).map((m) => Mesa.fromJson(Map<String, dynamic>.from(m as Map))));
+        ..addAll(
+          ((results[0] as List<dynamic>?) ?? const []).map(
+            (m) => Mesa.fromJson(Map<String, dynamic>.from(m as Map)),
+          ),
+        );
       mesas.sort((a, b) => a.numero.compareTo(b.numero));
 
       productos
         ..clear()
-        ..addAll(((results[1] as List<dynamic>?) ?? const []).map((p) => Producto.fromJson(Map<String, dynamic>.from(p as Map))));
+        ..addAll(
+          ((results[1] as List<dynamic>?) ?? const []).map(
+            (p) => Producto.fromJson(Map<String, dynamic>.from(p as Map)),
+          ),
+        );
 
       categorias
         ..clear()
-        ..addAll(((results[2] as List<dynamic>?) ?? const []).map((c) => Categoria.fromJson(Map<String, dynamic>.from(c as Map))));
+        ..addAll(
+          ((results[2] as List<dynamic>?) ?? const []).map(
+            (c) => Categoria.fromJson(Map<String, dynamic>.from(c as Map)),
+          ),
+        );
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -87,14 +102,16 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
       if (idx >= 0) {
         cart[idx] = cart[idx].copyWith(cantidad: cart[idx].cantidad + 1);
       } else {
-        cart.add(_CartItem(
-          idProducto: p.id,
-          nombre: p.nombre,
-          precio: p.precio,
-          cantidad: 1,
-          notas: '',
-          esBebida: p.esBebida,
-        ));
+        cart.add(
+          _CartItem(
+            idProducto: p.id,
+            nombre: p.nombre,
+            precio: p.precio,
+            cantidad: 1,
+            notas: '',
+            esBebida: p.esBebida,
+          ),
+        );
       }
     });
   }
@@ -131,11 +148,13 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
         'id_usuario': user?.id,
         if (notasPedido.trim().isNotEmpty) 'notas': notasPedido.trim(),
         'items': cart
-            .map((c) => {
-                  'id_producto': c.idProducto,
-                  'cantidad': c.cantidad,
-                  if (c.notas.trim().isNotEmpty) 'notas': c.notas.trim(),
-                })
+            .map(
+              (c) => {
+                'id_producto': c.idProducto,
+                'cantidad': c.cantidad,
+                if (c.notas.trim().isNotEmpty) 'notas': c.notas.trim(),
+              },
+            )
             .toList(),
       });
 
@@ -167,7 +186,12 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
         builder: (_) => AlertDialog(
           title: const Text('Error'),
           content: Text(e.toString()),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
     } finally {
@@ -187,7 +211,8 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
         total: _total,
         sending: sending,
         onUpdateQty: (id, delta) => _updateQty(id, delta),
-        onRemove: (id) => setState(() => cart.removeWhere((c) => c.idProducto == id)),
+        onRemove: (id) =>
+            setState(() => cart.removeWhere((c) => c.idProducto == id)),
         onUpdateNotasItem: (id, notas) {
           final idx = cart.indexWhere((c) => c.idProducto == id);
           if (idx < 0) return;
@@ -209,7 +234,10 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
             children: [
               CircularProgressIndicator(color: cs.primary),
               const SizedBox(height: 10),
-              Text('Cargando menú...', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+              Text(
+                'Cargando menú...',
+                style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
+              ),
             ],
           ),
         ),
@@ -227,7 +255,13 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Selecciona una mesa', style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
+                child: Text(
+                  'Selecciona una mesa',
+                  style: TextStyle(
+                    color: cs.onSurface.withOpacity(0.6),
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ),
           ),
@@ -250,15 +284,31 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   color: cs.surface,
-                  border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
+                  border: Border.all(
+                    color: cs.outlineVariant.withOpacity(0.35),
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.table_restaurant, color: cs.primary, size: 34),
                     const SizedBox(height: 8),
-                    Text('${m.numero}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cs.onSurface)),
-                    Text('Mesa', style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 11, fontWeight: FontWeight.w700)),
+                    Text(
+                      '${m.numero}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    Text(
+                      'Mesa',
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(0.55),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -309,7 +359,11 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                   _CatChip(
                     label: c.nombre,
                     selected: selectedCategoria == c.id,
-                    onTap: () => setState(() => selectedCategoria = selectedCategoria == c.id ? null : c.id),
+                    onTap: () => setState(
+                      () => selectedCategoria = selectedCategoria == c.id
+                          ? null
+                          : c.id,
+                    ),
                   ),
               ],
             ),
@@ -318,7 +372,12 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
           if (filtered.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 40),
-              child: Center(child: Text('No se encontraron productos', style: TextStyle(color: cs.onSurface.withOpacity(0.6)))),
+              child: Center(
+                child: Text(
+                  'No se encontraron productos',
+                  style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
+                ),
+              ),
             ),
           if (filtered.isNotEmpty)
             GridView.builder(
@@ -341,36 +400,107 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
-                      color: qty > 0 ? cs.primary.withOpacity(0.08) : cs.surface,
-                      border: Border.all(color: qty > 0 ? cs.primary.withOpacity(0.35) : cs.outlineVariant.withOpacity(0.35)),
+                      color: qty > 0
+                          ? cs.primary.withOpacity(0.08)
+                          : cs.surface,
+                      border: Border.all(
+                        color: qty > 0
+                            ? cs.primary.withOpacity(0.35)
+                            : cs.outlineVariant.withOpacity(0.35),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SupabaseImageWidget(
+                              imagePath: p.imagenUrl,
+                              width: double.infinity,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              placeholder: Container(
+                                width: double.infinity,
+                                height: 120,
+                                color: cs.surfaceVariant,
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                              errorWidget: Container(
+                                width: double.infinity,
+                                height: 120,
+                                color: cs.surfaceVariant,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 28,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
+                          const SizedBox(height: 10),
                         Row(
                           children: [
                             Container(
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: (p.esBebida ? cs.tertiary : cs.primary).withOpacity(0.14),
+                                color: (p.esBebida ? cs.tertiary : cs.primary)
+                                    .withOpacity(0.14),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(p.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 16, color: p.esBebida ? cs.tertiary : cs.primary),
+                              child: Icon(
+                                p.esBebida
+                                    ? Icons.local_bar_outlined
+                                    : Icons.restaurant_outlined,
+                                size: 16,
+                                color: p.esBebida ? cs.tertiary : cs.primary,
+                              ),
                             ),
                             const Spacer(),
                             if (qty > 0)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(999)),
-                                child: Text('$qty', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w900, fontSize: 11)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cs.primary,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '$qty',
+                                  style: TextStyle(
+                                    color: cs.onPrimary,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Text(p.nombre, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
+                        Text(
+                          p.nombre,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: cs.onSurface,
+                          ),
+                        ),
                         const Spacer(),
-                        Text('S/ ${p.precio.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary)),
+                        Text(
+                          'S/ ${p.precio.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: cs.primary,
+                          ),
+                        ),
                         if (qty > 0) ...[
                           const SizedBox(height: 10),
                           Row(
@@ -380,7 +510,15 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                                 icon: const Icon(Icons.remove, size: 18),
                               ),
                               Expanded(
-                                child: Center(child: Text('$qty', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface))),
+                                child: Center(
+                                  child: Text(
+                                    '$qty',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                ),
                               ),
                               IconButton.filledTonal(
                                 onPressed: () => _updateQty(p.id, 1),
@@ -411,7 +549,10 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                     children: [
                       const Icon(Icons.shopping_cart),
                       const SizedBox(width: 10),
-                      Text('Ver pedido ($_count) · S/ ${_total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text(
+                        'Ver pedido ($_count) · S/ ${_total.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
                     ],
                   ),
                 ),
@@ -441,7 +582,11 @@ class _CatChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _CatChip({required this.label, required this.selected, required this.onTap});
+  const _CatChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -456,9 +601,20 @@ class _CatChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             color: selected ? cs.primary.withOpacity(0.14) : Colors.transparent,
-            border: Border.all(color: selected ? cs.primary.withOpacity(0.5) : cs.outlineVariant.withOpacity(0.5)),
+            border: Border.all(
+              color: selected
+                  ? cs.primary.withOpacity(0.5)
+                  : cs.outlineVariant.withOpacity(0.5),
+            ),
           ),
-          child: Text(label, style: TextStyle(color: selected ? cs.primary : cs.onSurface.withOpacity(0.65), fontWeight: FontWeight.w800, fontSize: 12)),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? cs.primary : cs.onSurface.withOpacity(0.65),
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
         ),
       ),
     );
@@ -483,13 +639,13 @@ class _CartItem {
   });
 
   _CartItem copyWith({int? cantidad, String? notas}) => _CartItem(
-        idProducto: idProducto,
-        nombre: nombre,
-        precio: precio,
-        cantidad: cantidad ?? this.cantidad,
-        notas: notas ?? this.notas,
-        esBebida: esBebida,
-      );
+    idProducto: idProducto,
+    nombre: nombre,
+    precio: precio,
+    cantidad: cantidad ?? this.cantidad,
+    notas: notas ?? this.notas,
+    esBebida: esBebida,
+  );
 }
 
 // ── Cart Sheet ──────────────────────────────────
@@ -543,7 +699,9 @@ class _CartSheetState extends State<_CartSheet> {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
           child: Column(
@@ -552,8 +710,20 @@ class _CartSheetState extends State<_CartSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                 child: Row(
                   children: [
-                    Expanded(child: Text('Pedido — Mesa ${widget.mesaNumero}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: cs.onSurface))),
-                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                    Expanded(
+                      child: Text(
+                        'Pedido — Mesa ${widget.mesaNumero}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
                   ],
                 ),
               ),
@@ -569,12 +739,21 @@ class _CartSheetState extends State<_CartSheet> {
                         onUpdateNotasItem: widget.onUpdateNotasItem,
                       ),
                     const SizedBox(height: 10),
-                    Text('Notas del pedido', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontWeight: FontWeight.w900, fontSize: 12)),
+                    Text(
+                      'Notas del pedido',
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(0.7),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     TextField(
                       minLines: 2,
                       maxLines: 5,
-                      decoration: const InputDecoration(hintText: 'Notas generales...'),
+                      decoration: const InputDecoration(
+                        hintText: 'Notas generales...',
+                      ),
                       controller: _notasPedidoCtrl,
                       onChanged: widget.onUpdateNotasPedido,
                     ),
@@ -587,9 +766,22 @@ class _CartSheetState extends State<_CartSheet> {
                   children: [
                     Row(
                       children: [
-                        Text('Total', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
+                        Text(
+                          'Total',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: cs.onSurface,
+                          ),
+                        ),
                         const Spacer(),
-                        Text('S/ ${widget.total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: cs.primary)),
+                        Text(
+                          'S/ ${widget.total.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            color: cs.primary,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -605,8 +797,17 @@ class _CartSheetState extends State<_CartSheet> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           child: widget.sending
-                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Enviar pedido', style: TextStyle(fontWeight: FontWeight.w900)),
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Enviar pedido',
+                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                ),
                         ),
                       ),
                     ),
@@ -629,7 +830,12 @@ class _CartRow extends StatefulWidget {
   final void Function(String id) onRemove;
   final void Function(String id, String notas) onUpdateNotasItem;
 
-  const _CartRow({required this.item, required this.onUpdateQty, required this.onRemove, required this.onUpdateNotasItem});
+  const _CartRow({
+    required this.item,
+    required this.onUpdateQty,
+    required this.onRemove,
+    required this.onUpdateNotasItem,
+  });
 
   @override
   State<_CartRow> createState() => _CartRowState();
@@ -647,7 +853,8 @@ class _CartRowState extends State<_CartRow> {
   @override
   void didUpdateWidget(_CartRow old) {
     super.didUpdateWidget(old);
-    if (old.item.notas != widget.item.notas && _notasCtrl.text != widget.item.notas) {
+    if (old.item.notas != widget.item.notas &&
+        _notasCtrl.text != widget.item.notas) {
       _notasCtrl.text = widget.item.notas;
     }
   }
@@ -664,7 +871,10 @@ class _CartRowState extends State<_CartRow> {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: cs.outlineVariant.withOpacity(0.35))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: cs.outlineVariant.withOpacity(0.35)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -672,31 +882,73 @@ class _CartRowState extends State<_CartRow> {
           children: [
             Row(
               children: [
-                Icon(widget.item.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 18, color: widget.item.esBebida ? cs.tertiary : cs.primary),
+                Icon(
+                  widget.item.esBebida
+                      ? Icons.local_bar_outlined
+                      : Icons.restaurant_outlined,
+                  size: 18,
+                  color: widget.item.esBebida ? cs.tertiary : cs.primary,
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: Text(widget.item.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface))),
-                IconButton(onPressed: () => widget.onRemove(widget.item.idProducto), icon: Icon(Icons.delete_outline, color: cs.error)),
+                Expanded(
+                  child: Text(
+                    widget.item.nombre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => widget.onRemove(widget.item.idProducto),
+                  icon: Icon(Icons.delete_outline, color: cs.error),
+                ),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                IconButton.filledTonal(onPressed: () => widget.onUpdateQty(widget.item.idProducto, -1), icon: const Icon(Icons.remove, size: 18)),
+                IconButton.filledTonal(
+                  onPressed: () =>
+                      widget.onUpdateQty(widget.item.idProducto, -1),
+                  icon: const Icon(Icons.remove, size: 18),
+                ),
                 const SizedBox(width: 6),
-                Text('${widget.item.cantidad}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
+                Text(
+                  '${widget.item.cantidad}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: cs.onSurface,
+                  ),
+                ),
                 const SizedBox(width: 6),
-                IconButton.filledTonal(onPressed: () => widget.onUpdateQty(widget.item.idProducto, 1), icon: const Icon(Icons.add, size: 18)),
+                IconButton.filledTonal(
+                  onPressed: () =>
+                      widget.onUpdateQty(widget.item.idProducto, 1),
+                  icon: const Icon(Icons.add, size: 18),
+                ),
                 const Spacer(),
-                Text('S/ ${(widget.item.precio * widget.item.cantidad).toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary)),
+                Text(
+                  'S/ ${(widget.item.precio * widget.item.cantidad).toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: cs.primary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
             TextField(
               minLines: 1,
               maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Notas (sin sal, extra picante...)'),
+              decoration: const InputDecoration(
+                hintText: 'Notas (sin sal, extra picante...)',
+              ),
               controller: _notasCtrl,
-              onChanged: (v) => widget.onUpdateNotasItem(widget.item.idProducto, v),
+              onChanged: (v) =>
+                  widget.onUpdateNotasItem(widget.item.idProducto, v),
             ),
           ],
         ),
@@ -728,17 +980,28 @@ class _SuccessOverlay extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.green,
               ),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 46),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 46,
+              ),
             ),
             const SizedBox(height: 22),
             const Text(
               '¡Pedido Enviado!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Mesa $mesaNumero · S/ ${total.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.8)),
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
+              ),
             ),
           ],
         ),
