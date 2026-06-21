@@ -152,120 +152,107 @@ export default function SaaSLandingPage() {
         </div>
       )}
 
-      {/* ════ FLOATING GLASSMORPHISM NAVBAR ════ */}
-      <div style={{
-        position: "fixed",
-        top: 12,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "calc(100% - 40px)",
-        maxWidth: 1240,
-        zIndex: 200,
-        pointerEvents: "none",
-      }}>
-        <motion.nav
-          initial={{ y: -110, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            pointerEvents: "all",
-            height: scrolled ? 72 : 88,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 32px",
-            background: scrolled
-              ? (dark ? "rgba(15,14,18,0.84)" : "rgba(255,253,247,0.82)")
-              : "transparent",
-            backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
-            WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
-            borderRadius: scrolled ? 18 : 20,
-            border: scrolled
-              ? `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(197,160,89,0.18)"}`
-              : "1px solid transparent",
-            boxShadow: scrolled
-              ? (dark
-                ? "0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset"
-                : "0 8px 40px rgba(197,160,89,0.13), 0 2px 0 rgba(255,255,255,0.9) inset")
-              : "none",
-            transition: "height 300ms cubic-bezier(0.4,0,0.2,1), background 300ms ease, backdrop-filter 300ms ease, border 300ms ease, box-shadow 300ms ease, border-radius 300ms ease",
-          }}
-        >
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <motion.img src="/assets/Ordely.png" alt="Ordely"
-              style={{ height: scrolled ? 56 : 68, width: "auto", objectFit: "contain", transition: "height 300ms ease" }}
-              whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 400 }} />
-            <motion.span
-              style={{ fontSize: 22, fontWeight: 800, color: scrolled ? tm : tm, letterSpacing: "-0.02em", transition: "color 300ms ease" }}>
-              Ordely
-            </motion.span>
-          </div>
+      {/* ════ GLASSMORPHISM NAVBAR — FULL WIDTH ════ */}
+      <motion.nav
+        initial={{ y: -90, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 200,
+          height: scrolled ? 72 : 88,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 clamp(20px, 5%, 80px)",
+          background: scrolled
+            ? (dark ? "rgba(15,14,18,0.86)" : "rgba(255,253,247,0.84)")
+            : "transparent",
+          backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+          WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+          borderBottom: scrolled
+            ? `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(197,160,89,0.15)"}`
+            : "1px solid transparent",
+          boxShadow: scrolled
+            ? (dark
+              ? "0 4px 32px rgba(0,0,0,0.45)"
+              : "0 4px 32px rgba(197,160,89,0.1), 0 1px 0 rgba(255,255,255,0.8)")
+            : "none",
+          transition: "height 300ms cubic-bezier(0.4,0,0.2,1), background 300ms ease, backdrop-filter 300ms ease, border-bottom 300ms ease, box-shadow 300ms ease",
+        }}
+      >
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <motion.img src="/assets/Ordely.png" alt="Ordely"
+            style={{ height: scrolled ? 52 : 64, width: "auto", objectFit: "contain", transition: "height 300ms ease" }}
+            whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 400 }} />
+          <span style={{ fontSize: 22, fontWeight: 800, color: tm, letterSpacing: "-0.02em", transition: "color 300ms ease" }}>
+            Ordely
+          </span>
+        </div>
 
-          {/* Links + actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-            <NavLink href="#features" label="Caracteristicas" dark={dark} />
-            <NavLink href="#pricing" label="Precios" dark={dark} />
-
-            <motion.button onClick={() => router.push("/login")}
-              style={{ background: "none", border: "none", cursor: "pointer", color: tg, fontSize: 15, fontWeight: 600, padding: "8px 14px", letterSpacing: "0.02em", transition: "color 200ms ease" }}
-              whileHover={{ color: P }} transition={{ duration: 0.2 }}>
-              INGRESAR
-            </motion.button>
-
-            <motion.button onClick={() => setDark(!dark)}
-              style={{
-                width: 36, height: 36, borderRadius: 9,
-                background: scrolled ? (dark ? "rgba(255,255,255,0.06)" : "rgba(197,160,89,0.08)") : "rgba(255,255,255,0.15)",
-                border: `1px solid ${scrolled ? br : "rgba(197,160,89,0.25)"}`,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: tg,
-                transition: "all 300ms ease",
-              }}
-              whileHover={{ borderColor: P, color: P, scale: 1.05 }}
-              transition={{ duration: 0.2 }}>
-              {dark ? <Sun size={15} color={P} /> : <Moon size={15} />}
-            </motion.button>
-          </div>
-        </motion.nav>
-      </div>
+        {/* Links + actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <NavLink href="#features" label="Caracteristicas" dark={dark} />
+          <NavLink href="#pricing" label="Precios" dark={dark} />
+          <motion.button onClick={() => router.push("/login")}
+            style={{ background: "none", border: "none", cursor: "pointer", color: tg, fontSize: 15, fontWeight: 600, padding: "8px 14px", letterSpacing: "0.02em", transition: "color 200ms ease" }}
+            whileHover={{ color: P }} transition={{ duration: 0.2 }}>
+            INGRESAR
+          </motion.button>
+          <motion.button onClick={() => setDark(!dark)}
+            style={{ width: 36, height: 36, borderRadius: 9, background: "transparent", border: `1px solid ${br}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: tg, transition: "all 300ms ease" }}
+            whileHover={{ borderColor: P, color: P, scale: 1.05 }} transition={{ duration: 0.2 }}>
+            {dark ? <Sun size={15} color={P} /> : <Moon size={15} />}
+          </motion.button>
+        </div>
+      </motion.nav>
 
       {/* HERO */}
-      <section style={{ padding:"116px 6% 60px", position:"relative", overflow:"hidden", background:bg }} onMouseMove={onMouseMove}>
+      <section style={{ padding:"100px 6% 60px", position:"relative", overflow:"hidden", background:bg }} onMouseMove={onMouseMove}>
         <div style={{ position:"absolute", bottom:-40, left:-40, width:320, height:320, pointerEvents:"none", opacity: dark ? 0.1 : 0.32 }}>
           <svg viewBox="0 0 320 320" fill="none">{[60,100,140,180,220,260,300].map((r,i)=>(<circle key={i} cx="0" cy="320" r={r} stroke={P} strokeWidth="0.8" fill="none" opacity={0.7-i*0.08}/>))}</svg>
         </div>
-        <motion.div style={{ display:"grid", gridTemplateColumns:"1fr 1.25fr", gap:24, alignItems:"center", maxWidth:1240, margin:"0 auto", position:"relative", zIndex:1 }}
+        <motion.div
+          style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:32, alignItems:"center", maxWidth:1240, margin:"0 auto", position:"relative", zIndex:1 }}
           variants={{ hidden:{}, show:{ transition:{ staggerChildren:0.11 } } }} initial="hidden" animate="show">
-          <div>
+          <div style={{ minWidth:0 }}>
             <motion.div variants={hi} style={{ display:"inline-block", marginBottom:16, fontSize:11, fontWeight:700, letterSpacing:"0.12em", color:P, textTransform:"uppercase" as const }}>
               Arquitectura Multi-Tenant de Nueva Generacion
             </motion.div>
-            <motion.h1 variants={hi} style={{ fontSize:"clamp(38px,5vw,64px)", fontWeight:900, lineHeight:1.03, letterSpacing:"-0.03em", color:tm, margin:"0 0 20px" }}>
+            <motion.h1 variants={hi} style={{ fontSize:"clamp(34px,4.5vw,62px)", fontWeight:900, lineHeight:1.03, letterSpacing:"-0.03em", color:tm, margin:"0 0 20px" }}>
               El sistema operativo<br/>para tu Imperio<br/>Gastronomico.
             </motion.h1>
-            <motion.p variants={hi} style={{ fontSize:16, color:tg, lineHeight:1.75, margin:"0 0 36px", maxWidth:420 }}>
+            <motion.p variants={hi} style={{ fontSize:"clamp(14px,1.6vw,16px)", color:tg, lineHeight:1.75, margin:"0 0 36px", maxWidth:420 }}>
               Desde menus digitales inteligentes hasta gestion operativa en tiempo real. Todo lo que necesitas para escalar tu restaurante en una sola plataforma.
             </motion.p>
-            <motion.div variants={hi} style={{ display:"flex", gap:14, flexWrap:"wrap" as const }}>
-              <motion.button onClick={() => setShowModal(true)} style={{ background:P, color:"#fff", border:"none", borderRadius:10, padding:"14px 28px", fontSize:14, fontWeight:700, cursor:"pointer", letterSpacing:"0.04em", display:"flex", alignItems:"center", gap:8 }} whileHover={{ background:PD, scale:1.03 }} whileTap={{ scale:0.97 }} transition={{ type:"spring", stiffness:400, damping:20 }}>
-                REGISTRA TU RESTAURANTE <ArrowRight size={16}/>
+            <motion.div variants={hi} style={{ display:"flex", gap:12, flexWrap:"wrap" as const }}>
+              <motion.button onClick={() => setShowModal(true)}
+                style={{ background:P, color:"#fff", border:"none", borderRadius:10, padding:"14px 24px", fontSize:"clamp(12px,1.4vw,14px)", fontWeight:700, cursor:"pointer", letterSpacing:"0.04em", display:"flex", alignItems:"center", gap:8 }}
+                whileHover={{ background:PD, scale:1.03 }} whileTap={{ scale:0.97 }} transition={{ type:"spring", stiffness:400, damping:20 }}>
+                REGISTRA TU RESTAURANTE <ArrowRight size={15}/>
               </motion.button>
-              <motion.button style={{ background:"transparent", color:tm, border:`1.5px solid ${br}`, borderRadius:10, padding:"14px 24px", fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:8 }} whileHover={{ borderColor:P, scale:1.03 }} whileTap={{ scale:0.97 }} transition={{ type:"spring", stiffness:400, damping:20 }}>
-                <Calendar size={16} color={P}/> AGENDAR DEMO
+              <motion.button
+                style={{ background:"transparent", color:tm, border:`1.5px solid ${br}`, borderRadius:10, padding:"14px 20px", fontSize:"clamp(12px,1.4vw,14px)", fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}
+                whileHover={{ borderColor:P, scale:1.03 }} whileTap={{ scale:0.97 }} transition={{ type:"spring", stiffness:400, damping:20 }}>
+                <Calendar size={15} color={P}/> AGENDAR DEMO
               </motion.button>
             </motion.div>
           </div>
-          <motion.div initial={{ opacity:0, x:60 }} animate={{ opacity:1, x:0 }} transition={{ duration:0.9, delay:0.2, ease:[0.22,1,0.36,1] as any }} style={{ x:imgX, y:imgY, display:"flex", justifyContent:"center" }}>
-            <motion.img src="/assets/img_web.png" alt="Ordely Dashboard"
-              animate={{ y:[0,-10,0] }} transition={{ duration:4.5, repeat:Infinity, ease:"easeInOut" }}
-              style={{ width:"130%", maxWidth:780, height:"auto", display:"block", filter:"drop-shadow(0 28px 60px rgba(197,160,89,0.22)) drop-shadow(0 8px 20px rgba(0,0,0,0.07))", marginLeft:"-18%" }}/>
+          <motion.div initial={{ opacity:0, x:50 }} animate={{ opacity:1, x:0 }} transition={{ duration:0.9, delay:0.2, ease:[0.22,1,0.36,1] as any }} style={{ x:imgX, y:imgY, display:"flex", justifyContent:"center", minWidth:0 }}>
+            <motion.img src="/assets/image_web.png" alt="Ordely Dashboard"
+              animate={{ y:[0,-8,0] }} transition={{ duration:4.5, repeat:Infinity, ease:"easeInOut" }}
+              style={{ width:"100%", maxWidth:700, height:"auto", display:"block", filter:"drop-shadow(0 24px 56px rgba(197,160,89,0.2)) drop-shadow(0 6px 16px rgba(0,0,0,0.07))" }}/>
           </motion.div>
         </motion.div>
       </section>
 
       {/* STATS */}
       <section style={{ padding:"0 6% 64px", background:bg }}>
-        <div style={{ display:"flex", gap:14, maxWidth:1240, margin:"0 auto", flexWrap:"wrap" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14, maxWidth:1240, margin:"0 auto" }}>
           <StatCard dark={dark} label="Pedidos en Vivo" target={128} desc="● ahora mismo"
             icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>}/>
           <StatCard dark={dark} label="Mesas Activas" target={24} desc="● de 36"
@@ -278,31 +265,31 @@ export default function SaaSLandingPage() {
       </section>
 
       {/* FEATURES 2x2 */}
-      <section id="features" style={{ padding:"20px 6% 80px", background:bgCard, borderTop:`1px solid ${br}`, borderBottom:`1px solid ${br}` }}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18, maxWidth:1240, margin:"0 auto" }}>
-          <FeatureCard dark={dark} delay={0} icon={<QrCode size={34} color={P}/>} title="Menu Digital Inteligente" desc="Pedidos desde la mesa con validacion de geolocalizacion. Reduce tiempos y mejora la experiencia del cliente."/>
-          <FeatureCard dark={dark} delay={0.1} icon={<Users size={34} color={P}/>} title="Control Total Multi-Tenant" desc="Gestiona multiples locales, roles (Cocinero, Mesero, Cajero) y analiticas avanzadas en un panel unificado."/>
-          <FeatureCard dark={dark} delay={0.2} icon={<Zap size={34} color={P}/>} title="Real-Time de Verdad" desc="La cocina recibe pedidos al instante. Sincronizacion perfecta entre todos los dispositivos del staff."/>
-          <FeatureCard dark={dark} delay={0.3} icon={<ShieldCheck size={34} color={P}/>} title="Precio Simple y Transparente" desc="Sin planes complicados. Paga mensualmente y ten acceso completo."/>
+      <section id="features" style={{ padding:"40px 6% 80px", background:bgCard, borderTop:`1px solid ${br}`, borderBottom:`1px solid ${br}` }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:18, maxWidth:1240, margin:"0 auto" }}>
+          <FeatureCard dark={dark} delay={0} icon={<QrCode size={32} color={P}/>} title="Menu Digital Inteligente" desc="Pedidos desde la mesa con validacion de geolocalizacion. Reduce tiempos y mejora la experiencia del cliente."/>
+          <FeatureCard dark={dark} delay={0.1} icon={<Users size={32} color={P}/>} title="Control Total Multi-Tenant" desc="Gestiona multiples locales, roles (Cocinero, Mesero, Cajero) y analiticas avanzadas en un panel unificado."/>
+          <FeatureCard dark={dark} delay={0.2} icon={<Zap size={32} color={P}/>} title="Real-Time de Verdad" desc="La cocina recibe pedidos al instante. Sincronizacion perfecta entre todos los dispositivos del staff."/>
+          <FeatureCard dark={dark} delay={0.3} icon={<ShieldCheck size={32} color={P}/>} title="Precio Simple y Transparente" desc="Sin planes complicados. Paga mensualmente y ten acceso completo."/>
         </div>
       </section>
 
       {/* PRICING */}
-      <section id="pricing" style={{ padding:"100px 6%", background:bgCream, position:"relative", overflow:"hidden" }}>
+      <section id="pricing" style={{ padding:"80px 6%", background:bgCream, position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", right:-80, top:"50%", transform:"translateY(-50%)", opacity: dark ? 0.08 : 0.28, pointerEvents:"none" }}>
           <svg width="420" height="420" viewBox="0 0 420 420">{[60,100,140,180,220,260,300,340,380].map((r,i)=>(<circle key={i} cx="420" cy="210" r={r} stroke={P} strokeWidth="1.2" fill="none" opacity={0.9-i*0.08}/>))}</svg>
         </div>
         <div style={{ position:"absolute", left:40, bottom:40, opacity: dark ? 0.07 : 0.18, pointerEvents:"none" }}>
           <svg width="110" height="110" viewBox="0 0 110 110">{Array.from({length:6}).flatMap((_,row)=>Array.from({length:6}).map((_,col)=>(<circle key={`${row}-${col}`} cx={col*20+10} cy={row*20+10} r={2.5} fill={P}/>)))}</svg>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 0.45fr", gap:48, alignItems:"center", maxWidth:1240, margin:"0 auto", position:"relative", zIndex:1 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:40, alignItems:"center", maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
           <motion.div initial={{ opacity:0, x:-30 }} whileInView={{ opacity:1, x:0 }} viewport={{ once:true }} transition={{ duration:0.7 }}
             style={{ display:"flex", flexDirection:"column", gap:20 }}>
             <div style={{ width:88, height:88, borderRadius:"50%", background: dark ? "rgba(197,160,89,0.1)" : "#FFF5E0", border:`2px solid ${dark ? "rgba(197,160,89,0.3)" : "#F0DEB0"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
               <img src="/assets/Ordely.png" alt="Ordely" style={{ width:54, height:54, objectFit:"contain" }}/>
             </div>
             <div>
-              <h2 style={{ fontSize:52, fontWeight:900, color:tm, margin:0, letterSpacing:"-0.03em", lineHeight:1 }}>Todo Incluido</h2>
+              <h2 style={{ fontSize:"clamp(36px,4vw,52px)", fontWeight:900, color:tm, margin:0, letterSpacing:"-0.03em", lineHeight:1 }}>Todo Incluido</h2>
               <motion.div initial={{ width:0 }} whileInView={{ width:48 }} viewport={{ once:true }} transition={{ duration:0.6, delay:0.3 }}
                 style={{ height:3, background:P, borderRadius:2, margin:"16px 0 20px" }}/>
               <p style={{ fontSize:15, color:tg, lineHeight:1.75, margin:0 }}>Una sola plataforma.<br/>Todo lo que tu restaurante necesita<br/>para crecer sin limites.</p>
