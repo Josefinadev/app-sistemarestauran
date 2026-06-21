@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_state.dart';
+import '../widgets/supabase_image_widget.dart';
 
 typedef _Filtro = String; // todos | platos | bebidas
 
@@ -50,7 +51,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   void _setupRealtime() {
     final restId = context.read<MeseroAuthState>().restaurante?.id;
-    
+
     if (restId == null) return;
 
     final client = Supabase.instance.client;
@@ -60,7 +61,11 @@ class _PedidosScreenState extends State<PedidosScreen> {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'pedido',
-          filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'id_restaurante', value: restId),
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id_restaurante',
+            value: restId,
+          ),
           callback: (_) => _scheduleReload(),
         )
         .onPostgresChanges(
@@ -89,7 +94,9 @@ class _PedidosScreenState extends State<PedidosScreen> {
     });
 
     try {
-      final data = await ApiClient.getJson('/pedidos?id_restaurante=${rest.id}');
+      final data = await ApiClient.getJson(
+        '/pedidos?id_restaurante=${rest.id}',
+      );
       final List<ItemServir> newItems = [];
 
       for (final p in (data as List<dynamic>? ?? const [])) {
@@ -102,20 +109,34 @@ class _PedidosScreenState extends State<PedidosScreen> {
         final numeroPedido = (pedido['numero_pedido'] ?? 0) is int
             ? (pedido['numero_pedido'] as int)
             : int.tryParse((pedido['numero_pedido'] ?? '0').toString()) ?? 0;
-        final horaPedido = DateTime.tryParse((pedido['created_at'] ?? '').toString()) ?? DateTime.now();
+        final horaPedido =
+            DateTime.tryParse((pedido['created_at'] ?? '').toString()) ??
+            DateTime.now();
 
-        for (final d in (pedido['detalle_pedido'] as List<dynamic>? ?? const [])) {
+        for (final d
+            in (pedido['detalle_pedido'] as List<dynamic>? ?? const [])) {
           final det = Map<String, dynamic>.from(d as Map);
           final estado = (det['estado'] ?? '').toString();
           if (estado != 'LISTO' && estado != 'ENTREGADO') continue;
 
-          final prod = det['producto'] is Map ? Map<String, dynamic>.from(det['producto']) : <String, dynamic>{};
-          final agregados = (det['detalle_pedido_agregado'] as List<dynamic>? ?? const [])
-              .map((a) => (a is Map && a['agregado'] is Map) ? (a['agregado']['nombre'] ?? '').toString() : '')
-              .where((s) => s.trim().isNotEmpty)
-              .toList();
+          final prod = det['producto'] is Map
+              ? Map<String, dynamic>.from(det['producto'])
+              : <String, dynamic>{};
+          final agregados =
+              (det['detalle_pedido_agregado'] as List<dynamic>? ?? const [])
+                  .map(
+                    (a) => (a is Map && a['agregado'] is Map)
+                        ? (a['agregado']['nombre'] ?? '').toString()
+                        : '',
+                  )
+                  .where((s) => s.trim().isNotEmpty)
+                  .toList();
 
-          final created = DateTime.tryParse((det['created_at'] ?? pedido['created_at'] ?? '').toString()) ?? horaPedido;
+          final created =
+              DateTime.tryParse(
+                (det['created_at'] ?? pedido['created_at'] ?? '').toString(),
+              ) ??
+              horaPedido;
 
           newItems.add(
             ItemServir(
@@ -137,7 +158,10 @@ class _PedidosScreenState extends State<PedidosScreen> {
       }
 
       // new LISTO notification
-      final currentListos = newItems.where((i) => i.estado == 'LISTO').map((i) => i.id).toSet();
+      final currentListos = newItems
+          .where((i) => i.estado == 'LISTO')
+          .map((i) => i.id)
+          .toSet();
       final hasNew = currentListos.any((id) => !_prevListos.contains(id));
       _prevListos
         ..clear()
@@ -166,26 +190,30 @@ class _PedidosScreenState extends State<PedidosScreen> {
     setState(() => updatingKey = updating);
     try {
       for (final id in ids) {
-        await ApiClient.patchJson('/pedidos/detalle/$id/estado', {'estado': 'ENTREGADO'});
+        await ApiClient.patchJson('/pedidos/detalle/$id/estado', {
+          'estado': 'ENTREGADO',
+        });
       }
       setState(() {
         items = items
-            .map((i) => ids.contains(i.id)
-                ? ItemServir(
-                    id: i.id,
-                    nombre: i.nombre,
-                    mesa: i.mesa,
-                    hora: i.hora,
-                    estado: 'ENTREGADO',
-                    esBebida: i.esBebida,
-                    pedidoId: i.pedidoId,
-                    numeroPedido: i.numeroPedido,
-                    horaPedido: i.horaPedido,
-                    notas: i.notas,
-                    imagenUrl: i.imagenUrl,
-                    agregados: i.agregados,
-                  )
-                : i)
+            .map(
+              (i) => ids.contains(i.id)
+                  ? ItemServir(
+                      id: i.id,
+                      nombre: i.nombre,
+                      mesa: i.mesa,
+                      hora: i.hora,
+                      estado: 'ENTREGADO',
+                      esBebida: i.esBebida,
+                      pedidoId: i.pedidoId,
+                      numeroPedido: i.numeroPedido,
+                      horaPedido: i.horaPedido,
+                      notas: i.notas,
+                      imagenUrl: i.imagenUrl,
+                      agregados: i.agregados,
+                    )
+                  : i,
+            )
             .toList();
       });
     } finally {
@@ -198,8 +226,12 @@ class _PedidosScreenState extends State<PedidosScreen> {
     final cs = Theme.of(context).colorScheme;
 
     final listosCount = items.where((i) => i.estado == 'LISTO').length;
-    final platosListosCount = items.where((i) => i.estado == 'LISTO' && !i.esBebida).length;
-    final bebidasListasCount = items.where((i) => i.estado == 'LISTO' && i.esBebida).length;
+    final platosListosCount = items
+        .where((i) => i.estado == 'LISTO' && !i.esBebida)
+        .length;
+    final bebidasListasCount = items
+        .where((i) => i.estado == 'LISTO' && i.esBebida)
+        .length;
 
     final filtered = items.where((i) {
       if (filtro == 'platos') return !i.esBebida;
@@ -244,20 +276,53 @@ class _PedidosScreenState extends State<PedidosScreen> {
           children: [
             Row(
               children: [
-                Expanded(child: _PedidoStatCard(label: 'Por servir', value: '$listosCount', color: cs.primary, icon: Icons.flash_on_outlined)),
+                Expanded(
+                  child: _PedidoStatCard(
+                    label: 'Por servir',
+                    value: '$listosCount',
+                    color: cs.primary,
+                    icon: Icons.flash_on_outlined,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _PedidoStatCard(label: 'Platos', value: '$platosListosCount', color: cs.secondary, icon: Icons.restaurant_outlined)),
+                Expanded(
+                  child: _PedidoStatCard(
+                    label: 'Platos',
+                    value: '$platosListosCount',
+                    color: cs.secondary,
+                    icon: Icons.restaurant_outlined,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _PedidoStatCard(label: 'Bebidas', value: '$bebidasListasCount', color: cs.tertiary, icon: Icons.local_bar_outlined)),
+                Expanded(
+                  child: _PedidoStatCard(
+                    label: 'Bebidas',
+                    value: '$bebidasListasCount',
+                    color: cs.tertiary,
+                    icon: Icons.local_bar_outlined,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               children: [
-                _FilterChip(label: 'Todos', selected: filtro == 'todos', onTap: () => setState(() => filtro = 'todos')),
-                _FilterChip(label: 'Platos', selected: filtro == 'platos', onTap: () => setState(() => filtro = 'platos')),
-                _FilterChip(label: 'Bebidas', selected: filtro == 'bebidas', onTap: () => setState(() => filtro = 'bebidas')),
+                _FilterChip(
+                  label: 'Todos',
+                  selected: filtro == 'todos',
+                  onTap: () => setState(() => filtro = 'todos'),
+                ),
+                _FilterChip(
+                  label: 'Platos',
+                  selected: filtro == 'platos',
+                  onTap: () => setState(() => filtro = 'platos'),
+                ),
+                _FilterChip(
+                  label: 'Bebidas',
+                  selected: filtro == 'bebidas',
+                  onTap: () => setState(() => filtro = 'bebidas'),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -269,7 +334,10 @@ class _PedidosScreenState extends State<PedidosScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Center(
-                  child: Text('¡Todo servido! Sin items pendientes', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+                  child: Text(
+                    '¡Todo servido! Sin items pendientes',
+                    style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
+                  ),
                 ),
               ),
             for (final pedidoId in pedidoIds)
@@ -302,7 +370,11 @@ class _FilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -315,9 +387,20 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           color: selected ? cs.primary.withOpacity(0.14) : Colors.transparent,
-          border: Border.all(color: selected ? cs.primary.withOpacity(0.5) : cs.outlineVariant.withOpacity(0.5)),
+          border: Border.all(
+            color: selected
+                ? cs.primary.withOpacity(0.5)
+                : cs.outlineVariant.withOpacity(0.5),
+          ),
         ),
-        child: Text(label, style: TextStyle(color: selected ? cs.primary : cs.onSurface.withOpacity(0.65), fontWeight: FontWeight.w700, fontSize: 12)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? cs.primary : cs.onSurface.withOpacity(0.65),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
       ),
     );
   }
@@ -331,6 +414,7 @@ class _Aggregated {
   final DateTime hora;
   final bool esBebida;
   final String? notas;
+  final String? imagenUrl;
   final List<String> agregados;
   final List<String> listosIds;
   final bool allEntregado;
@@ -343,6 +427,7 @@ class _Aggregated {
     required this.hora,
     required this.esBebida,
     required this.notas,
+    this.imagenUrl,
     required this.agregados,
     required this.listosIds,
     required this.allEntregado,
@@ -381,7 +466,10 @@ class _PedidoCard extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: cs.outlineVariant.withOpacity(0.35))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: cs.outlineVariant.withOpacity(0.35)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -401,7 +489,11 @@ class _PedidoCard extends StatelessWidget {
                     child: Center(
                       child: Text(
                         '$mesa',
-                        style: TextStyle(color: cs.primary, fontWeight: FontWeight.w900, fontSize: 16),
+                        style: TextStyle(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -410,16 +502,28 @@ class _PedidoCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Mesa $mesa', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
+                        Text(
+                          'Mesa $mesa',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: cs.onSurface,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           '${listos.length} por entregar · ${entregados.length} entregados · ${formatHora(first.horaPedido)}',
-                          style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12),
+                          style: TextStyle(
+                            color: cs.onSurface.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(expanded ? Icons.expand_less : Icons.expand_more, color: cs.onSurface.withOpacity(0.6)),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: cs.onSurface.withOpacity(0.6),
+                  ),
                 ],
               ),
             ),
@@ -441,9 +545,16 @@ class _PedidoCard extends StatelessWidget {
                   child: FilledButton.tonal(
                     onPressed: updatingKey == 'pedido-all-$pedidoId'
                         ? null
-                        : () => onEntregarIds(listos.map((e) => e.id).toList(), 'pedido-all-$pedidoId'),
+                        : () => onEntregarIds(
+                            listos.map((e) => e.id).toList(),
+                            'pedido-all-$pedidoId',
+                          ),
                     child: updatingKey == 'pedido-all-$pedidoId'
-                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Text('Marcar todo como entregado'),
                   ),
                 ),
@@ -458,16 +569,21 @@ class _PedidoCard extends StatelessWidget {
   List<_Aggregated> _aggregate(List<ItemServir> raw) {
     final map = <String, List<ItemServir>>{};
     for (final i in raw) {
-      final normalizedAgregados = [...i.agregados]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final normalizedAgregados = [...i.agregados]
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       final normalizedNotas = (i.notas ?? '').trim();
-      final key = '${i.esBebida ? 'B' : 'P'}|${i.nombre}|$normalizedNotas|${normalizedAgregados.join(',')}';
+      final key =
+          '${i.esBebida ? 'B' : 'P'}|${i.nombre}|$normalizedNotas|${normalizedAgregados.join(',')}';
       (map[key] ??= []).add(i);
     }
     final out = <_Aggregated>[];
     for (final e in map.entries) {
       final list = e.value;
       list.sort((a, b) => b.hora.compareTo(a.hora));
-      final listosIds = list.where((x) => x.estado == 'LISTO').map((x) => x.id).toList();
+      final listosIds = list
+          .where((x) => x.estado == 'LISTO')
+          .map((x) => x.id)
+          .toList();
       out.add(
         _Aggregated(
           key: 'agg-${pedidoId}-${e.key}',
@@ -477,6 +593,7 @@ class _PedidoCard extends StatelessWidget {
           hora: list.first.hora,
           esBebida: list.first.esBebida,
           notas: list.first.notas,
+          imagenUrl: list.first.imagenUrl,
           agregados: list.first.agregados,
           listosIds: listosIds,
           allEntregado: list.every((x) => x.estado == 'ENTREGADO'),
@@ -495,7 +612,12 @@ class _AggRow extends StatelessWidget {
   final String Function(DateTime) formatHora;
   final VoidCallback? onEntregar;
 
-  const _AggRow({required this.a, required this.updatingKey, required this.formatHora, required this.onEntregar});
+  const _AggRow({
+    required this.a,
+    required this.updatingKey,
+    required this.formatHora,
+    required this.onEntregar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -508,20 +630,57 @@ class _AggRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        color: a.allEntregado ? cs.surfaceContainerHighest.withOpacity(0.35) : cs.surfaceContainerHighest,
+        color: a.allEntregado
+            ? cs.surfaceContainerHighest.withOpacity(0.35)
+            : cs.surfaceContainerHighest,
         border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: (a.esBebida ? cs.tertiary : cs.primary).withOpacity(0.14),
+          if (a.imagenUrl != null && a.imagenUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SupabaseImageWidget(
+                imagePath: a.imagenUrl,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                placeholder: Container(
+                  width: 48,
+                  height: 48,
+                  color: cs.surfaceVariant,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorWidget: Container(
+                  width: 48,
+                  height: 48,
+                  color: cs.surfaceVariant,
+                  child: const Center(
+                    child: Icon(Icons.broken_image_outlined, size: 18),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: (a.esBebida ? cs.tertiary : cs.primary).withOpacity(
+                  0.14,
+                ),
+              ),
+              child: Icon(
+                a.esBebida
+                    ? Icons.local_bar_outlined
+                    : Icons.restaurant_outlined,
+                size: 18,
+                color: a.esBebida ? cs.tertiary : cs.primary,
+              ),
             ),
-            child: Icon(a.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 18, color: a.esBebida ? cs.tertiary : cs.primary),
-          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -531,21 +690,48 @@ class _AggRow extends StatelessWidget {
                   '${a.nombre}${a.cantidad > 1 ? ' x${a.cantidad}' : ''}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w900, color: a.allEntregado ? cs.onSurface.withOpacity(0.55) : cs.onSurface),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: a.allEntregado
+                        ? cs.onSurface.withOpacity(0.55)
+                        : cs.onSurface,
+                  ),
                 ),
                 if ((a.notas ?? '').trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text('📝 ${a.notas}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onSurface.withOpacity(0.65), fontSize: 12)),
+                    child: Text(
+                      '📝 ${a.notas}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 if (a.agregados.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text('＋ ${a.agregados.join(', ')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onSurface.withOpacity(0.65), fontSize: 12)),
+                    child: Text(
+                      '＋ ${a.agregados.join(', ')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(formatHora(a.hora), style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 11)),
+                  child: Text(
+                    formatHora(a.hora),
+                    style: TextStyle(
+                      color: cs.onSurface.withOpacity(0.55),
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -555,7 +741,11 @@ class _AggRow extends StatelessWidget {
             IconButton.filledTonal(
               onPressed: isUpdating ? null : onEntregar,
               icon: isUpdating
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Icon(Icons.check_circle, color: cs.primary),
             )
           else
@@ -571,7 +761,12 @@ class _PedidoStatCard extends StatelessWidget {
   final String value;
   final Color color;
   final IconData icon;
-  const _PedidoStatCard({required this.label, required this.value, required this.color, required this.icon});
+  const _PedidoStatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -591,15 +786,34 @@ class _PedidoStatCard extends StatelessWidget {
               Container(
                 width: 26,
                 height: 26,
-                decoration: BoxDecoration(color: color.withOpacity(0.14), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Icon(icon, size: 14, color: color),
               ),
               const Spacer(),
-              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cs.onSurface)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: cs.onSurface,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: TextStyle(
+              color: cs.onSurface.withOpacity(0.6),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
