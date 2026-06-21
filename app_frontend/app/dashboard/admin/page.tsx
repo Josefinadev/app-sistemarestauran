@@ -29,6 +29,10 @@ export default function AdminDashboard() {
   const [previewUrl, setPreviewUrl] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const editFileRef = useRef<HTMLInputElement | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState("");
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -36,6 +40,14 @@ export default function AdminDashboard() {
       }
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (editPreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(editPreviewUrl);
+      }
+    };
+  }, [editPreviewUrl]);
 
   const downloadQr = (mesaSlug: string, mesaNum: number) => {
     const canvas = document.querySelector(`#qr-${mesaSlug} canvas`) as HTMLCanvasElement;
@@ -68,9 +80,21 @@ export default function AdminDashboard() {
 
   const mesaErrors = useMemo(() => ({
     numero: validate(vm.newMesa.numero, "integer", { required: true, min: 1, max: 9999 }),
-  }), [vm.newMesa.numero]);
+    capacidad: validate(vm.newMesa.capacidad, "integer", { required: true, min: 1, max: 99 }),
+  }), [vm.newMesa.numero, vm.newMesa.capacidad]);
 
-  const isMesaFormValid = !mesaErrors.numero;
+  const isMesaFormValid = !mesaErrors.numero && !mesaErrors.capacidad;
+
+  const getSuggestedCapacity = (numero: string) => {
+    const n = parseInt(numero, 10);
+    if (!n || n < 1) return "";
+    if (n <= 2) return "2";
+    if (n <= 4) return "4";
+    if (n <= 6) return "6";
+    return "8";
+  };
+
+  const suggestedCapacity = getSuggestedCapacity(vm.newMesa.numero);
 
   const categoriaErrors = useMemo(() => ({
     nombre: validate(vm.newCat.nombre, "text", { required: true }),
@@ -83,6 +107,24 @@ export default function AdminDashboard() {
     setPreviewUrl("");
     if (fileRef.current) {
       fileRef.current.value = "";
+    }
+  };
+
+  const handleEditImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setEditImageFile(file);
+    if (file) {
+      setEditPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setEditPreviewUrl(editProduct?.imagen_url || "");
+    }
+  };
+
+  const handleClearEditImage = () => {
+    setEditImageFile(null);
+    setEditPreviewUrl(editProduct?.imagen_url || "");
+    if (editFileRef.current) {
+      editFileRef.current.value = "";
     }
   };
 
@@ -103,6 +145,11 @@ export default function AdminDashboard() {
       es_bebida: p.es_bebida || false,
       requiere_preparacion: p.requiere_preparacion !== false,
     });
+    setEditImageFile(null);
+    setEditPreviewUrl(p.imagen_url || "");
+    if (editFileRef.current) {
+      editFileRef.current.value = "";
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -110,6 +157,11 @@ export default function AdminDashboard() {
     setEditSaving(true);
     try {
       const { actualizarProducto } = await import("@/lib/api");
+      let imagen_url = editProduct.imagen_url || null;
+      if (editImageFile) {
+        const { uploadImage } = await import("@/lib/api");
+        imagen_url = await uploadImage(editImageFile, "productos");
+      }
       await actualizarProducto(editProduct.id, {
         nombre: editData.nombre,
         precio: parseFloat(editData.precio),
@@ -119,8 +171,14 @@ export default function AdminDashboard() {
         id_categoria: editData.id_categoria,
         es_bebida: editData.es_bebida,
         requiere_preparacion: editData.requiere_preparacion,
+        imagen_url,
       });
       setEditProduct(null);
+      setEditImageFile(null);
+      setEditPreviewUrl("");
+      if (editFileRef.current) {
+        editFileRef.current.value = "";
+      }
       vm.loadData();
     } catch (err: any) {
       console.error("Error editing product:", err);
@@ -548,14 +606,13 @@ export default function AdminDashboard() {
             </span>
           </label>
           <input
+            type="number"
+            min={1}
+            step={1}
             className={`input ${mesaErrors.numero ? "input--invalid" : ""}`}
             placeholder="Ej: 1, 2, 3..."
-            inputMode="numeric"
             value={vm.newMesa.numero}
             onChange={(e) => vm.setNewMesa({ ...vm.newMesa, numero: sanitize(e.target.value, "integer") })}
-            onKeyDown={(e) => {
-              if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
-            }}
             autoFocus
           />
           {mesaErrors.numero && (
@@ -571,16 +628,24 @@ export default function AdminDashboard() {
             </span>
           </label>
           <input
-            className="input"
-            placeholder="Ej: 4 personas"
-            inputMode="numeric"
+            type="number"
+            min={1}
+            step={1}
+            className={`input ${mesaErrors.capacidad ? "input--invalid" : ""}`}
+            placeholder={suggestedCapacity ? `Ej: ${suggestedCapacity} personas` : "Ej: 4 personas"}
             value={vm.newMesa.capacidad}
-            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: sanitize(e.target.value, "integer") || "4" })}
-            onKeyDown={(e) => {
-              if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
-            }}
+            onChange={(e) => vm.setNewMesa({ ...vm.newMesa, capacidad: sanitize(e.target.value, "integer") })}
           />
-          <span className="premium-field-hint">Número máximo de comensales en esta mesa.</span>
+          {mesaErrors.capacidad && (
+            <span className="premium-field-error">
+              <AlertCircle size={11} /> {mesaErrors.capacidad}
+            </span>
+          )}
+          <span className="premium-field-hint">
+            {suggestedCapacity
+              ? `Sugerido: ${suggestedCapacity} personas para la mesa ${vm.newMesa.numero}.`
+              : "Número máximo de comensales en esta mesa."}
+          </span>
         </div>
       </Modal>
 
@@ -682,6 +747,60 @@ export default function AdminDashboard() {
           <label className="premium-field-label">Descripcion</label>
           <input className="input" value={editData.descripcion} onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })} placeholder="Descripcion breve" />
         </div>
+
+        <div className="premium-field">
+          <label className="premium-field-label">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <ImageIcon size={12} /> Imagen del plato
+            </span>
+          </label>
+          {editPreviewUrl ? (
+            <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)" }}>
+              <img
+                src={editPreviewUrl}
+                alt="Vista previa"
+                style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+              />
+            </div>
+          ) : (
+            <div style={{
+              display: "grid", placeItems: "center", minHeight: 120,
+              background: "var(--surface)",
+              border: "1px dashed var(--border)",
+              borderRadius: 14, color: "var(--text-muted)", fontSize: 12,
+            }}>
+              Selecciona una imagen para mostrar en la carta
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => editFileRef.current?.click()}
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1, minWidth: 140 }}
+            >
+              {editPreviewUrl ? "Cambiar imagen" : "Seleccionar imagen"}
+            </button>
+            {editPreviewUrl && (
+              <button
+                type="button"
+                onClick={handleClearEditImage}
+                className="btn btn-ghost btn-sm"
+                style={{ minWidth: 100 }}
+              >
+                Quitar
+              </button>
+            )}
+            <input
+              ref={editFileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleEditImageChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+
         <div className="premium-field" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <input type="checkbox" id="edit-bebida" checked={editData.es_bebida} onChange={(e) => setEditData({ ...editData, es_bebida: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--primary)" }} />
           <label htmlFor="edit-bebida" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer" }}>Es bebida</label>

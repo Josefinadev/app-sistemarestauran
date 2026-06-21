@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_state.dart';
+import '../widgets/supabase_image_widget.dart';
 
 typedef _Filtro = String; // todos | platos | bebidas
 
@@ -334,6 +335,7 @@ class _Aggregated {
   final List<String> agregados;
   final List<String> listosIds;
   final bool allEntregado;
+  final String? imagenUrl;
 
   _Aggregated({
     required this.key,
@@ -346,6 +348,7 @@ class _Aggregated {
     required this.agregados,
     required this.listosIds,
     required this.allEntregado,
+    this.imagenUrl,
   });
 }
 
@@ -480,6 +483,7 @@ class _PedidoCard extends StatelessWidget {
           agregados: list.first.agregados,
           listosIds: listosIds,
           allEntregado: list.every((x) => x.estado == 'ENTREGADO'),
+          imagenUrl: list.first.imagenUrl,
         ),
       );
     }
@@ -502,6 +506,7 @@ class _AggRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isUpdating = updatingKey == a.key;
     final canEntregar = onEntregar != null;
+    final hasImage = (a.imagenUrl ?? '').isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -513,16 +518,29 @@ class _AggRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: (a.esBebida ? cs.tertiary : cs.primary).withOpacity(0.14),
+          if (hasImage)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: SupabaseImageWidget(
+                imagePath: a.imagenUrl,
+                width: 56,
+                height: 56,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: (a.esBebida ? cs.tertiary : cs.primary).withOpacity(0.14),
+                ),
+                child: Icon(a.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 24, color: a.esBebida ? cs.tertiary : cs.primary),
+              ),
             ),
-            child: Icon(a.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined, size: 18, color: a.esBebida ? cs.tertiary : cs.primary),
-          ),
-          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

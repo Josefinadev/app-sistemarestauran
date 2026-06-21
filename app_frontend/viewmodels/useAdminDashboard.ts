@@ -47,7 +47,7 @@ export function useAdminDashboard() {
     requiere_preparacion: true,
     imagen_url: "",
   });
-  const [newMesa, setNewMesa] = useState({ numero: "", capacidad: "4" });
+  const [newMesa, setNewMesa] = useState({ numero: "", capacidad: "" });
   const [newCat, setNewCat] = useState({ nombre: "", descripcion: "" });
   const [saving, setSaving] = useState(false);
 
@@ -228,14 +228,14 @@ export function useAdminDashboard() {
       const created = await crearMesa({
         id_restaurante: idRestaurante,
         numero: parseInt(newMesa.numero),
-        capacidad: parseInt(newMesa.capacidad) || 4,
+        capacidad: parseInt(newMesa.capacidad) || 1,
       });
       if (created && created.id) {
         setMesas((prev) => [created, ...prev]);
         setStats((s) => ({ ...s, mesas: s.mesas + (created.activa ? 1 : 0) }));
       }
       setShowMesaModal(false);
-      setNewMesa({ numero: "", capacidad: "4" });
+      setNewMesa({ numero: "", capacidad: "" });
       toast.success({
         message: "Mesa creada",
         description: `Mesa ${newMesa.numero} lista. Su QR ya está disponible.`,
