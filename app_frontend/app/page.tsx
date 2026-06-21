@@ -74,11 +74,9 @@ export default function SaaSLandingPage() {
           <img src="/assets/Ordely.png" alt="Ordely" style={{ height: 36, width: "auto", objectFit: "contain" }} />
           <span style={{ fontSize: 22, fontWeight: 800, color: textMain, letterSpacing: "-0.02em" }}>Ordely</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
           <a href="#features" style={{ color: textGray, textDecoration: "none", fontSize: 15, fontWeight: 500 }}>Caracteristicas</a>
           <a href="#pricing" style={{ color: textGray, textDecoration: "none", fontSize: 15, fontWeight: 500 }}>Precios</a>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => setDarkMode(!darkMode)} style={{ width: 36, height: 36, borderRadius: 8, background: "transparent", border: `1px solid ${border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: textGray }}>
             {darkMode ? <Sun size={16} color={PRIMARY} /> : <Moon size={16} />}
           </button>
@@ -252,3 +250,4 @@ export default function SaaSLandingPage() {
     </div>
   );
 }
+
