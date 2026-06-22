@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { formatPrecio, formatHora } from "@/lib/utils";
+import { formatPrecio } from "@/lib/utils";
 import { useCajaDashboard } from "@/viewmodels/useCajaDashboard";
 import { NoUsuariosAsignados } from "@/components/NoUsuariosAsignados";
 import {
-  CreditCard, CheckCircle2, Clock, DollarSign,
-  X, Smartphone, Banknote, Image as ImageIcon,
+  CreditCard, CheckCircle2, DollarSign,
+  Smartphone, Banknote,
   ShoppingBag, BarChart3, Monitor, Printer,
   TrendingUp, ChevronDown, ChevronUp,
 } from "lucide-react";
@@ -45,6 +46,11 @@ const monitorColors: Record<string, string> = {
 export default function CajaDashboard() {
   const vm = useCajaDashboard();
   const [expandedMesas, setExpandedMesas] = useState<Set<string | number>>(new Set());
+  const [efectivoRecibido, setEfectivoRecibido] = useState<number | undefined>();
+  const [pagoIndividual, setPagoIndividual] = useState<boolean>(false);
+  const [pedidoActivo, setPedidoActivo] = useState<string | null>(null);
+  const [detallePagoIds, setDetallePagoIds] = useState<Set<string>>(new Set());
+  const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState<string | null>(null);
 
   const toggleMesa = (mesa: string | number) => {
     setExpandedMesas((prev) => {
@@ -74,7 +80,7 @@ export default function CajaDashboard() {
       {/* Stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         {[
-          { label: "Por cobrar", value: formatPrecio(vm.pendientes.reduce((s, p: any) => s + (p.total || 0), 0)), sub: `${vm.pendientes.length} pedidos pendientes`, iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: DollarSign },
+          { label: "Por cobrar", value: formatPrecio(vm.pendientes.reduce((s, p) => s + (p.total || 0), 0)), sub: `${vm.pendientes.length} pedidos pendientes`, iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: DollarSign },
           { label: "Pagados", value: formatPrecio(vm.totalDia), sub: `${vm.pagados.length} pedidos cobrados`, iconBg: "rgba(22,163,74,0.1)", iconColor: "var(--success)", Icon: CheckCircle2 },
           { label: "Ingresos hoy", value: formatPrecio(vm.totalDia), sub: "+18% vs ayer", iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)", Icon: TrendingUp },
           { label: "Total pedidos", value: String(vm.pedidos.length), sub: `${vm.pendientes.length} pend. · ${vm.pagados.length} cobrados`, iconBg: "rgba(74,108,247,0.1)", iconColor: "var(--tertiary)", Icon: ShoppingBag },
@@ -137,13 +143,13 @@ export default function CajaDashboard() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Mesa {mesa.mesa}</p>
                       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>
-                        Pedido #{mesa.pedidos[0]?.numeroPedido || "—"} · Hace {Math.floor(Math.random() * 30) + 5} min
+                        Pedido #{mesa.pedidos[0]?.numeroPedido || "—"} · {isPending ? "Cobro pendiente" : "Pagado"}
                       </p>
                     </div>
                     {/* Progress bar */}
                     <div style={{ width: 80, flexShrink: 0 }}>
                       <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${isPending ? (Math.floor(Math.random() * 60) + 20) : 100}%`, background: isPending ? "var(--warning)" : "var(--success)", borderRadius: 2 }} />
+                        <div style={{ height: "100%", width: `${isPending ? 40 : 100}%`, background: isPending ? "var(--warning)" : "var(--success)", borderRadius: 2 }} />
                       </div>
                     </div>
                     <div style={{ textAlign: "right", minWidth: 80, flexShrink: 0 }}>
@@ -157,13 +163,13 @@ export default function CajaDashboard() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
                         {["YAPE", "PLIN"].map((m) => (
                           <button key={m} onClick={(e) => { e.stopPropagation(); vm.pagarTodaLaMesa(mesa, m); }} className="pay-tag">
-                            {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 14, height: 14, objectFit: "contain", borderRadius: 2 }} /> : null}
+                            {metodoImages[m] ? <Image src={metodoImages[m]} alt={m} width={14} height={14} style={{ objectFit: "contain", borderRadius: 2 }} /> : null}
                             {m}
                           </button>
                         ))}
                         {["EFECTIVO", "BCP"].map((m) => (
                           <button key={m} onClick={(e) => { e.stopPropagation(); vm.pagarTodaLaMesa(mesa, m); }} className="pay-tag" style={{ background: m === "BCP" ? "#00529B" : "var(--surface)", color: m === "BCP" ? "#fff" : "var(--text)", borderColor: m === "BCP" ? "#00529B" : "var(--border)" }}>
-                            {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 14, height: 14, objectFit: "contain", borderRadius: 2 }} /> : null}
+                            {metodoImages[m] ? <Image src={metodoImages[m]} alt={m} width={14} height={14} style={{ objectFit: "contain", borderRadius: 2 }} /> : null}
                             {m === "BCP" ? `>${m}` : m}
                           </button>
                         ))}
@@ -189,24 +195,149 @@ export default function CajaDashboard() {
                             {p.items.map((item, i) => (
                               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <div style={{ width: 30, height: 30, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  {item.imagenUrl ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ShoppingBag size={12} color="var(--text-muted)" />}
+                                  {item.imagenUrl ? <Image src={item.imagenUrl} alt={item.nombre} width={30} height={30} unoptimized style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ShoppingBag size={12} color="var(--text-muted)" />}
                                 </div>
                                 <span style={{ flex: 1, fontSize: 12, color: "var(--text-secondary)" }}>{item.cantidad}x {item.nombre}</span>
                                 <span style={{ fontSize: 12, fontWeight: 500 }}>{formatPrecio(item.precio)}</span>
                               </div>
                             ))}
                           </div>
-                          {p.estadoPago === "PENDIENTE" && (
-                            <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              {METODOS_PAGO.map((m) => {
-                                const Icon = metodoIcons[m] || CreditCard;
-                                return (
-                                  <button key={m} onClick={() => vm.confirmarPago(p.id, m)} className="btn btn-secondary btn-sm" disabled={vm.procesando} style={{ fontSize: 10, opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4 }}>
-                                    {metodoImages[m] ? <img src={metodoImages[m]} alt={m} style={{ width: 12, height: 12, objectFit: "contain" }} /> : <Icon size={11} />}
-                                    {m}
-                                  </button>
-                                );
-                              })}
+                          {(p.estadoPago === "PENDIENTE" || p.estadoPago === "MIXTO") && (
+                            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {METODOS_PAGO.map((m) => {
+                                  const Icon = metodoIcons[m] || CreditCard;
+                                  const pendingItems = p.items.filter((item) => item.estado !== "ENTREGADO" && item.estado !== "CANCELADO");
+                                  return (
+                                    <button key={m} onClick={() => {
+                                      setPedidoActivo(p.id);
+                                      setPagoIndividual(true);
+                                      setMetodoPagoSeleccionado(m);
+                                      if (m === "EFECTIVO") {
+                                        setDetallePagoIds(new Set(pendingItems.map((item) => item.id).filter(Boolean)));
+                                        setEfectivoRecibido(pendingItems.reduce((sum, item) => sum + item.precio, 0));
+                                      } else {
+                                        setDetallePagoIds(new Set());
+                                        setEfectivoRecibido(undefined);
+                                      }
+                                    }} className="btn btn-secondary btn-sm" disabled={vm.procesando} style={{ fontSize: 10, opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                      {metodoImages[m] ? <Image src={metodoImages[m]} alt={m} width={12} height={12} style={{ objectFit: "contain" }} /> : <Icon size={11} />}
+                                      {m}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {p.id === pedidoActivo && pagoIndividual && (
+                                <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 12, background: "var(--surface)" }}>
+                                  <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+                                    Selecciona platos para pagar {metodoPagoSeleccionado ? `(Método: ${metodoPagoSeleccionado})` : ''}
+                                  </p>
+                                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                                    {p.items.map((item) => {
+                                      const idDetalle = item.id;
+                                      const selected = detallePagoIds.has(idDetalle);
+                                      const isLocked = item.estado === "ENTREGADO" || item.estado === "CANCELADO";
+                                      return (
+                                        <button
+                                          key={idDetalle}
+                                          type="button"
+                                          onClick={() => {
+                                            if (isLocked) return;
+                                            const next = new Set(detallePagoIds);
+                                            if (selected) next.delete(idDetalle);
+                                            else next.add(idDetalle);
+                                            setDetallePagoIds(next);
+                                          }}
+                                          disabled={isLocked}
+                                          style={{
+                                            padding: "6px 10px",
+                                            borderRadius: 999,
+                                            border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                            background: selected ? "var(--primary-ghost)" : isLocked ? "rgba(148,163,184,0.08)" : "transparent",
+                                            cursor: isLocked ? "not-allowed" : "pointer",
+                                            fontSize: 12,
+                                            color: isLocked ? "var(--text-secondary)" : "inherit",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                          }}
+                                        >
+                                          {isLocked ? "✓ " : selected ? "✓ " : "○ "}
+                                          {item.nombre}
+                                          {item.estado === "ENTREGADO" && <span style={{ fontSize: 11, color: "var(--success)", marginLeft: 4 }}>(Pagado)</span>}
+                                          {item.estado === "CANCELADO" && <span style={{ fontSize: 11, color: "var(--warning)", marginLeft: 4 }}>(Cancelado)</span>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 10 }}>
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                      Ítems pendientes: {p.items.filter((item) => item.estado !== "ENTREGADO" && item.estado !== "CANCELADO").length}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                      Seleccionados: {detallePagoIds.size}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                      Total seleccionado: {formatPrecio(p.items.filter((item) => detallePagoIds.has(item.id)).reduce((sum, item) => sum + item.precio, 0))}
+                                    </div>
+                                  </div>
+                                  {metodoPagoSeleccionado === 'EFECTIVO' ? (
+                                    <>
+                                      <label style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 600 }}>Monto recibido en efectivo</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={efectivoRecibido !== undefined ? efectivoRecibido : ""}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            setEfectivoRecibido(value === "" ? undefined : Number(value));
+                                          }}
+                                          placeholder="Ej. 50"
+                                          className="input"
+                                          style={{ width: 140 }}
+                                        />
+                                      </label>
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary btn-sm"
+                                        disabled={vm.procesando || efectivoRecibido === undefined || efectivoRecibido <= 0 || detallePagoIds.size === 0}
+                                        onClick={() => {
+                                          const detailIds = Array.from(detallePagoIds);
+                                          vm.confirmarPago(p.id, "EFECTIVO", efectivoRecibido, detailIds);
+                                          setPagoIndividual(false);
+                                          setPedidoActivo(null);
+                                          setEfectivoRecibido(undefined);
+                                          setDetallePagoIds(new Set());
+                                          setMetodoPagoSeleccionado(null);
+                                        }}
+                                      >
+                                        Registrar pago en efectivo
+                                      </button>
+                                    </>
+                                  ) : (
+                                    metodoPagoSeleccionado && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary btn-sm"
+                                        disabled={vm.procesando || detallePagoIds.size === 0}
+                                        onClick={() => {
+                                          const detailIds = Array.from(detallePagoIds);
+                                          vm.confirmarPago(p.id, metodoPagoSeleccionado, undefined, detailIds);
+                                          setPagoIndividual(false);
+                                          setPedidoActivo(null);
+                                          setEfectivoRecibido(undefined);
+                                          setDetallePagoIds(new Set());
+                                          setMetodoPagoSeleccionado(null);
+                                        }}
+                                      >
+                                        Pagar seleccionados con {metodoPagoSeleccionado}
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -255,19 +386,19 @@ export default function CajaDashboard() {
               {/* By payment method */}
               <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ventas por método de pago</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {Object.entries(vm.cuadre.porMetodo).map(([metodo, data]) => {
-                  const pct = vm.cuadre.totalVentas > 0 ? ((data as any).total / vm.cuadre.totalVentas) * 100 : 0;
+                {(Object.entries(vm.cuadre.porMetodo) as [string, { total: number; cantidad: number }][]).map(([metodo, data]) => {
+                  const pct = vm.cuadre.totalVentas > 0 ? ((data.total / vm.cuadre.totalVentas) * 100) : 0;
                   const colors: Record<string, string> = { YAPE: "#7C3AED", PLIN: "#0EA5E9", EFECTIVO: "#16A34A", BCP: "#00529B" };
                   const color = colors[metodo] || "var(--primary)";
                   return (
                     <div key={metodo}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {metodoImages[metodo] ? <img src={metodoImages[metodo]} alt={metodo} style={{ width: 16, height: 16, objectFit: "contain", borderRadius: 3 }} /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{metodo.charAt(0)}</span>}
+                          {metodoImages[metodo] ? <Image src={metodoImages[metodo]} alt={metodo} width={16} height={16} style={{ objectFit: "contain", borderRadius: 3 }} /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{metodo.charAt(0)}</span>}
                           <span style={{ fontSize: 12, color: "var(--text)" }}>{metodo}</span>
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{formatPrecio((data as any).total)}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{formatPrecio(data.total)}</span>
                           <span style={{ fontSize: 11, color: "var(--text-muted)", minWidth: 32, textAlign: "right" }}>{pct.toFixed(1)}%</span>
                         </div>
                       </div>
@@ -293,7 +424,7 @@ export default function CajaDashboard() {
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                {vm.monitorData.map((mesa: any) => {
+                {vm.monitorData.map((mesa) => {
                   const progress = mesa.platosTotal > 0 ? (mesa.platosEntregados / mesa.platosTotal) * 100 : 0;
                   const statusText = progress >= 100 ? "Entregado" : progress > 0 ? "En preparación" : "En cocina";
                   const color = monitorColors[statusText] || "var(--text-muted)";
@@ -346,16 +477,16 @@ export default function CajaDashboard() {
           <div className="card-flat" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 20px" }}>Por método de pago</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {Object.entries(vm.cuadre.porMetodo).map(([metodo, data]) => {
-                const pct = vm.cuadre.totalVentas > 0 ? ((data as any).total / vm.cuadre.totalVentas) * 100 : 0;
+              {(Object.entries(vm.cuadre.porMetodo) as [string, { total: number; cantidad: number }][]).map(([metodo, data]) => {
+                const pct = vm.cuadre.totalVentas > 0 ? ((data.total / vm.cuadre.totalVentas) * 100) : 0;
                 return (
                   <div key={metodo}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {metodoImages[metodo] ? <img src={metodoImages[metodo]} alt={metodo} style={{ width: 18, height: 18, objectFit: "contain", borderRadius: 4 }} /> : <CreditCard size={16} color="var(--text-secondary)" />}
+                        {metodoImages[metodo] ? <Image src={metodoImages[metodo]} alt={metodo} width={18} height={18} style={{ objectFit: "contain", borderRadius: 4 }} /> : <CreditCard size={16} color="var(--text-secondary)" />}
                         <span style={{ fontSize: 13, color: "var(--text)" }}>{metodo}</span>
                       </div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio((data as any).total)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>{formatPrecio(data.total)}</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: "var(--primary)", transition: "width 0.5s" }} />
@@ -372,7 +503,7 @@ export default function CajaDashboard() {
       {vm.activeTab === "monitor" && (
         <div className="animate-fade-in">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
-            {vm.monitorData.map((mesa: any) => {
+            {vm.monitorData.map((mesa) => {
               const progress = mesa.platosTotal > 0 ? (mesa.platosEntregados / mesa.platosTotal) * 100 : 0;
               return (
                 <div key={mesa.mesa} className="card-flat" style={{ padding: 16 }}>
@@ -400,6 +531,7 @@ export default function CajaDashboard() {
             )}
           </div>
         </div>
+
       )}
     </div>
   );

@@ -358,6 +358,26 @@ export default function MenuPage() {
                   })}
                 </div>
 
+                <div
+                  role="status"
+                  aria-live="polite"
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    background: "linear-gradient(90deg,#fff4e5,#fffaf0)",
+                    border: "1px solid rgba(255,200,120,0.6)",
+                    padding: 12,
+                    borderRadius: 12,
+                    marginTop: 6,
+                  }}
+                >
+                  <AlertCircle size={18} className="text-[var(--warning)]" />
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#7a4b00" }}>
+                    IMPORTANTE: Revisa tu pedido antes de confirmar. No hay devolución ni cambio de plato después de confirmar.
+                  </div>
+                </div>
+
                 <div className="mt-6 flex flex-col gap-4">
                   <label className="flex flex-col gap-1.5">
                     <span className="text-xs font-bold text-[var(--text)]">Notas del pedido (opcional)</span>

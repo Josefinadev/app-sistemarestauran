@@ -340,43 +340,161 @@ router.patch('/:id/pago', authenticate, async (req, res) => {
     if (!req.isSuperAdmin && !['caja', 'admin', 'propietario'].includes(req.user.rol)) {
       return res.status(403).json({ error: true, message: 'Solo caja/admin puede registrar pagos.' });
     }
-    const { metodo_pago, comprobante_url } = req.body;
+
+    const { metodo_pago, comprobante_url, efectivo_recibido: efectivoRaw, detalle_ids } = req.body;
     const validMetodos = ['EFECTIVO', 'YAPE', 'PLIN', 'TARJETA', 'BCP', 'OTRO'];
+    let efectivo_recibido;
 
     if (!validMetodos.includes(metodo_pago)) {
       return res.status(400).json({ error: true, message: `Método inválido. Válidos: ${validMetodos.join(', ')}` });
     }
 
-    // Al registrar pago, también actualizar estado del pedido a ENTREGADO
-    // para mantener coherencia entre estado y estado_pago
-    const { data, error } = await supabase
+    if (detalle_ids !== undefined && (!Array.isArray(detalle_ids) || detalle_ids.length === 0)) {
+      return res.status(400).json({ error: true, message: 'detalle_ids debe ser un arreglo con al menos un id válido.' });
+    }
+
+    if (efectivoRaw !== undefined) {
+      if (typeof efectivoRaw === 'string') {
+        if (efectivoRaw.trim() === '') {
+          return res.status(400).json({ error: true, message: 'efectivo_recibido no puede estar vacío.' });
+        }
+        efectivo_recibido = Number(efectivoRaw);
+      } else if (typeof efectivoRaw === 'number') {
+        efectivo_recibido = efectivoRaw;
+      } else {
+        return res.status(400).json({ error: true, message: 'efectivo_recibido debe ser un número.' });
+      }
+
+      if (Number.isNaN(efectivo_recibido)) {
+        return res.status(400).json({ error: true, message: 'efectivo_recibido debe ser un número válido.' });
+      }
+    }
+
+    if (metodo_pago === 'EFECTIVO' && efectivo_recibido === undefined) {
+      return res.status(400).json({ error: true, message: 'efectivo_recibido es requerido para pagos en efectivo.' });
+    }
+
+    const { data: pedidoMeta, error: pedidoMetaError } = await supabase
       .from('pedido')
-      .update({
+      .select('id_restaurante')
+      .eq('id', req.params.id)
+      .single();
+
+    if (pedidoMetaError) throw pedidoMetaError;
+    if (!pedidoMeta) return res.status(404).json({ error: true, message: 'Pedido no encontrado.' });
+    if (!req.isSuperAdmin && pedidoMeta.id_restaurante !== req.user.id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+    }
+
+    let pagoCompletado = false;
+
+    if (detalle_ids) {
+      const { data: detalles, error: detallesError } = await supabase
+        .from('detalle_pedido')
+        .select('id, id_pedido, estado, precio_unitario, detalle_pedido_agregado(precio_momento)')
+        .in('id', detalle_ids)
+        .eq('id_pedido', req.params.id);
+
+      if (detallesError) throw detallesError;
+      if (!detalles || detalles.length !== detalle_ids.length) {
+        return res.status(400).json({ error: true, message: 'Algunos ids de detalle no existen o no pertenecen al pedido.' });
+      }
+
+      const detallesValidos = detalles.filter((detalle) => detalle.estado !== 'ENTREGADO' && detalle.estado !== 'CANCELADO');
+      if (detallesValidos.length === 0) {
+        return res.status(400).json({ error: true, message: 'No hay ítems válidos para pagar en la selección.' });
+      }
+
+      const detalleTotal = detallesValidos.reduce((total, detalle) => {
+        const agregadosTotal = (detalle.detalle_pedido_agregado || []).reduce((sum, agregado) => sum + Number(agregado.precio_momento || 0), 0);
+        return total + ((Number(detalle.precio_unitario) || 0) + agregadosTotal);
+      }, 0);
+
+      if (efectivo_recibido !== undefined && efectivo_recibido < detalleTotal) {
+        return res.status(400).json({ error: true, message: 'El monto recibido en efectivo es menor al total de los ítems seleccionados.' });
+      }
+
+      const validIds = detallesValidos.map((detalle) => detalle.id);
+
+      const { error: actualizarDetallesError } = await supabase
+        .from('detalle_pedido')
+        .update({ estado: 'ENTREGADO' })
+        .in('id', validIds)
+        .neq('estado', 'ENTREGADO')
+        .neq('estado', 'CANCELADO');
+
+      if (actualizarDetallesError) throw actualizarDetallesError;
+
+      const { data: pendientes, error: pendientesError } = await supabase
+        .from('detalle_pedido')
+        .select('id')
+        .eq('id_pedido', req.params.id)
+        .neq('estado', 'ENTREGADO')
+        .neq('estado', 'CANCELADO');
+
+      if (pendientesError) throw pendientesError;
+      if (!pendientes || pendientes.length === 0) {
+        pagoCompletado = true;
+      }
+    } else {
+      pagoCompletado = true;
+      const { error: actualizarDetallesError } = await supabase
+        .from('detalle_pedido')
+        .update({ estado: 'ENTREGADO' })
+        .eq('id_pedido', req.params.id)
+        .neq('estado', 'ENTREGADO')
+        .neq('estado', 'CANCELADO');
+
+      if (actualizarDetallesError) throw actualizarDetallesError;
+    }
+
+    let data;
+
+    if (pagoCompletado) {
+      const pedidoUpdate = {
         estado: 'ENTREGADO',
         estado_pago: 'PAGADO',
         metodo_pago,
         comprobante_url: comprobante_url || null,
         pagado_en: new Date().toISOString(),
-      })
-      .eq('id', req.params.id)
-      .select()
-      .single();
+      };
 
-    if (error) throw error;
+      const updateResult = await supabase
+        .from('pedido')
+        .update(pedidoUpdate)
+        .eq('id', req.params.id)
+        .select()
+        .single();
 
-    if (!req.isSuperAdmin && data?.id_restaurante !== req.user.id_restaurante) {
-      return res.status(403).json({ error: true, message: 'No tienes acceso a este pedido.' });
+      if (updateResult.error) throw updateResult.error;
+      data = updateResult.data;
+    } else {
+      // Pago parcial: marcar pedido como MIXTO y guardar método usado
+      const updatePartial = {
+        // DB enum no contiene 'MIXTO' — usar 'PENDIENTE' para pagos parciales
+        estado_pago: 'PENDIENTE',
+        metodo_pago: metodo_pago,
+        comprobante_url: comprobante_url || null,
+      };
+
+      const { error: updatePartialError } = await supabase
+        .from('pedido')
+        .update(updatePartial)
+        .eq('id', req.params.id);
+
+      if (updatePartialError) throw updatePartialError;
+
+      const selectResult = await supabase
+        .from('pedido')
+        .select()
+        .eq('id', req.params.id)
+        .single();
+
+      if (selectResult.error) throw selectResult.error;
+      data = selectResult.data;
     }
 
-    // También marcar todos los detalles como ENTREGADO si no lo están
-    await supabase
-      .from('detalle_pedido')
-      .update({ estado: 'ENTREGADO' })
-      .eq('id_pedido', req.params.id)
-      .neq('estado', 'ENTREGADO')
-      .neq('estado', 'CANCELADO');
-
-    res.json({ data });
+    return res.json({ data, pagoCompletado });
   } catch (err) {
     res.status(500).json({ error: true, message: err.message });
   }

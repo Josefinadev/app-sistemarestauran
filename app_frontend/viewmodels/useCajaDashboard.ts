@@ -3,6 +3,16 @@ import { getPedidos, registrarPago, getUsuarios } from "@/lib/api";
 import { useAuth, useNotificaciones } from "@/lib/store";
 import { usePedidosRealtime } from "@/lib/realtime";
 
+export interface PedidoItemCaja {
+  id: string;
+  nombre: string;
+  cantidad: number;
+  precio: number;
+  precioUnitario: number;
+  estado: string;
+  imagenUrl?: string | null;
+}
+
 export interface PedidoCaja {
   id: string;
   numeroPedido: string;
@@ -13,7 +23,7 @@ export interface PedidoCaja {
   metodoPago: string | null;
   comprobanteUrl: string | null;
   hora: string;
-  items: { nombre: string; cantidad: number; precio: number; precioUnitario: number; estado: string; imagenUrl?: string | null }[];
+  items: PedidoItemCaja[];
 }
 
 export interface MesaCaja {
@@ -70,6 +80,7 @@ export function useCajaDashboard() {
         comprobanteUrl: p.comprobante_url,
         hora: p.created_at,
         items: (p.detalle_pedido || []).map((d: any) => ({
+          id: d.id,
           nombre: d.producto?.nombre || "Producto",
           cantidad: d.cantidad || 1,
           precio: (d.precio_unitario || 0) * (d.cantidad || 1),
@@ -123,7 +134,10 @@ export function useCajaDashboard() {
   }, [mesasAgrupadas, filtro]);
 
   // Stats
-  const pendientes = useMemo(() => pedidos.filter((p) => p.estadoPago === "PENDIENTE"), [pedidos]);
+  const pendientes = useMemo(
+    () => pedidos.filter((p) => p.estadoPago === "PENDIENTE" || p.estadoPago === "MIXTO"),
+    [pedidos]
+  );
   const pagados = useMemo(() => pedidos.filter((p) => p.estadoPago === "PAGADO"), [pedidos]);
   const totalDia = useMemo(() => pagados.reduce((acc, p) => acc + p.total, 0), [pagados]);
 
@@ -155,8 +169,17 @@ export function useCajaDashboard() {
   }, [pagados, pendientes, totalDia]);
 
   // Monitor data
-  const monitorData = useMemo(() => {
-    const mesasMap: Record<string, any> = {};
+  interface MonitorMesa {
+    mesa: string | number;
+    platosTotal: number;
+    platosPendientes: number;
+    platosPreparando: number;
+    platosListos: number;
+    platosEntregados: number;
+  }
+
+  const monitorData = useMemo<MonitorMesa[]>(() => {
+    const mesasMap: Record<string, MonitorMesa> = {};
     pedidos.filter((p) => p.estado !== "CANCELADO" && p.estadoPago !== "PAGADO").forEach((p) => {
       if (!mesasMap[p.mesa]) {
         mesasMap[p.mesa] = { mesa: p.mesa, platosTotal: 0, platosPendientes: 0, platosPreparando: 0, platosListos: 0, platosEntregados: 0 };
@@ -172,10 +195,10 @@ export function useCajaDashboard() {
     return Object.values(mesasMap);
   }, [pedidos]);
 
-  const confirmarPago = async (pedidoId: string, metodo: string) => {
+  const confirmarPago = async (pedidoId: string, metodo: string, efectivo_recibido?: number, detalle_ids?: string[]) => {
     setProcesando(true);
     try {
-      await registrarPago(pedidoId, metodo);
+      await registrarPago(pedidoId, metodo, undefined, efectivo_recibido, detalle_ids);
       addNotif({ tipo: "success", titulo: "Pago registrado", mensaje: `Pedido pagado via ${metodo}` });
       await loadPedidos();
     } catch (err: any) {
@@ -188,7 +211,7 @@ export function useCajaDashboard() {
   const pagarTodaLaMesa = async (mesa: MesaCaja, metodo: string) => {
     setProcesando(true);
     try {
-      const pendientesPago = mesa.pedidos.filter((p) => p.estadoPago === "PENDIENTE");
+      const pendientesPago = mesa.pedidos.filter((p) => p.estadoPago !== "PAGADO");
       for (const p of pendientesPago) {
         await registrarPago(p.id, metodo);
       }
