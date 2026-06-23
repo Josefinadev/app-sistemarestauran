@@ -165,7 +165,7 @@ export default function EstadoPage() {
   return (
     <>
     <div style={{ minHeight: "100vh", background: heroImage ? `linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.4) 100%), url(${heroImage}) center/cover no-repeat` : "var(--bg)" }}>
-    <main className="animate-fade-in" style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px" }}>
+    <main className="animate-fade-in" style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px 80px" }}>
       <ThemeToggle floating />
 
       {/* Header */}
@@ -319,7 +319,7 @@ export default function EstadoPage() {
           </div>
         </div>
       </>,
-      document.body
+      document.getElementById('portal-root') || document.body
     )}
     </>
   );

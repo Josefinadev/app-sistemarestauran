@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, UserPlus, LogIn } from "lucide-react";
+import { X, User, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, UserPlus, LogIn, ShoppingBag, LogOut } from "lucide-react";
 import { loginAuth, registrarCliente } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 
@@ -12,17 +12,18 @@ import { useAuth } from "@/lib/store";
    Respeta colores primary/secondary del restaurante.
    ═══════════════════════════════════════════════════════════ */
 
-type View = "options" | "login" | "register";
+type View = "options" | "login" | "register" | "account";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onContinueAsGuest: () => void;
   slug: string;
+  onHistorial?: () => void;
 }
 
-export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug }: Props) {
-  const { restaurante } = useAuth();
+export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHistorial }: Props) {
+  const { restaurante, usuario, logout } = useAuth();
   const [view, setView] = useState<View>("options");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +32,15 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug }: Prop
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Cuando el modal se abre, mostrar la vista correcta según estado de sesión
+  useEffect(() => {
+    if (open) {
+      setView(usuario ? "account" : "options");
+      setSuccess(false);
+      setError("");
+    }
+  }, [open, usuario]);
 
   const resetForm = () => {
     setEmail("");
@@ -54,13 +64,13 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug }: Prop
         return;
       }
       useAuth.getState().setSession({
-        accessToken: data.token,
-        refreshToken: data.refreshToken || "",
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || "",
         usuario: data.usuario,
         restaurante: data.restaurante || restaurante,
       });
       setSuccess(true);
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => { onClose(); setView("account"); }, 1000);
     } catch (err: any) {
       setError(err.message || "Email o contrasena incorrectos.");
     } finally {
@@ -70,28 +80,31 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug }: Prop
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !email.trim() || !password.trim() || !restaurante?.id) return;
+    if (!email.trim() || !password.trim() || !nombre.trim()) return;
+    if (!restaurante?.id) return;
     setLoading(true);
     setError("");
     try {
-      await registrarCliente({
-        nombre: nombre.trim(),
-        email: email.trim(),
-        password,
-        id_restaurante: restaurante.id,
-      });
-      // Auto login after register
-      const data = await loginAuth(email.trim(), password);
+      // 1. Crear la cuenta
+      await registrarCliente({ email: email.trim(), password, nombre, id_restaurante: restaurante.id });
+      
+      // 2. Iniciar sesión automáticamente
+      const loginData = await loginAuth(email.trim(), password);
+      if (loginData.usuario?.rol !== "cliente") {
+        throw new Error("Error en la asignación de rol.");
+      }
+      
       useAuth.getState().setSession({
-        accessToken: data.token,
-        refreshToken: data.refreshToken || "",
-        usuario: data.usuario,
-        restaurante: data.restaurante || restaurante,
+        accessToken: loginData.access_token,
+        refreshToken: loginData.refresh_token || "",
+        usuario: loginData.usuario,
+        restaurante: loginData.restaurante || restaurante,
       });
+      
       setSuccess(true);
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => { onClose(); setView("account"); }, 1000);
     } catch (err: any) {
-      setError(err.message || "Error al crear cuenta.");
+      setError(err.message || "Error al registrar la cuenta.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +144,51 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug }: Prop
 
           <div style={{ padding: "32px 24px 24px" }}>
             <AnimatePresence mode="wait">
-              {/* ═══ OPTIONS VIEW ═══ */}
+
+              {/* ═══ ACCOUNT VIEW (usuario ya logueado) ═══ */}
+              {view === "account" && !success && (
+                <motion.div
+                  key="account"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--primary-ghost)", border: "1px solid rgba(197,160,89,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                      <User size={24} color="var(--primary)" />
+                    </div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>
+                      {usuario?.nombre || "Mi cuenta"}
+                    </h2>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{usuario?.email}</p>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        if (onHistorial) onHistorial();
+                        else window.location.href = `/${slug}/historial`;
+                      }}
+                      style={{ width: "100%", padding: "14px 16px", background: "var(--primary)", color: "var(--text-inverse)", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    >
+                      <ShoppingBag size={16} /> Mi historial de pedidos
+                    </button>
+                    <button
+                      onClick={() => {
+                        logout();
+                        onClose();
+                        setView("options");
+                      }}
+                      style={{ width: "100%", padding: "14px 16px", background: "rgba(220,38,38,0.06)", color: "var(--error)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    >
+                      <LogOut size={16} /> Cerrar sesión
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               {view === "options" && !success && (
                 <motion.div
                   key="options"

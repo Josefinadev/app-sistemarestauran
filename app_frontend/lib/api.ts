@@ -6,17 +6,13 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
+import { useAuth } from "./store";
+
 /** Obtener el token de sesión actual del store (sin hooks) */
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    // El store (lib/store.ts) persiste en sessionStorage para mantener sesiones
-    // independientes por pestaña. Leer de localStorage siempre devolvería null
-    // y provocaría el error "Token faltante" en cada petición.
-    const raw = sessionStorage.getItem("el-mijano-auth");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.state?.accessToken || null;
+    return useAuth.getState().accessToken || null;
   } catch {
     return null;
   }
@@ -273,6 +269,9 @@ export const getPedidos = (params: { id_restaurante?: string; estado?: string; e
   if (params.estado_pago) query.set("estado_pago", params.estado_pago);
   return apiFetch(`/pedidos?${query.toString()}`);
 };
+
+export const getMisPedidos = (id_restaurante: string) =>
+  apiFetch(`/pedidos/mis-pedidos?id_restaurante=${id_restaurante}`);
 
 export const getPedido = (id: string) =>
   apiFetch(`/pedidos/${id}`);

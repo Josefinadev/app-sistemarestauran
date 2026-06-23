@@ -274,7 +274,7 @@ export default function MenuPage() {
             </motion.button>
           )}
         </AnimatePresence>,
-        document.body
+        document.getElementById('portal-root') || document.body
       )}
 
 
@@ -303,7 +303,7 @@ export default function MenuPage() {
             </motion.button>
           )}
         </AnimatePresence>,
-        document.body
+        document.getElementById('portal-root') || document.body
       )}
 
       {/* CART DRAWER */}
@@ -454,7 +454,7 @@ export default function MenuPage() {
             </div>
           )}
         </AnimatePresence>,
-        document.body
+        document.getElementById('portal-root') || document.body
       )}
 
       <AnimatePresence>

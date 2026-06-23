@@ -82,6 +82,7 @@ export default function RootLayout({
         />
         {children}
         <Toaster />
+        <div id="portal-root"></div>
       </body>
     </html>
   );

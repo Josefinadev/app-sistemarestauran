@@ -178,7 +178,7 @@ export function Modal({
   );
 
   if (!mounted) return null;
-  return createPortal(dialog, document.body);
+  return createPortal(dialog, document.getElementById('portal-root') || document.body);
 }
 
 type ModalFooterProps = {
