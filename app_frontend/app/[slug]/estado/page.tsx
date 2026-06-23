@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getEstadoTexto } from "@/lib/utils";
 import { getPedido } from "@/lib/api";
@@ -11,16 +11,16 @@ import {
   ChefHat,
   CheckCircle2,
   UtensilsCrossed,
-  StickyNote,
-  Plus,
   Receipt,
   Search,
   ArrowLeft,
-  Check,
   ShoppingCart,
   ChevronRight,
+  Home,
+  X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { createPortal } from "react-dom";
 
 /* ═══════════════════════════════════════════════════════════
    ESTADO DEL PEDIDO — Seguimiento en TIEMPO REAL
@@ -62,6 +62,24 @@ export default function EstadoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [numeroPedido, setNumeroPedido] = useState("");
+  const [showBackDialog, setShowBackDialog] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Montar estado cliente
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Interceptar botón "atrás" del navegador
+  useEffect(() => {
+    // Empujamos una entrada extra al historial para poder capturar el popstate
+    history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      // Restauramos la entrada para seguir interceptando si el usuario cancela
+      history.pushState(null, "", window.location.href);
+      setShowBackDialog(true);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     if (!pedidoId) {
@@ -145,6 +163,7 @@ export default function EstadoPage() {
   const progressPercent = maxProgress > 0 ? Math.round((currentProgress / maxProgress) * 100) : 0;
 
   return (
+    <>
     <div style={{ minHeight: "100vh", background: heroImage ? `linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.4) 100%), url(${heroImage}) center/cover no-repeat` : "var(--bg)" }}>
     <main className="animate-fade-in" style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px" }}>
       <ThemeToggle floating />
@@ -265,5 +284,43 @@ export default function EstadoPage() {
       </div>
     </main>
     </div>
+
+    {/* ── Diálogo confirmar retroceso ── */}
+    {isMounted && showBackDialog && createPortal(
+      <>
+        <div
+          className="back-dialog-overlay"
+          onClick={() => setShowBackDialog(false)}
+        />
+        <div className="back-dialog" role="dialog" aria-modal="true" aria-labelledby="back-dialog-title">
+          <div className="back-dialog-icon">
+            <Home size={24} />
+          </div>
+          <div className="back-dialog-body">
+            <h2 id="back-dialog-title">¿Deseas volver a la página de inicio?</h2>
+            <p>Tu pedido sigue activo. Puedes volver a ver su estado cuando quieras desde el menú.</p>
+          </div>
+          <div className="back-dialog-actions">
+            <button
+              className="back-dialog-btn-back"
+              onClick={() => {
+                setShowBackDialog(false);
+                router.push(`/${slug}/menu`);
+              }}
+            >
+              Volver al inicio
+            </button>
+            <button
+              className="back-dialog-btn-cancel"
+              onClick={() => setShowBackDialog(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </>,
+      document.body
+    )}
+    </>
   );
 }
