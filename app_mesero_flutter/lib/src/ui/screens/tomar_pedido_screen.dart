@@ -208,7 +208,6 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
         mesaNumero: selectedMesa!.numero,
         cart: cart,
         notasPedido: notasPedido,
-        total: _total,
         sending: sending,
         onUpdateQty: (id, delta) => _updateQty(id, delta),
         onRemove: (id) =>
@@ -387,7 +386,7 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.92,
+                childAspectRatio: 0.60,
               ),
               itemCount: filtered.length,
               itemBuilder: (context, idx) {
@@ -413,34 +412,35 @@ class _TomarPedidoScreenState extends State<TomarPedidoScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: SupabaseImageWidget(
-                              imagePath: p.imagenUrl,
-                              width: double.infinity,
-                              height: 120,
-                              fit: BoxFit.cover,
-                              placeholder: Container(
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: SupabaseImageWidget(
+                                imagePath: p.imagenUrl,
                                 width: double.infinity,
-                                height: 120,
-                                color: cs.surfaceVariant,
-                                child: const Center(
-                                  child: CircularProgressIndicator(),
+                                fit: BoxFit.cover,
+                                placeholder: Container(
+                                  width: double.infinity,
+                                  color: cs.surfaceVariant,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                                 ),
-                              ),
-                              errorWidget: Container(
-                                width: double.infinity,
-                                height: 120,
-                                color: cs.surfaceVariant,
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 28,
+                                errorWidget: Container(
+                                  width: double.infinity,
+                                  color: cs.surfaceVariant,
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 28,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                          )
+                        else
+                          const Expanded(child: SizedBox()),
                         if (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
                           const SizedBox(height: 10),
                         Row(
@@ -654,7 +654,6 @@ class _CartSheet extends StatefulWidget {
   final int mesaNumero;
   final List<_CartItem> cart;
   final String notasPedido;
-  final double total;
   final bool sending;
   final void Function(String id, int delta) onUpdateQty;
   final void Function(String id) onRemove;
@@ -666,7 +665,6 @@ class _CartSheet extends StatefulWidget {
     required this.mesaNumero,
     required this.cart,
     required this.notasPedido,
-    required this.total,
     required this.sending,
     required this.onUpdateQty,
     required this.onRemove,
@@ -697,6 +695,8 @@ class _CartSheetState extends State<_CartSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final currentTotal = widget.cart.fold<double>(0, (s, c) => s + (c.precio * c.cantidad));
+    
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -734,8 +734,14 @@ class _CartSheetState extends State<_CartSheet> {
                     for (final item in widget.cart)
                       _CartRow(
                         item: item,
-                        onUpdateQty: widget.onUpdateQty,
-                        onRemove: widget.onRemove,
+                        onUpdateQty: (id, delta) {
+                          widget.onUpdateQty(id, delta);
+                          setState(() {});
+                        },
+                        onRemove: (id) {
+                          widget.onRemove(id);
+                          setState(() {});
+                        },
                         onUpdateNotasItem: widget.onUpdateNotasItem,
                       ),
                     const SizedBox(height: 10),
@@ -775,7 +781,7 @@ class _CartSheetState extends State<_CartSheet> {
                         ),
                         const Spacer(),
                         Text(
-                          'S/ ${widget.total.toStringAsFixed(2)}',
+                          'S/ ${currentTotal.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 18,

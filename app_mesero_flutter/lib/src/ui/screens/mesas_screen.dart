@@ -115,7 +115,7 @@ class _MesasScreenState extends State<MesasScreen> {
       }
 
       final out = map.values.toList()..sort((a, b) => a.numero.compareTo(b.numero));
-      setState(() => mesas = out);
+      if (mounted) setState(() => mesas = out);
     } finally {
       if (mounted) {
         setState(() {
@@ -291,12 +291,13 @@ class _MesaCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: m.pedidoActivo ? cs.primary.withOpacity(0.12) : cs.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
@@ -304,43 +305,43 @@ class _MesaCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     '${m.numero}',
-                    style: TextStyle(fontWeight: FontWeight.w900, color: m.pedidoActivo ? cs.primary : cs.onSurface.withOpacity(0.6)),
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: m.pedidoActivo ? cs.primary : cs.onSurface.withOpacity(0.6)),
                   ),
                 ),
               ),
               const Spacer(),
               if (m.pedidoActivo)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(999)),
-                  child: Text('${m.platosListos + m.platosEntregados}/${m.totalPlatos}', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 11, fontWeight: FontWeight.w800)),
+                  child: Text('${m.platosListos + m.platosEntregados}/${m.totalPlatos}', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.w800)),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text('Mesa ${m.numero}', style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface)),
           const SizedBox(height: 6),
+          Text('Mesa ${m.numero}', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: cs.onSurface)),
+          const SizedBox(height: 4),
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12), overflow: TextOverflow.ellipsis)),
-              Icon(icon, size: 16, color: color.withOpacity(0.85)),
+              Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11), overflow: TextOverflow.ellipsis)),
+              Icon(icon, size: 14, color: color.withOpacity(0.85)),
             ],
           ),
           if (m.pedidoActivo) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 value: progress,
-                minHeight: 8,
+                minHeight: 6,
                 backgroundColor: cs.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(progress >= 1 ? cs.tertiary : Colors.green),
               ),
             ),
-            const SizedBox(height: 6),
-            Text('${(progress * 100).round()}%', style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 11)),
+            const SizedBox(height: 4),
+            Text('${(progress * 100).round()}%', style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 10)),
           ],
         ],
       ),

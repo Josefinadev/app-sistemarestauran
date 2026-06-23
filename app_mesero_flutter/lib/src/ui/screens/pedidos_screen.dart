@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,6 +87,17 @@ class _PedidosScreenState extends State<PedidosScreen> {
     });
   }
 
+  DateTime _parseSupaDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return DateTime.now();
+    if (!dateStr.endsWith('Z') && !dateStr.contains('+')) {
+      final tIdx = dateStr.indexOf('T');
+      if (tIdx != -1 && dateStr.lastIndexOf('-') < tIdx) {
+        dateStr += 'Z';
+      }
+    }
+    return (DateTime.tryParse(dateStr) ?? DateTime.now()).toLocal();
+  }
+
   Future<void> _load() async {
     final rest = context.read<MeseroAuthState>().restaurante;
     if (rest == null) return;
@@ -111,9 +122,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
             : int.tryParse((pedido['numero_pedido'] ?? '0').toString()) ?? 0;
 
         // Convert to LOCAL time
-        final horaPedido =
-            (DateTime.tryParse((pedido['created_at'] ?? '').toString()) ??
-                DateTime.now()).toLocal();
+        final horaPedido = _parseSupaDate((pedido['created_at'] ?? '').toString());
 
         for (final d
             in (pedido['detalle_pedido'] as List<dynamic>? ?? const [])) {
@@ -137,9 +146,8 @@ class _PedidosScreenState extends State<PedidosScreen> {
                   .toList();
 
           // Convert detail time to LOCAL
-          final created = (DateTime.tryParse(
-                    (det['created_at'] ?? pedido['created_at'] ?? '').toString(),
-                  ) ?? horaPedido).toLocal();
+          final createdStr = (det['updated_at'] ?? det['created_at'] ?? pedido['created_at'] ?? '').toString();
+          final created = createdStr.isNotEmpty ? _parseSupaDate(createdStr) : horaPedido;
 
           newItems.add(
             ItemServir(
