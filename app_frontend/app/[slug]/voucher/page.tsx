@@ -103,11 +103,16 @@ export default function VoucherPage() {
         .getPublicUrl(filePath);
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+      const latestPago = Array.isArray(pedido?.pedido_pago)
+        ? [...pedido.pedido_pago].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        : null;
+      const metodoPago = latestPago?.metodo_pago || pedido?.metodo_pago || "YAPE";
+
       await fetch(`${API_URL}/pedidos/${pedidoId}/pago`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          metodo_pago: pedido.metodo_pago || "YAPE",
+          metodo_pago: metodoPago,
           comprobante_url: urlData?.publicUrl || `comprobante-${pedidoId}`,
         }),
       });

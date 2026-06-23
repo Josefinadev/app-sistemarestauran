@@ -13,6 +13,16 @@ export interface PedidoItemCaja {
   imagenUrl?: string | null;
 }
 
+export interface PedidoPago {
+  id: string;
+  metodoPago: string;
+  monto: number;
+  efectivoRecibido?: number | null;
+  comprobanteUrl?: string | null;
+  detalleIds?: string[];
+  createdAt: string;
+}
+
 export interface PedidoCaja {
   id: string;
   numeroPedido: string;
@@ -22,6 +32,9 @@ export interface PedidoCaja {
   estadoPago: string;
   metodoPago: string | null;
   comprobanteUrl: string | null;
+  montoPagado: number;
+  montoRestante: number;
+  pagos: PedidoPago[];
   hora: string;
   items: PedidoItemCaja[];
 }
@@ -69,26 +82,57 @@ export function useCajaDashboard() {
       if (loading) setLoading(true);
       const res = await getPedidos({ id_restaurante: idRest });
 
-      const mapped: PedidoCaja[] = (res || []).map((p: any) => ({
-        id: p.id,
-        numeroPedido: `PED-${String(p.numero_pedido).padStart(3, "0")}`,
-        mesa: p.mesa?.numero || "S/M",
-        total: p.total || 0,
-        estado: p.estado,
-        estadoPago: p.estado_pago,
-        metodoPago: p.metodo_pago,
-        comprobanteUrl: p.comprobante_url,
-        hora: p.created_at,
-        items: (p.detalle_pedido || []).map((d: any) => ({
-          id: d.id,
-          nombre: d.producto?.nombre || "Producto",
-          cantidad: d.cantidad || 1,
-          precio: (d.precio_unitario || 0) * (d.cantidad || 1),
-          precioUnitario: d.precio_unitario || 0,
-          estado: d.estado,
-          imagenUrl: d.producto?.imagen_url || null,
-        })),
-      }));
+      const mapped: PedidoCaja[] = (res || []).map((p: any) => {
+        const pagosData = (p.pedido_pago || []).map((pay: any) => ({
+          id: pay.id,
+          metodoPago: pay.metodo_pago,
+          monto: Number(pay.monto || 0),
+          efectivoRecibido: pay.efectivo_recibido !== null ? Number(pay.efectivo_recibido) : undefined,
+          comprobanteUrl: pay.comprobante_url || null,
+          detalleIds: pay.detalle_ids || [],
+          createdAt: pay.created_at,
+        }));
+        const montoPagado = pagosData.reduce((sum: number, pay: { monto: number }) => sum + pay.monto, 0);
+        const montoRestante = Math.max(0, Number(p.total || 0) - montoPagado);
+        const metodoPago = pagosData.length === 1 ? pagosData[0].metodoPago : p.metodo_pago || null;
+        const estadoPago = montoRestante <= 0
+          ? 'PAGADO'
+          : montoPagado > 0
+          ? 'MIXTO'
+          : p.estado_pago === 'PAGADO'
+          ? 'PAGADO'
+          : p.estado_pago === 'MIXTO'
+          ? 'MIXTO'
+          : 'PENDIENTE';
+
+        return {
+          id: p.id,
+          numeroPedido: `PED-${String(p.numero_pedido).padStart(3, "0")}`,
+          mesa: p.mesa?.numero || "S/M",
+          total: p.total || 0,
+          estado: p.estado,
+          estadoPago,
+          metodoPago,
+          comprobanteUrl: p.comprobante_url,
+          montoPagado,
+          montoRestante,
+          pagos: pagosData,
+          hora: p.created_at,
+          items: (p.detalle_pedido || []).map((d: any) => {
+            const isPaidByDetalle = pagosData.some((pay) => Array.isArray(pay.detalleIds) && pay.detalleIds.includes(d.id));
+            const allPaidPedido = montoRestante <= 0;
+            return {
+              id: d.id,
+              nombre: d.producto?.nombre || "Producto",
+              cantidad: d.cantidad || 1,
+              precio: (d.precio_unitario || 0) * (d.cantidad || 1),
+              precioUnitario: d.precio_unitario || 0,
+              estado: allPaidPedido || isPaidByDetalle ? "ENTREGADO" : d.estado,
+              imagenUrl: d.producto?.imagen_url || null,
+            };
+          }),
+        };
+      });
 
       setPedidos(mapped);
     } catch (err) {
@@ -139,7 +183,10 @@ export function useCajaDashboard() {
     [pedidos]
   );
   const pagados = useMemo(() => pedidos.filter((p) => p.estadoPago === "PAGADO"), [pedidos]);
-  const totalDia = useMemo(() => pagados.reduce((acc, p) => acc + p.total, 0), [pagados]);
+  const totalDia = useMemo(
+    () => pedidos.flatMap((p) => p.pagos || []).reduce((acc, pago) => acc + pago.monto, 0),
+    [pedidos]
+  );
 
   const pedidoSeleccionado = useMemo(() => {
     return pedidos.find((p) => p.id === selectedPedidoId) || null;
@@ -152,21 +199,25 @@ export function useCajaDashboard() {
   // Cuadre
   const cuadre = useMemo(() => {
     const porMetodo: Record<string, { total: number; cantidad: number }> = {};
-    pagados.forEach((p) => {
-      const m = p.metodoPago || "OTROS";
+    const allPagos = pedidos.flatMap((p) => p.pagos || []);
+    allPagos.forEach((pago) => {
+      const m = pago.metodoPago || "OTROS";
       if (!porMetodo[m]) porMetodo[m] = { total: 0, cantidad: 0 };
-      porMetodo[m].total += p.total;
+      porMetodo[m].total += pago.monto;
       porMetodo[m].cantidad += 1;
     });
+    const pedidosConPago = pedidos.filter((p) => Array.isArray(p.pagos) && p.pagos.length > 0);
+    const totalVentas = allPagos.reduce((sum, pago) => sum + pago.monto, 0);
+
     return {
-      totalVentas: totalDia,
-      cantidadPedidos: pagados.length,
-      ticketPromedio: pagados.length > 0 ? totalDia / pagados.length : 0,
+      totalVentas,
+      cantidadPedidos: pedidosConPago.length,
+      ticketPromedio: pedidosConPago.length > 0 ? totalVentas / pedidosConPago.length : 0,
       cantidadPendientes: pendientes.length,
-      pendientesCobro: pendientes.reduce((acc, p) => acc + p.total, 0),
+      pendientesCobro: pendientes.reduce((acc, p) => acc + p.montoRestante, 0),
       porMetodo,
     };
-  }, [pagados, pendientes, totalDia]);
+  }, [pedidos, pendientes]);
 
   // Monitor data
   interface MonitorMesa {
@@ -195,10 +246,10 @@ export function useCajaDashboard() {
     return Object.values(mesasMap);
   }, [pedidos]);
 
-  const confirmarPago = async (pedidoId: string, metodo: string, efectivo_recibido?: number, detalle_ids?: string[]) => {
+  const confirmarPago = async (pedidoId: string, metodo: string, efectivo_recibido?: number, detalle_ids?: string[], monto?: number) => {
     setProcesando(true);
     try {
-      await registrarPago(pedidoId, metodo, undefined, efectivo_recibido, detalle_ids);
+      await registrarPago(pedidoId, metodo, undefined, efectivo_recibido, detalle_ids?.length ? detalle_ids : undefined, monto);
       addNotif({ tipo: "success", titulo: "Pago registrado", mensaje: `Pedido pagado via ${metodo}` });
       await loadPedidos();
     } catch (err: any) {

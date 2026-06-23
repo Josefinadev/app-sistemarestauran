@@ -51,6 +51,8 @@ export default function CajaDashboard() {
   const [pedidoActivo, setPedidoActivo] = useState<string | null>(null);
   const [detallePagoIds, setDetallePagoIds] = useState<Set<string>>(new Set());
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState<string | null>(null);
+  const [montoAPagar, setMontoAPagar] = useState<number | undefined>();
+  const [montoManual, setMontoManual] = useState<boolean>(false);
 
   const toggleMesa = (mesa: string | number) => {
     setExpandedMesas((prev) => {
@@ -207,17 +209,23 @@ export default function CajaDashboard() {
                               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                                 {METODOS_PAGO.map((m) => {
                                   const Icon = metodoIcons[m] || CreditCard;
-                                  const pendingItems = p.items.filter((item) => item.estado !== "ENTREGADO" && item.estado !== "CANCELADO");
+                                  const selectedItems = p.items.filter((item) => detallePagoIds.has(item.id));
+                                  const selectedAmount = selectedItems.reduce((sum, item) => sum + item.precio, 0);
+                                  const hasSelection = selectedItems.length > 0;
                                   return (
                                     <button key={m} onClick={() => {
+                                      const isSamePedido = p.id === pedidoActivo;
+                                      const shouldKeepManual = !hasSelection && isSamePedido && montoManual;
                                       setPedidoActivo(p.id);
                                       setPagoIndividual(true);
                                       setMetodoPagoSeleccionado(m);
+                                      setMontoManual(hasSelection ? false : shouldKeepManual);
+                                      setDetallePagoIds(hasSelection ? new Set(selectedItems.map((item) => item.id).filter(Boolean)) : new Set());
+                                      const montoInicial = hasSelection ? selectedAmount : shouldKeepManual ? montoAPagar : p.montoRestante;
+                                      setMontoAPagar(montoInicial);
                                       if (m === "EFECTIVO") {
-                                        setDetallePagoIds(new Set(pendingItems.map((item) => item.id).filter(Boolean)));
-                                        setEfectivoRecibido(pendingItems.reduce((sum, item) => sum + item.precio, 0));
+                                        setEfectivoRecibido(montoInicial);
                                       } else {
-                                        setDetallePagoIds(new Set());
                                         setEfectivoRecibido(undefined);
                                       }
                                     }} className="btn btn-secondary btn-sm" disabled={vm.procesando} style={{ fontSize: 10, opacity: vm.procesando ? 0.6 : 1, display: "flex", alignItems: "center", gap: 4 }}>
@@ -231,31 +239,64 @@ export default function CajaDashboard() {
                               {p.id === pedidoActivo && pagoIndividual && (
                                 <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 12, background: "var(--surface)" }}>
                                   <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
-                                    Selecciona platos para pagar {metodoPagoSeleccionado ? `(Método: ${metodoPagoSeleccionado})` : ''}
+                                    Pago parcial en {metodoPagoSeleccionado ? metodoPagoSeleccionado : "método seleccionado"}
                                   </p>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                      Total pendiente: {formatPrecio(p.montoRestante)}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                      Pago por monto: {montoAPagar !== undefined ? formatPrecio(montoAPagar) : "—"}
+                                    </div>
+                                    {detallePagoIds.size > 0 && (
+                                      <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                        Selección: {formatPrecio(p.items.filter((item) => detallePagoIds.has(item.id)).reduce((sum, item) => sum + item.precio, 0))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {p.items.some((item) => item.estado === "ENTREGADO") && (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>Platos ya pagados:</span>
+                                      {p.items.filter((item) => item.estado === "ENTREGADO").map((item) => (
+                                        <span key={item.id} style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(22,163,74,0.12)", color: "var(--success)", fontSize: 11, fontWeight: 600 }}>
+                                          {item.nombre}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                                     {p.items.map((item) => {
                                       const idDetalle = item.id;
                                       const selected = detallePagoIds.has(idDetalle);
                                       const isLocked = item.estado === "ENTREGADO" || item.estado === "CANCELADO";
+                                      const selectionDisabled = montoManual || isLocked;
                                       return (
                                         <button
                                           key={idDetalle}
                                           type="button"
                                           onClick={() => {
-                                            if (isLocked) return;
+                                            if (selectionDisabled) return;
                                             const next = new Set(detallePagoIds);
                                             if (selected) next.delete(idDetalle);
                                             else next.add(idDetalle);
                                             setDetallePagoIds(next);
+                                            const selectedItems = p.items.filter((item) => next.has(item.id));
+                                            const selectedAmount = selectedItems.reduce((sum, item) => sum + item.precio, 0);
+                                            if (selectedItems.length > 0) {
+                                              setMontoAPagar(selectedAmount);
+                                              setMontoManual(false);
+                                              if (metodoPagoSeleccionado === "EFECTIVO") {
+                                                setEfectivoRecibido(selectedAmount);
+                                              }
+                                            }
                                           }}
-                                          disabled={isLocked}
+                                          disabled={selectionDisabled}
                                           style={{
                                             padding: "6px 10px",
                                             borderRadius: 999,
                                             border: selected ? "1px solid var(--primary)" : "1px solid var(--border)",
                                             background: selected ? "var(--primary-ghost)" : isLocked ? "rgba(148,163,184,0.08)" : "transparent",
-                                            cursor: isLocked ? "not-allowed" : "pointer",
+                                            cursor: selectionDisabled ? "not-allowed" : "pointer",
                                             fontSize: 12,
                                             color: isLocked ? "var(--text-secondary)" : "inherit",
                                             display: "flex",
@@ -271,30 +312,27 @@ export default function CajaDashboard() {
                                       );
                                     })}
                                   </div>
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 10 }}>
-                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                      Ítems pendientes: {p.items.filter((item) => item.estado !== "ENTREGADO" && item.estado !== "CANCELADO").length}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                      Seleccionados: {detallePagoIds.size}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                      Total seleccionado: {formatPrecio(p.items.filter((item) => detallePagoIds.has(item.id)).reduce((sum, item) => sum + item.precio, 0))}
-                                    </div>
-                                  </div>
                                   {metodoPagoSeleccionado === 'EFECTIVO' ? (
                                     <>
                                       <label style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
-                                        <span style={{ fontSize: 12, fontWeight: 600 }}>Monto recibido en efectivo</span>
+                                        <span style={{ fontSize: 12, fontWeight: 600 }}>Monto a pagar con {metodoPagoSeleccionado}</span>
                                         <input
                                           type="number"
                                           min="0"
-                                          value={efectivoRecibido !== undefined ? efectivoRecibido : ""}
+                                          value={montoAPagar !== undefined ? montoAPagar : ""}
                                           onChange={(e) => {
                                             const value = e.target.value;
-                                            setEfectivoRecibido(value === "" ? undefined : Number(value));
+                                            const parsed = value === "" ? undefined : Number(value);
+                                            setMontoAPagar(parsed);
+                                            setEfectivoRecibido(parsed);
+                                            if (!detallePagoIds.size) {
+                                              setMontoManual(parsed !== undefined);
+                                            }
+                                            if (parsed !== undefined && detallePagoIds.size > 0) {
+                                              setDetallePagoIds(new Set());
+                                            }
                                           }}
-                                          placeholder="Ej. 50"
+                                          placeholder="Ej. 56"
                                           className="input"
                                           style={{ width: 140 }}
                                         />
@@ -302,38 +340,60 @@ export default function CajaDashboard() {
                                       <button
                                         type="button"
                                         className="btn btn-primary btn-sm"
-                                        disabled={vm.procesando || efectivoRecibido === undefined || efectivoRecibido <= 0 || detallePagoIds.size === 0}
+                                        disabled={vm.procesando || montoAPagar === undefined || montoAPagar <= 0}
                                         onClick={() => {
-                                          const detailIds = Array.from(detallePagoIds);
-                                          vm.confirmarPago(p.id, "EFECTIVO", efectivoRecibido, detailIds);
+                                          vm.confirmarPago(p.id, "EFECTIVO", montoAPagar, undefined, montoAPagar);
                                           setPagoIndividual(false);
                                           setPedidoActivo(null);
                                           setEfectivoRecibido(undefined);
-                                          setDetallePagoIds(new Set());
                                           setMetodoPagoSeleccionado(null);
+                                          setMontoAPagar(undefined);
                                         }}
                                       >
-                                        Registrar pago en efectivo
+                                        Registrar pago en efectivo parcial
                                       </button>
                                     </>
                                   ) : (
                                     metodoPagoSeleccionado && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-primary btn-sm"
-                                        disabled={vm.procesando || detallePagoIds.size === 0}
-                                        onClick={() => {
-                                          const detailIds = Array.from(detallePagoIds);
-                                          vm.confirmarPago(p.id, metodoPagoSeleccionado, undefined, detailIds);
-                                          setPagoIndividual(false);
-                                          setPedidoActivo(null);
-                                          setEfectivoRecibido(undefined);
-                                          setDetallePagoIds(new Set());
-                                          setMetodoPagoSeleccionado(null);
-                                        }}
-                                      >
-                                        Pagar seleccionados con {metodoPagoSeleccionado}
-                                      </button>
+                                      <>
+                                        <label style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                                          <span style={{ fontSize: 12, fontWeight: 600 }}>Monto a pagar con {metodoPagoSeleccionado}</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            value={montoAPagar !== undefined ? montoAPagar : ""}
+                                            onChange={(e) => {
+                                              const value = e.target.value;
+                                              const parsed = value === "" ? undefined : Number(value);
+                                              setMontoAPagar(parsed);
+                                              if (!detallePagoIds.size) {
+                                                setMontoManual(parsed !== undefined);
+                                              }
+                                              if (parsed !== undefined && detallePagoIds.size > 0) {
+                                                setDetallePagoIds(new Set());
+                                              }
+                                            }}
+                                            placeholder="Ej. 56"
+                                            className="input"
+                                            style={{ width: 140 }}
+                                          />
+                                        </label>
+                                        <button
+                                          type="button"
+                                          className="btn btn-primary btn-sm"
+                                          disabled={vm.procesando || montoAPagar === undefined || montoAPagar <= 0}
+                                          onClick={() => {
+                                            vm.confirmarPago(p.id, metodoPagoSeleccionado, undefined, undefined, montoAPagar);
+                                            setPagoIndividual(false);
+                                            setPedidoActivo(null);
+                                            setEfectivoRecibido(undefined);
+                                            setMetodoPagoSeleccionado(null);
+                                            setMontoAPagar(undefined);
+                                          }}
+                                        >
+                                          Registrar pago parcial con {metodoPagoSeleccionado}
+                                        </button>
+                                      </>
                                     )
                                   )}
                                 </div>
