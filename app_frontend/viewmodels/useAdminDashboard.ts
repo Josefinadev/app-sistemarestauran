@@ -14,7 +14,10 @@ import {
   eliminarProducto,
   crearMesa,
   crearCategoria,
+  actualizarCategoria,
+  eliminarCategoria,
   uploadImage,
+  deleteImageFromStorage,
 } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import { toast } from "@/lib/toast";
@@ -195,12 +198,16 @@ export function useAdminDashboard() {
   const handleDeleteProduct = async (id: string) => {
     const removed = productos.find((p) => p.id === id);
     try {
-      // Optimistic update
+      // Optimistic update — instant UI feedback
       setProductos((prev) => prev.filter((p) => p.id !== id));
       if (removed?.disponible) {
         setStats((s) => ({ ...s, productos: Math.max(0, s.productos - 1) }));
       }
       await eliminarProducto(id);
+      // Delete image from storage (non-blocking, best-effort)
+      if (removed?.imagen_url) {
+        deleteImageFromStorage(removed.imagen_url).catch(() => {});
+      }
       toast.success({
         message: "Producto eliminado",
         description: removed ? `${removed.nombre} se quitó de la carta.` : undefined,
@@ -217,6 +224,58 @@ export function useAdminDashboard() {
       const msg = err?.message || "Error al eliminar producto";
       setError(msg);
       toast.error({ message: "No se pudo eliminar", description: msg });
+    }
+  };
+
+  // ── Update product in-place (optimistic, no reload) ──
+  const handleUpdateProduct = async (id: string, data: any, newImageFile?: File | null) => {
+    try {
+      let imagen_url = data.imagen_url;
+      if (newImageFile) {
+        // Delete old image first if it exists
+        const old = productos.find((p) => p.id === id);
+        if (old?.imagen_url) deleteImageFromStorage(old.imagen_url).catch(() => {});
+        imagen_url = await uploadImage(newImageFile, "productos");
+      }
+      const payload = { ...data, imagen_url: imagen_url || null };
+      await actualizarProducto(id, payload);
+      // Optimistic update — no loadData()
+      setProductos((prev) =>
+        prev.map((p) => p.id === id ? { ...p, ...payload } : p)
+      );
+      toast.success({ message: "Producto actualizado", description: data.nombre, duration: 2000 });
+      return true;
+    } catch (err: any) {
+      toast.error({ message: "No se pudo actualizar", description: err?.message });
+      return false;
+    }
+  };
+
+  // ── Update category (optimistic) ──
+  const handleUpdateCategoria = async (id: string, data: { nombre: string; descripcion: string }) => {
+    try {
+      await actualizarCategoria(id, data);
+      setCategorias((prev) =>
+        prev.map((c) => c.id === id ? { ...c, ...data } : c)
+      );
+      toast.success({ message: "Categoría actualizada", description: data.nombre, duration: 2000 });
+      return true;
+    } catch (err: any) {
+      toast.error({ message: "No se pudo actualizar la categoría", description: err?.message });
+      return false;
+    }
+  };
+
+  // ── Delete category (optimistic) ──
+  const handleDeleteCategoria = async (id: string) => {
+    const removed = categorias.find((c) => c.id === id);
+    try {
+      setCategorias((prev) => prev.filter((c) => c.id !== id));
+      await eliminarCategoria(id);
+      toast.success({ message: "Categoría eliminada", description: removed?.nombre });
+    } catch (err: any) {
+      if (removed) setCategorias((prev) => [...prev, removed]);
+      toast.error({ message: "No se pudo eliminar la categoría", description: err?.message });
     }
   };
 
@@ -308,6 +367,7 @@ export function useAdminDashboard() {
     setShowProductModal, setShowMesaModal, setShowCatModal,
     setNewProd, setNewMesa, setNewCat,
     handleCreateProduct, handleToggleDisponible, handleDeleteProduct,
+    handleUpdateProduct, handleUpdateCategoria, handleDeleteCategoria,
     handleCreateMesa, handleCreateCategoria,
     getQrUrl, loadData, clearError,
   };

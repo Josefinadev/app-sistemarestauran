@@ -174,6 +174,25 @@ export async function uploadImage(file: File, folder: string = "web"): Promise<s
   return data.url;
 }
 
+// ── Delete image from Supabase Storage (non-blocking, best-effort) ──
+export async function deleteImageFromStorage(imageUrl: string): Promise<void> {
+  if (!imageUrl) return;
+  try {
+    const { supabase } = await import("@/lib/supabase");
+    // URL format: ...supabase.co/storage/v1/object/public/imagenes/path/file.ext
+    const marker = "/imagenes/";
+    const idx = imageUrl.indexOf(marker);
+    if (idx === -1) return; // not a Supabase storage URL, skip silently
+    const filePath = imageUrl.substring(idx + marker.length).split("?")[0]; // strip query params
+    if (!filePath) return;
+    const { error } = await supabase.storage.from("imagenes").remove([filePath]);
+    if (error) console.warn("Storage delete warning:", error.message);
+  } catch (err) {
+    console.warn("Could not delete image from storage:", err);
+    // Non-fatal: silently swallow errors
+  }
+}
+
 // ── Restaurante ──
 export const getRestaurante = (slug: string) =>
   apiFetch(`/restaurante/${slug}`);
