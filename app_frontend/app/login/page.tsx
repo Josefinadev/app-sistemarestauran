@@ -87,7 +87,7 @@ export default function LoginPage() {
               style={{ objectFit: "contain" }}
             />
             <div className="lv-brand-text">
-              <span className="lv-brand-name">ORDERLY</span>
+              <span className="lv-brand-name">ORDELY</span>
               <span className="lv-brand-sub">RESTAURANTE</span>
             </div>
           </div>

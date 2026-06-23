@@ -409,8 +409,16 @@ export default function AdminDashboard() {
           <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
             {vm.mesas.map((m: any) => (
               <div key={m.id} className="card-flat" style={{ padding: "20px", textAlign: "center", opacity: m.activa ? 1 : 0.5 }}>
-                <div id={`qr-${m.slug}`} style={{ margin: "0 auto 12px", display: "flex", justifyContent: "center" }}>
-                  <QRCode value={vm.getQrUrl(m.slug)} size={120} bgColor="transparent" fgColor="var(--primary)" qrStyle="dots" eyeRadius={8} />
+                <div id={`qr-${m.slug}`} style={{ margin: "0 auto 14px", display: "flex", justifyContent: "center", background: "#FFFFFF", borderRadius: 12, padding: 10, border: "1px solid #E8DFD0", width: "fit-content" }}>
+                  <QRCode
+                    value={vm.getQrUrl(m.slug)}
+                    size={140}
+                    bgColor="#FFFFFF"
+                    fgColor="#1A1410"
+                    qrStyle="dots"
+                    eyeRadius={6}
+                    quietZone={4}
+                  />
                 </div>
                 <p style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: "0 0 4px" }}>Mesa {m.numero}</p>
                 <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 12px" }}>Cap. {m.capacidad} · {m.activa ? "Activa" : "Inactiva"}</p>

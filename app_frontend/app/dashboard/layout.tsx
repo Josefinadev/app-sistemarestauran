@@ -67,6 +67,7 @@ export default function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [modulosActivos, setModulosActivos] = useState<string[]>([]);
 
   // ── Auth Guard ──
@@ -100,6 +101,8 @@ export default function DashboardLayout({
   // ── Close mobile menu on route change ──
   useEffect(() => {
     setMobileMenuOpen(false);
+    setShowNotifs(false);
+    setShowUserMenu(false);
   }, [pathname]);
 
   // ── Mobile drawer: Esc + scroll lock ──
@@ -421,22 +424,72 @@ export default function DashboardLayout({
               )}
             </div>
 
-            {/* User display */}
-            <div className="header-user-display">
-              <div className="header-user-avatar">
-                {restaurante?.logo_url ? (
-                  <img src={restaurante.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                ) : (
-                  usuario?.nombre?.charAt(0).toUpperCase() || "?"
-                )}
+            {/* User display with logout dropdown */}
+            <div style={{ position: "relative", zIndex: 9999 }}>
+              <div
+                className="header-user-display"
+                onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="header-user-avatar">
+                  {restaurante?.logo_url ? (
+                    <img src={restaurante.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                  ) : (
+                    usuario?.nombre?.charAt(0).toUpperCase() || "?"
+                  )}
+                </div>
+                <div className="header-user-info">
+                  <span className="header-user-name">{usuario?.nombre || "Usuario"}</span>
+                  <span className="header-user-role">
+                    {rol === "admin" ? "Administrador" : rol === "cocina" ? "Cocinero" : rol === "mesero" ? "Mesero" : rol === "caja" ? "Cajero" : rol || "Sin rol"}
+                  </span>
+                </div>
+                <ChevronDown size={14} color="var(--text-muted)" style={{ transition: "transform 0.2s", transform: showUserMenu ? "rotate(180deg)" : "rotate(0deg)" }} />
               </div>
-              <div className="header-user-info">
-                <span className="header-user-name">{usuario?.nombre || "Usuario"}</span>
-                <span className="header-user-role">
-                  {rol === "admin" ? "Administrador" : rol === "cocina" ? "Cocinero" : rol === "mesero" ? "Mesero" : rol === "caja" ? "Cajero" : rol || "Sin rol"}
-                </span>
-              </div>
-              <ChevronDown size={14} color="var(--text-muted)" />
+
+              {showUserMenu && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  boxShadow: "var(--shadow-lg)",
+                  zIndex: 9999,
+                  minWidth: 200,
+                  overflow: "hidden",
+                }}>
+                  {/* User info header */}
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-hover)" }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: 0 }}>{usuario?.nombre || "Usuario"}</p>
+                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>{usuario?.email || rol || ""}</p>
+                  </div>
+                  {/* Logout option */}
+                  <button
+                    onClick={() => { setShowUserMenu(false); handleLogout(); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "12px 16px",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--secondary)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textAlign: "left",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(226,114,91,0.08)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <LogOut size={15} /> Cerrar sesión
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

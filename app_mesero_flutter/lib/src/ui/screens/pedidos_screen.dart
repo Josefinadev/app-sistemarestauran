@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,14 +21,16 @@ class PedidosScreen extends StatefulWidget {
 }
 
 class _PedidosScreenState extends State<PedidosScreen> {
+  // Use LOCAL time format
   final _fmtHora = DateFormat('HH:mm');
   bool loading = true;
   bool refreshing = false;
   _Filtro filtro = 'todos';
   String? updatingKey;
+
+  // Only LISTO items (no history, no ENTREGADO)
   List<ItemServir> items = [];
   final Set<String> _prevListos = <String>{};
-  final Set<String> _expandedPedidos = <String>{};
 
   RealtimeChannel? _channel;
   Timer? _debounceReload;
@@ -51,12 +53,11 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   void _setupRealtime() {
     final restId = context.read<MeseroAuthState>().restaurante?.id;
-
     if (restId == null) return;
 
     final client = Supabase.instance.client;
     _channel = client
-        .channel('mesero-realtime')
+        .channel('mesero-realtime-v2')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
@@ -79,7 +80,8 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   void _scheduleReload() {
     _debounceReload?.cancel();
-    _debounceReload = Timer(const Duration(milliseconds: 250), () {
+    // Fast debounce: 150ms for near-instant response
+    _debounceReload = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) return;
       _load();
     });
@@ -89,9 +91,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
     final rest = context.read<MeseroAuthState>().restaurante;
     if (rest == null) return;
 
-    setState(() {
-      if (!refreshing) loading = true;
-    });
+    if (!refreshing && mounted) setState(() => loading = true);
 
     try {
       final data = await ApiClient.getJson(
@@ -109,15 +109,19 @@ class _PedidosScreenState extends State<PedidosScreen> {
         final numeroPedido = (pedido['numero_pedido'] ?? 0) is int
             ? (pedido['numero_pedido'] as int)
             : int.tryParse((pedido['numero_pedido'] ?? '0').toString()) ?? 0;
+
+        // Convert to LOCAL time
         final horaPedido =
-            DateTime.tryParse((pedido['created_at'] ?? '').toString()) ??
-            DateTime.now();
+            (DateTime.tryParse((pedido['created_at'] ?? '').toString()) ??
+                DateTime.now()).toLocal();
 
         for (final d
             in (pedido['detalle_pedido'] as List<dynamic>? ?? const [])) {
           final det = Map<String, dynamic>.from(d as Map);
           final estado = (det['estado'] ?? '').toString();
-          if (estado != 'LISTO' && estado != 'ENTREGADO') continue;
+
+          // ── KEY FIX: Only include LISTO items (no ENTREGADO history) ──
+          if (estado != 'LISTO') continue;
 
           final prod = det['producto'] is Map
               ? Map<String, dynamic>.from(det['producto'])
@@ -132,11 +136,10 @@ class _PedidosScreenState extends State<PedidosScreen> {
                   .where((s) => s.trim().isNotEmpty)
                   .toList();
 
-          final created =
-              DateTime.tryParse(
-                (det['created_at'] ?? pedido['created_at'] ?? '').toString(),
-              ) ??
-              horaPedido;
+          // Convert detail time to LOCAL
+          final created = (DateTime.tryParse(
+                    (det['created_at'] ?? pedido['created_at'] ?? '').toString(),
+                  ) ?? horaPedido).toLocal();
 
           newItems.add(
             ItemServir(
@@ -157,32 +160,20 @@ class _PedidosScreenState extends State<PedidosScreen> {
         }
       }
 
-      // new LISTO notification
-      final currentListos = newItems
-          .where((i) => i.estado == 'LISTO')
-          .map((i) => i.id)
-          .toSet();
+      // Sound/haptic when new LISTO items arrive
+      final currentListos = newItems.map((i) => i.id).toSet();
       final hasNew = currentListos.any((id) => !_prevListos.contains(id));
-      _prevListos
-        ..clear()
-        ..addAll(currentListos);
+      _prevListos..clear()..addAll(currentListos);
       if (hasNew) {
         SystemSound.play(SystemSoundType.alert);
         HapticFeedback.heavyImpact();
       }
 
-      setState(() {
-        items = newItems;
-      });
+      if (mounted) setState(() => items = newItems);
     } catch (_) {
-      // keep silent; UI already has pull-to-refresh
+      // Keep silent; pull-to-refresh available
     } finally {
-      if (mounted) {
-        setState(() {
-          loading = false;
-          refreshing = false;
-        });
-      }
+      if (mounted) setState(() { loading = false; refreshing = false; });
     }
   }
 
@@ -194,28 +185,14 @@ class _PedidosScreenState extends State<PedidosScreen> {
           'estado': 'ENTREGADO',
         });
       }
-      setState(() {
-        items = items
-            .map(
-              (i) => ids.contains(i.id)
-                  ? ItemServir(
-                      id: i.id,
-                      nombre: i.nombre,
-                      mesa: i.mesa,
-                      hora: i.hora,
-                      estado: 'ENTREGADO',
-                      esBebida: i.esBebida,
-                      pedidoId: i.pedidoId,
-                      numeroPedido: i.numeroPedido,
-                      horaPedido: i.horaPedido,
-                      notas: i.notas,
-                      imagenUrl: i.imagenUrl,
-                      agregados: i.agregados,
-                    )
-                  : i,
-            )
-            .toList();
-      });
+      // ── KEY FIX: Remove ENTREGADO items immediately, don't wait for reload ──
+      if (mounted) {
+        setState(() {
+          items = items.where((i) => !ids.contains(i.id)).toList();
+        });
+      }
+      // Also trigger a real reload to stay in sync
+      _scheduleReload();
     } finally {
       if (mounted) setState(() => updatingKey = null);
     }
@@ -225,20 +202,18 @@ class _PedidosScreenState extends State<PedidosScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    final listosCount = items.where((i) => i.estado == 'LISTO').length;
-    final platosListosCount = items
-        .where((i) => i.estado == 'LISTO' && !i.esBebida)
-        .length;
-    final bebidasListasCount = items
-        .where((i) => i.estado == 'LISTO' && i.esBebida)
-        .length;
+    final listosCount = items.length;
+    final platosCount = items.where((i) => !i.esBebida).length;
+    final bebidasCount = items.where((i) => i.esBebida).length;
 
+    // Filter by tipo
     final filtered = items.where((i) {
       if (filtro == 'platos') return !i.esBebida;
       if (filtro == 'bebidas') return i.esBebida;
       return true;
     }).toList();
 
+    // Group by pedido
     final byPedido = <String, List<ItemServir>>{};
     for (final i in filtered) {
       (byPedido[i.pedidoId] ??= []).add(i);
@@ -253,7 +228,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pedidos'),
+        title: const Text('Pedidos por servir'),
         centerTitle: false,
         actions: [
           if (listosCount > 0)
@@ -274,6 +249,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
           children: [
+            // Stat cards
             Row(
               children: [
                 Expanded(
@@ -288,7 +264,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
                 Expanded(
                   child: _PedidoStatCard(
                     label: 'Platos',
-                    value: '$platosListosCount',
+                    value: '$platosCount',
                     color: cs.secondary,
                     icon: Icons.restaurant_outlined,
                   ),
@@ -297,7 +273,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
                 Expanded(
                   child: _PedidoStatCard(
                     label: 'Bebidas',
-                    value: '$bebidasListasCount',
+                    value: '$bebidasCount',
                     color: cs.tertiary,
                     icon: Icons.local_bar_outlined,
                   ),
@@ -305,24 +281,13 @@ class _PedidosScreenState extends State<PedidosScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            // Filter chips
             Wrap(
               spacing: 8,
               children: [
-                _FilterChip(
-                  label: 'Todos',
-                  selected: filtro == 'todos',
-                  onTap: () => setState(() => filtro = 'todos'),
-                ),
-                _FilterChip(
-                  label: 'Platos',
-                  selected: filtro == 'platos',
-                  onTap: () => setState(() => filtro = 'platos'),
-                ),
-                _FilterChip(
-                  label: 'Bebidas',
-                  selected: filtro == 'bebidas',
-                  onTap: () => setState(() => filtro = 'bebidas'),
-                ),
+                _FilterChip(label: 'Todos', selected: filtro == 'todos', onTap: () => setState(() => filtro = 'todos')),
+                _FilterChip(label: 'Platos', selected: filtro == 'platos', onTap: () => setState(() => filtro = 'platos')),
+                _FilterChip(label: 'Bebidas', selected: filtro == 'bebidas', onTap: () => setState(() => filtro = 'bebidas')),
               ],
             ),
             const SizedBox(height: 12),
@@ -330,13 +295,26 @@ class _PedidosScreenState extends State<PedidosScreen> {
               Center(child: CircularProgressIndicator(color: cs.primary)),
               const SizedBox(height: 12),
             ],
+            // Empty state — clean, no history
             if (!loading && pedidoIds.isEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 40),
+                padding: const EdgeInsets.only(top: 48),
                 child: Center(
-                  child: Text(
-                    '¡Todo servido! Sin items pendientes',
-                    style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 56, color: cs.primary.withOpacity(0.5)),
+                      const SizedBox(height: 12),
+                      Text(
+                        '¡Todo servido!',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cs.onSurface),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'No hay nada pendiente por atender',
+                        style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 13),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -344,18 +322,8 @@ class _PedidosScreenState extends State<PedidosScreen> {
               _PedidoCard(
                 pedidoId: pedidoId,
                 items: byPedido[pedidoId]!,
-                expanded: _expandedPedidos.contains(pedidoId),
                 updatingKey: updatingKey,
-                onToggle: () {
-                  setState(() {
-                    if (_expandedPedidos.contains(pedidoId)) {
-                      _expandedPedidos.remove(pedidoId);
-                    } else {
-                      _expandedPedidos.add(pedidoId);
-                    }
-                  });
-                },
-                formatHora: (d) => _fmtHora.format(d),
+                formatHora: (d) => _fmtHora.format(d.toLocal()),
                 onEntregarIds: (ids, key) => _marcarEntregado(ids, key),
               ),
           ],
@@ -365,16 +333,12 @@ class _PedidosScreenState extends State<PedidosScreen> {
   }
 }
 
+// ── FilterChip ──
 class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -388,9 +352,7 @@ class _FilterChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           color: selected ? cs.primary.withOpacity(0.14) : Colors.transparent,
           border: Border.all(
-            color: selected
-                ? cs.primary.withOpacity(0.5)
-                : cs.outlineVariant.withOpacity(0.5),
+            color: selected ? cs.primary.withOpacity(0.5) : cs.outlineVariant.withOpacity(0.5),
           ),
         ),
         child: Text(
@@ -406,49 +368,18 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _Aggregated {
-  final String key;
-  final String nombre;
-  final int cantidad;
-  final int mesa;
-  final DateTime hora;
-  final bool esBebida;
-  final String? notas;
-  final String? imagenUrl;
-  final List<String> agregados;
-  final List<String> listosIds;
-  final bool allEntregado;
-
-  _Aggregated({
-    required this.key,
-    required this.nombre,
-    required this.cantidad,
-    required this.mesa,
-    required this.hora,
-    required this.esBebida,
-    required this.notas,
-    this.imagenUrl,
-    required this.agregados,
-    required this.listosIds,
-    required this.allEntregado,
-  });
-}
-
+// ── Pedido Card — no expand needed, show all LISTO items directly ──
 class _PedidoCard extends StatelessWidget {
   final String pedidoId;
   final List<ItemServir> items;
-  final bool expanded;
   final String? updatingKey;
-  final VoidCallback onToggle;
   final String Function(DateTime) formatHora;
   final Future<void> Function(List<String> ids, String key) onEntregarIds;
 
   const _PedidoCard({
     required this.pedidoId,
     required this.items,
-    required this.expanded,
     required this.updatingKey,
-    required this.onToggle,
     required this.formatHora,
     required this.onEntregarIds,
   });
@@ -458,162 +389,89 @@ class _PedidoCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final first = items.first;
     final mesa = first.mesa;
-    final listos = items.where((i) => i.estado == 'LISTO').toList();
-    final entregados = items.where((i) => i.estado == 'ENTREGADO').toList();
-
-    final aggregated = _aggregate(items);
+    final allIds = items.map((i) => i.id).toList();
+    final updatingAll = updatingKey == 'pedido-all-$pedidoId';
 
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: cs.outlineVariant.withOpacity(0.35)),
+        side: BorderSide(color: cs.primary.withOpacity(0.25)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InkWell(
-              onTap: onToggle,
-              borderRadius: BorderRadius.circular(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: cs.primary.withOpacity(0.12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$mesa',
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+            // Mesa header
+            Row(
+              children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: cs.primary.withOpacity(0.12),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mesa $mesa',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${listos.length} por entregar · ${entregados.length} entregados · ${formatHora(first.horaPedido)}',
-                          style: TextStyle(
-                            color: cs.onSurface.withOpacity(0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: Center(
+                    child: Text('$mesa',
+                      style: TextStyle(color: cs.primary, fontWeight: FontWeight.w900, fontSize: 17)),
                   ),
-                  Icon(
-                    expanded ? Icons.expand_less : Icons.expand_more,
-                    color: cs.onSurface.withOpacity(0.6),
-                  ),
-                ],
-              ),
-            ),
-            if (expanded) ...[
-              const SizedBox(height: 12),
-              for (final a in aggregated)
-                _AggRow(
-                  a: a,
-                  updatingKey: updatingKey,
-                  formatHora: formatHora,
-                  onEntregar: a.listosIds.isEmpty
-                      ? null
-                      : () => onEntregarIds(a.listosIds, a.key),
                 ),
-              if (listos.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonal(
-                    onPressed: updatingKey == 'pedido-all-$pedidoId'
-                        ? null
-                        : () => onEntregarIds(
-                            listos.map((e) => e.id).toList(),
-                            'pedido-all-$pedidoId',
-                          ),
-                    child: updatingKey == 'pedido-all-$pedidoId'
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Marcar todo como entregado'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mesa $mesa',
+                        style: TextStyle(fontWeight: FontWeight.w900, color: cs.onSurface, fontSize: 15)),
+                      Text('${items.length} item${items.length > 1 ? "s" : ""} · ${formatHora(first.horaPedido)}',
+                        style: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 12)),
+                    ],
                   ),
+                ),
+                // Entregar todo button
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: updatingAll ? null : () => onEntregarIds(allIds, 'pedido-all-$pedidoId'),
+                  child: updatingAll
+                      ? const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Todo listo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                 ),
               ],
-            ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            // Items list — all LISTO, no history
+            ...items.map((item) => _ItemRow(
+              item: item,
+              updatingKey: updatingKey,
+              formatHora: formatHora,
+              onEntregar: () => onEntregarIds([item.id], item.id),
+            )),
           ],
         ),
       ),
     );
   }
-
-  List<_Aggregated> _aggregate(List<ItemServir> raw) {
-    final map = <String, List<ItemServir>>{};
-    for (final i in raw) {
-      final normalizedAgregados = [...i.agregados]
-        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-      final normalizedNotas = (i.notas ?? '').trim();
-      final key =
-          '${i.esBebida ? 'B' : 'P'}|${i.nombre}|$normalizedNotas|${normalizedAgregados.join(',')}';
-      (map[key] ??= []).add(i);
-    }
-    final out = <_Aggregated>[];
-    for (final e in map.entries) {
-      final list = e.value;
-      list.sort((a, b) => b.hora.compareTo(a.hora));
-      final listosIds = list
-          .where((x) => x.estado == 'LISTO')
-          .map((x) => x.id)
-          .toList();
-      out.add(
-        _Aggregated(
-          key: 'agg-${pedidoId}-${e.key}',
-          nombre: list.first.nombre,
-          cantidad: list.length,
-          mesa: list.first.mesa,
-          hora: list.first.hora,
-          esBebida: list.first.esBebida,
-          notas: list.first.notas,
-          imagenUrl: list.first.imagenUrl,
-          agregados: list.first.agregados,
-          listosIds: listosIds,
-          allEntregado: list.every((x) => x.estado == 'ENTREGADO'),
-        ),
-      );
-    }
-    // show newest first
-    out.sort((a, b) => b.hora.compareTo(a.hora));
-    return out;
-  }
 }
 
-class _AggRow extends StatelessWidget {
-  final _Aggregated a;
+// ── Item Row ──
+class _ItemRow extends StatelessWidget {
+  final ItemServir item;
   final String? updatingKey;
   final String Function(DateTime) formatHora;
-  final VoidCallback? onEntregar;
+  final VoidCallback onEntregar;
 
-  const _AggRow({
-    required this.a,
+  const _ItemRow({
+    required this.item,
     required this.updatingKey,
     required this.formatHora,
     required this.onEntregar,
@@ -622,63 +480,43 @@ class _AggRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isUpdating = updatingKey == a.key;
-    final canEntregar = onEntregar != null;
+    final isUpdating = updatingKey == item.id;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: a.allEntregado
-            ? cs.surfaceContainerHighest.withOpacity(0.35)
-            : cs.surfaceContainerHighest,
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
+        borderRadius: BorderRadius.circular(12),
+        color: cs.surfaceContainerHighest,
+        border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          if (a.imagenUrl != null && a.imagenUrl!.isNotEmpty)
+          // Thumbnail
+          if (item.imagenUrl != null && item.imagenUrl!.isNotEmpty)
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: SupabaseImageWidget(
-                imagePath: a.imagenUrl,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                placeholder: Container(
-                  width: 48,
-                  height: 48,
-                  color: cs.surfaceVariant,
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
+                imagePath: item.imagenUrl,
+                width: 44, height: 44, fit: BoxFit.cover,
+                placeholder: Container(width: 44, height: 44, color: cs.surfaceVariant),
                 errorWidget: Container(
-                  width: 48,
-                  height: 48,
-                  color: cs.surfaceVariant,
-                  child: const Center(
-                    child: Icon(Icons.broken_image_outlined, size: 18),
-                  ),
+                  width: 44, height: 44, color: cs.surfaceVariant,
+                  child: const Center(child: Icon(Icons.broken_image_outlined, size: 18)),
                 ),
               ),
             )
           else
             Container(
-              width: 34,
-              height: 34,
+              width: 36, height: 36,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: (a.esBebida ? cs.tertiary : cs.primary).withOpacity(
-                  0.14,
-                ),
+                color: (item.esBebida ? cs.tertiary : cs.primary).withOpacity(0.14),
               ),
               child: Icon(
-                a.esBebida
-                    ? Icons.local_bar_outlined
-                    : Icons.restaurant_outlined,
+                item.esBebida ? Icons.local_bar_outlined : Icons.restaurant_outlined,
                 size: 18,
-                color: a.esBebida ? cs.tertiary : cs.primary,
+                color: item.esBebida ? cs.tertiary : cs.primary,
               ),
             ),
           const SizedBox(width: 10),
@@ -687,86 +525,47 @@ class _AggRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${a.nombre}${a.cantidad > 1 ? ' x${a.cantidad}' : ''}',
+                  item.nombre,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: a.allEntregado
-                        ? cs.onSurface.withOpacity(0.55)
-                        : cs.onSurface,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface, fontSize: 13),
                 ),
-                if ((a.notas ?? '').trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      '📝 ${a.notas}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: cs.onSurface.withOpacity(0.65),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                if (a.agregados.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      '＋ ${a.agregados.join(', ')}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: cs.onSurface.withOpacity(0.65),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    formatHora(a.hora),
-                    style: TextStyle(
-                      color: cs.onSurface.withOpacity(0.55),
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
+                if ((item.notas ?? '').trim().isNotEmpty)
+                  Text('📝 ${item.notas}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 11)),
+                Text(formatHora(item.hora),
+                  style: TextStyle(color: cs.onSurface.withOpacity(0.5), fontSize: 11)),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          if (canEntregar)
-            IconButton.filledTonal(
-              onPressed: isUpdating ? null : onEntregar,
-              icon: isUpdating
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(Icons.check_circle, color: cs.primary),
-            )
-          else
-            Icon(Icons.check_circle, color: cs.onSurface.withOpacity(0.25)),
+          // Entregar button
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+            ),
+            onPressed: isUpdating ? null : onEntregar,
+            child: isUpdating
+                ? const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Entregar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
   }
 }
 
+// ── Stat Card ──
 class _PedidoStatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
   final IconData icon;
-  const _PedidoStatCard({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
+  const _PedidoStatCard({required this.label, required this.value, required this.color, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -784,36 +583,16 @@ class _PedidoStatCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                width: 26, height: 26,
+                decoration: BoxDecoration(color: color.withOpacity(0.14), borderRadius: BorderRadius.circular(8)),
                 child: Icon(icon, size: 14, color: color),
               ),
               const Spacer(),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: cs.onSurface,
-                ),
-              ),
+              Text('$value', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cs.onSurface)),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: cs.onSurface.withOpacity(0.6),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(label, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
