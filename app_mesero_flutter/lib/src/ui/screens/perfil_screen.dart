@@ -33,9 +33,20 @@ class _PerfilScreenState extends State<PerfilScreen> {
       int entregados = 0;
       int hoyCount = 0;
 
+      DateTime? parseDate(String? d) {
+        if (d == null || d.isEmpty) return null;
+        if (!d.endsWith('Z') && !d.contains('+')) {
+          final tIdx = d.indexOf('T');
+          if (tIdx != -1 && d.lastIndexOf('-') < tIdx) {
+            d += 'Z';
+          }
+        }
+        return DateTime.tryParse(d)?.toLocal();
+      }
+
       for (final p in (data ?? const [])) {
         final pedido = Map<String, dynamic>.from(p as Map);
-        final created = DateTime.tryParse((pedido['created_at'] ?? '').toString());
+        final created = parseDate((pedido['created_at'] ?? '').toString());
         if (created != null && created.year == hoy.year && created.month == hoy.month && created.day == hoy.day) {
           hoyCount += 1;
         }
