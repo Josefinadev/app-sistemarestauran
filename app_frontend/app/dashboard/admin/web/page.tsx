@@ -159,19 +159,32 @@ export default function GestionWebPage() {
       };
       if (editingCombo) {
         await actualizarWebCombo(editingCombo.id, data);
+        // Optimistic update — no reload
+        setCombos((prev) => prev.map((c) => c.id === editingCombo.id ? { ...c, ...data } : c));
         toast.success({ message: "Combo actualizado", description: newCombo.nombre });
       } else {
-        await crearWebCombo(data);
+        const created = await crearWebCombo(data);
+        // Optimistic append
+        if (created?.id) setCombos((prev) => [...prev, created]);
+        else loadData();
         toast.success({ message: "Combo creado", description: newCombo.nombre });
       }
-      closeComboModal(); loadData();
+      closeComboModal();
     } catch (err: any) { toast.error({ message: "No se pudo guardar", description: err?.message }); }
   };
 
   const handleDeleteCombo = async (id: string) => {
     if (!confirm("¿Eliminar este combo?")) return;
-    try { await eliminarWebCombo(id); loadData(); toast.success({ message: "Combo eliminado" }); }
-    catch (err: any) { toast.error({ message: "No se pudo eliminar", description: err?.message }); }
+    // Optimistic remove
+    const removed = combos.find((c) => c.id === id);
+    setCombos((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await eliminarWebCombo(id);
+      toast.success({ message: "Combo eliminado" });
+    } catch (err: any) {
+      if (removed) setCombos((prev) => [...prev, removed]);
+      toast.error({ message: "No se pudo eliminar", description: err?.message });
+    }
   };
 
   // ── Ofertas ──
@@ -194,19 +207,31 @@ export default function GestionWebPage() {
       const data: any = { id_restaurante, titulo: newOferta.titulo, descripcion: newOferta.descripcion, descuento: newOferta.descuento, imagen_url: newOferta.imagen_url || null, activo: true };
       if (editingOferta) {
         await actualizarWebOferta(editingOferta.id, data);
+        // Optimistic update — no reload
+        setOfertas((prev) => prev.map((o) => o.id === editingOferta.id ? { ...o, ...data } : o));
         toast.success({ message: "Oferta actualizada" });
       } else {
-        await crearWebOferta(data);
+        const created = await crearWebOferta(data);
+        // Optimistic append
+        if (created?.id) setOfertas((prev) => [...prev, created]);
+        else loadData();
         toast.success({ message: "Oferta creada" });
       }
-      closeOfertaModal(); loadData();
+      closeOfertaModal();
     } catch (err: any) { toast.error({ message: "No se pudo guardar", description: err?.message }); }
   };
 
   const handleDeleteOferta = async (id: string) => {
     if (!confirm("¿Eliminar esta oferta?")) return;
-    try { await eliminarWebOferta(id); loadData(); toast.success({ message: "Oferta eliminada" }); }
-    catch (err: any) { toast.error({ message: "No se pudo eliminar", description: err?.message }); }
+    const removed = ofertas.find((o) => o.id === id);
+    setOfertas((prev) => prev.filter((o) => o.id !== id));
+    try {
+      await eliminarWebOferta(id);
+      toast.success({ message: "Oferta eliminada" });
+    } catch (err: any) {
+      if (removed) setOfertas((prev) => [...prev, removed]);
+      toast.error({ message: "No se pudo eliminar", description: err?.message });
+    }
   };
 
   // ── Image picker ──
@@ -395,19 +420,7 @@ export default function GestionWebPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <ImageUploadInput label="Logo" value={visualConfig.logo_url} onChange={(url) => setVisualConfig({ ...visualConfig, logo_url: url })} height={120} />
-                <div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: "0 0 8px" }}>Banner principal (Hero)</p>
-                  {visualConfig.hero_banner_url ? (
-                    <div style={{ borderRadius: 10, overflow: "hidden", height: 80, border: "1px solid var(--border)" }}>
-                      <img src={visualConfig.hero_banner_url} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    </div>
-                  ) : (
-                    <div style={{ height: 80, border: "1px dashed var(--border)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-hover)" }}>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Sin banner</p>
-                    </div>
-                  )}
-                  <ImageUploadInput label="" value={visualConfig.hero_banner_url} onChange={(url) => setVisualConfig({ ...visualConfig, hero_banner_url: url })} height={0} hint="1920x800 px. JPG, PNG. Máx. 5MB." />
-                </div>
+                <ImageUploadInput label="Banner principal (Hero)" value={visualConfig.hero_banner_url} onChange={(url) => setVisualConfig({ ...visualConfig, hero_banner_url: url })} height={120} hint="1920x800 px. JPG, PNG. Máx. 5MB." />
               </div>
             </div>
 

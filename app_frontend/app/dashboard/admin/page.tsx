@@ -124,19 +124,23 @@ export default function AdminDashboard() {
     if (!editProduct) return;
     setEditSaving(true);
     try {
-      const { actualizarProducto, uploadImage } = await import("@/lib/api");
-      let imagen_url = editData.imagen_url;
-      if (editImageFile) imagen_url = await uploadImage(editImageFile, "productos");
-      await actualizarProducto(editProduct.id, {
-        nombre: editData.nombre, precio: parseFloat(editData.precio),
-        stock: parseInt(editData.stock) || 0, descripcion: editData.descripcion,
-        disponible: editData.disponible, id_categoria: editData.id_categoria,
-        es_bebida: editData.es_bebida, requiere_preparacion: editData.requiere_preparacion,
-        imagen_url: imagen_url || null,
-      });
-      setEditProduct(null); setEditImageFile(null); setEditPreviewUrl(""); vm.loadData();
-    } catch (err: any) { console.error("Error editing product:", err); }
-    finally { setEditSaving(false); }
+      const ok = await vm.handleUpdateProduct(
+        editProduct.id,
+        {
+          nombre: editData.nombre,
+          precio: parseFloat(editData.precio),
+          stock: parseInt(editData.stock) || 0,
+          descripcion: editData.descripcion,
+          disponible: editData.disponible,
+          id_categoria: editData.id_categoria,
+          es_bebida: editData.es_bebida,
+          requiere_preparacion: editData.requiere_preparacion,
+          imagen_url: editData.imagen_url,
+        },
+        editImageFile
+      );
+      if (ok) { setEditProduct(null); setEditImageFile(null); setEditPreviewUrl(""); }
+    } finally { setEditSaving(false); }
   };
 
   // ── Edit/Delete categories ──
@@ -150,19 +154,13 @@ export default function AdminDashboard() {
 
   const handleSaveEditCat = async () => {
     if (!editCat) return;
-    try {
-      const { actualizarCategoria } = await import("@/lib/api");
-      await actualizarCategoria(editCat.id, editCatData);
-      setEditCat(null); vm.loadData();
-    } catch (err: any) { console.error("Error editing category:", err); }
+    const ok = await vm.handleUpdateCategoria(editCat.id, editCatData);
+    if (ok) setEditCat(null);
   };
 
   const handleDeleteCategoria = async (id: string) => {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    try {
-      const { eliminarCategoria } = await import("@/lib/api");
-      await eliminarCategoria(id); vm.loadData();
-    } catch (err: any) { console.error("Error deleting category:", err); }
+    await vm.handleDeleteCategoria(id);
   };
 
   // ── Stat cards data ──
