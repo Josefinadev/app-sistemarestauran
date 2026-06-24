@@ -229,7 +229,11 @@ export default function SaaSLandingPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
-    try { const pref = await crearPreferenciaPagoRegistro(form); window.location.href = pref.sandbox_init_point; }
+    try {
+      const pref = await crearPreferenciaPagoRegistro(form);
+      // Usar init_point (checkout de producción) — sandbox_init_point causa ERR_TOO_MANY_REDIRECTS
+      window.location.href = pref.init_point;
+    }
     catch (err: any) { alert(err.message || "Error."); setLoading(false); }
   };
 

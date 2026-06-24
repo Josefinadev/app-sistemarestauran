@@ -119,7 +119,7 @@ router.post('/crear-preferencia', async (req, res) => {
       metadata,
       external_reference,
       back_urls: {
-        success: es_registro 
+        success: es_registro
           ? `${FRONTEND_URL}/login?pago=exitoso&nuevo=true`
           : `${FRONTEND_URL}/dashboard?pago=exitoso`,
         failure: es_registro
@@ -129,7 +129,7 @@ router.post('/crear-preferencia', async (req, res) => {
           ? `${FRONTEND_URL}/?pago=pendiente`
           : `${FRONTEND_URL}/dashboard/pagos?pago=pendiente`
       },
-      auto_return: 'approved',
+      // auto_return removido — causa ERR_TOO_MANY_REDIRECTS en algunos entornos
       notification_url: `${BACKEND_URL}/api/pagos/webhook`,
       statement_descriptor: 'RestaurantOS'
     };
