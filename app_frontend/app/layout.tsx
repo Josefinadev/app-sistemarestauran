@@ -84,6 +84,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <SuccessOverlay />
+        <div id="portal-root"></div>
       </body>
     </html>
   );

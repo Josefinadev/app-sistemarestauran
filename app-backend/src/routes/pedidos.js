@@ -100,6 +100,73 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 /**
+ * GET /api/pedidos/mis-pedidos?id_restaurante=:id
+ * Historial de pedidos del cliente autenticado.
+ * Requiere Bearer token de cliente (rol = 'cliente').
+ * Solo devuelve los pedidos donde id_usuario = req.user.id
+ * y id_restaurante = query param (para respetar tenant isolation).
+ */
+router.get('/mis-pedidos', optionalAuth, async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: true, message: 'Debes iniciar sesión para ver tu historial.' });
+    }
+    if (req.user.rol !== 'cliente') {
+      return res.status(403).json({ error: true, message: 'Solo los clientes pueden acceder a este recurso.' });
+    }
+
+    const { id_restaurante } = req.query;
+    if (!id_restaurante) {
+      return res.status(400).json({ error: true, message: 'id_restaurante es requerido.' });
+    }
+
+    // Tenant isolation: el cliente solo puede ver pedidos de su restaurante
+    if (req.user.id_restaurante !== id_restaurante) {
+      return res.status(403).json({ error: true, message: 'No tienes acceso a los pedidos de este restaurante.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pedido')
+      .select(`
+        id,
+        numero_pedido,
+        estado,
+        estado_pago,
+        metodo_pago,
+        subtotal,
+        total,
+        notas,
+        created_at,
+        pagado_en,
+        mesa:id_mesa(id, numero),
+        detalle_pedido(
+          id,
+          precio_unitario,
+          notas,
+          estado,
+          detalle_pedido_agregado(
+            id_agregado,
+            precio_momento,
+            agregado:id_agregado(nombre)
+          ),
+          producto:id_producto(id, nombre, imagen_url, precio)
+        )
+      `)
+      .eq('id_usuario', req.user.id)
+      .eq('id_restaurante', id_restaurante)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    res.json({ data: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+});
+
+/**
  * GET /api/pedidos/:id
  * Auth OPCIONAL: el cliente comensal (sin login con email) puede consultar el
  * estado de su pedido pasando solo el UUID en la URL. Si hay un usuario
@@ -108,6 +175,7 @@ router.get('/', authenticate, async (req, res) => {
  * únicamente con el cliente a través del QR/redirect post-pedido.
  */
 router.get('/:id', optionalAuth, async (req, res) => {
+
   try {
     const { data, error } = await supabase
       .from('pedido')
@@ -151,9 +219,12 @@ router.get('/:id', optionalAuth, async (req, res) => {
  * Crea un nuevo pedido con detalles (transacción atómica)
  * Body: { id_restaurante, id_mesa, notas?, items: [{ id_producto, notas?, agregados: [{ id_agregado }] }] }
  */
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const { id_restaurante, id_mesa, id_usuario, notas, items } = req.body;
+    
+    // Si hay token válido, usar el ID del usuario autenticado
+    const final_id_usuario = req.user ? req.user.id : (id_usuario || null);
 
     if (!id_restaurante || !id_mesa || !items || !items.length) {
       return res.status(400).json({
@@ -262,7 +333,7 @@ router.post('/', async (req, res) => {
       .insert({
         id_restaurante,
         id_mesa,
-        id_usuario: id_usuario || null,
+        id_usuario: final_id_usuario,
         subtotal,
         total: subtotal,
         notas: notas || null,

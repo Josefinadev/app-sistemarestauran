@@ -26,7 +26,7 @@ class MeseroAuthState extends ChangeNotifier {
       usuario = AuthUsuario.fromJson(Map<String, dynamic>.from(me['usuario']));
       restaurante = Restaurante.fromJson(Map<String, dynamic>.from(me['restaurante']));
     } catch (_) {
-      await ApiClient.clearToken();
+      await ApiClient.clearTokens();
       usuario = null;
       restaurante = null;
     } finally {
@@ -46,14 +46,17 @@ class MeseroAuthState extends ChangeNotifier {
       throw ApiException('Esta app es exclusiva para meseros. Contacta al administrador.');
     }
 
-    await ApiClient.setToken((data['access_token'] ?? '').toString());
+    await ApiClient.setTokens(
+      (data['access_token'] ?? '').toString(),
+      (data['refresh_token'] ?? '').toString(),
+    );
     usuario = user;
     restaurante = Restaurante.fromJson(Map<String, dynamic>.from(data['restaurante']));
     notifyListeners();
   }
 
   Future<void> logout() async {
-    await ApiClient.clearToken();
+    await ApiClient.clearTokens();
     usuario = null;
     restaurante = null;
     notifyListeners();
