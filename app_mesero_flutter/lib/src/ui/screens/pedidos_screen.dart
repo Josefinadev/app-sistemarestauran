@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../models/models.dart';
 import '../../services/api_client.dart';
@@ -30,7 +31,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   // Only LISTO items (no history, no ENTREGADO)
   List<ItemServir> items = [];
-  final Set<String> _prevListos = <String>{};
+  static final Set<String> _prevListos = <String>{};
 
   RealtimeChannel? _channel;
   Timer? _debounceReload;
@@ -169,10 +170,14 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
       // Sound/haptic when new LISTO items arrive
       final currentListos = newItems.map((i) => i.id).toSet();
+      // Si _prevListos está vacío y es la primera carga real, no debe sonar todo de golpe,
+      // PERO al ser static, conservará los previos entre reconstrucciones.
+      final isFirstLoad = _prevListos.isEmpty && currentListos.isNotEmpty;
       final hasNew = currentListos.any((id) => !_prevListos.contains(id));
       _prevListos..clear()..addAll(currentListos);
-      if (hasNew) {
-        SystemSound.play(SystemSoundType.alert);
+
+      if (hasNew && !isFirstLoad) {
+        AudioPlayer().play(AssetSource('campanilla.mp3'));
         HapticFeedback.heavyImpact();
       }
 
@@ -241,6 +246,19 @@ class _PedidosScreenState extends State<PedidosScreen> {
         title: const Text('Pedidos por servir'),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.volume_up),
+            onPressed: () async {
+              print('🔊 TEST SONIDO: Intentando reproducir campanilla.mp3...');
+              try {
+                final player = AudioPlayer();
+                await player.play(AssetSource('campanilla.mp3'));
+                print('🔊 TEST SONIDO: Reproducción iniciada sin errores.');
+              } catch (e) {
+                print('🔊 ERROR DE SONIDO: $e');
+              }
+            },
+          ),
           if (listosCount > 0)
             Padding(
               padding: const EdgeInsets.only(right: 14),
