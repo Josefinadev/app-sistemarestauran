@@ -428,4 +428,4 @@ export const verificarAccesoRestaurante = async (id_restaurante: string): Promis
   const res = await fetch(`${API_URL}/pagos/verificar-acceso/${id_restaurante}`);
   return res.json();
 };
-// trigger deploy mié 17 jun 2026 18:25:44 -05
+
