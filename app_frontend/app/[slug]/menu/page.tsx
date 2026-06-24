@@ -10,9 +10,9 @@ import { useAuth } from "@/lib/store";
 import type { Agregado } from "@/lib/database.types";
 import {
   Search, ShoppingCart, Plus, X, StickyNote, CheckCircle2,
-  User, FlaskConical, AlertTriangle, ChefHat,
+  User, AlertTriangle, ChefHat,
   ChevronDown, Trash2, ShieldCheck, Check, Utensils, Loader2, AlertCircle,
-  Clock, QrCode,
+  Clock, Pencil,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -164,7 +164,7 @@ export default function MenuPage() {
           </div>
 
           {/* Tagline */}
-          <p className="mv2-sidebar-tagline" style={{ color: primary }}>
+          <p className="mv2-sidebar-tagline">
             Sabor que<br />te hace volver
           </p>
 
@@ -320,16 +320,31 @@ export default function MenuPage() {
                         </span>
                       )}
                       {!agotado && (
-                        <motion.button
-                          type="button"
-                          className="mv2-add-btn"
-                          style={{ background: primary }}
-                          onClick={(e) => { e.stopPropagation(); vm.quickAddProduct(prod); }}
-                          whileTap={{ scale: 0.85 }}
-                          aria-label={`Agregar ${prod.nombre}`}
-                        >
-                          <Plus size={16} strokeWidth={3} />
-                        </motion.button>
+                        <>
+                          {/* Lápiz: abrir detalle con notas/agregados */}
+                          <motion.button
+                            type="button"
+                            className="mv2-pencil-btn"
+                            onClick={(e) => { e.stopPropagation(); vm.openProductDetail(prod); }}
+                            whileTap={{ scale: 0.85 }}
+                            aria-label={`Personalizar ${prod.nombre}`}
+                            title="Personalizar"
+                          >
+                            <Pencil size={13} strokeWidth={2.5} />
+                          </motion.button>
+                          {/* + : agregar directo */}
+                          <motion.button
+                            type="button"
+                            className="mv2-add-btn"
+                            style={{ background: primary }}
+                            onClick={(e) => { e.stopPropagation(); vm.quickAddProduct(prod); }}
+                            whileTap={{ scale: 0.85 }}
+                            aria-label={`Agregar ${prod.nombre}`}
+                            title="Agregar directo"
+                          >
+                            <Plus size={16} strokeWidth={3} />
+                          </motion.button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -408,7 +423,7 @@ export default function MenuPage() {
           MOBILE BOTTOM NAV
       ══════════════════════════════════════════════ */}
       {mounted && createPortal(
-        <nav className="mv2-bottom-nav">
+        <nav className={`mv2-bottom-nav${isCartOpen ? " mv2-bottom-nav--hidden" : ""}`}>
           <button className="mv2-nav-item mv2-nav-item--active">
             <Utensils size={20} />
             <span>Menú</span>
@@ -429,7 +444,7 @@ export default function MenuPage() {
           </button>
           <button
             className="mv2-nav-item"
-            onClick={() => activePedidoId && router.push(`/${slug}/estado?pedido=${activePedidoId}`)}
+            onClick={() => router.push(`/${slug}/historial`)}
           >
             <Clock size={20} />
             <span>Historial</span>
@@ -442,13 +457,52 @@ export default function MenuPage() {
         document.body
       )}
 
+      {/* FAB de carrito — solo en desktop (la versión móvil usa el bottom nav) */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {vm.itemCount > 0 && !isCartOpen && !vm.selectedProduct && (
+            <motion.button
+              key="cart-fab-desktop"
+              className="mv2-desktop-cart-fab"
+              style={{ background: primary }}
+              onClick={() => setIsCartOpen(true)}
+              initial={{ y: 80, scale: 0.5, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: 80, scale: 0.5, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 520, damping: 22 }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.94 }}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={vm.itemCount}
+                  className="mv2-desktop-fab-badge"
+                  initial={{ scale: 0.3, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.3, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 700, damping: 14 }}
+                >
+                  {vm.itemCount}
+                </motion.span>
+              </AnimatePresence>
+              <ShoppingCart size={22} color="#fff" strokeWidth={2.4} />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ver Pedido</span>
+                <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{formatPrecio(cartVm.total)}</span>
+              </div>
+            </motion.button>
+          )}
+        </AnimatePresence>,
+        document.getElementById("portal-root") || document.body
+      )}
+
       {/* ══════════════════════════════════════════════
           CART DRAWER
       ══════════════════════════════════════════════ */}
       {mounted && createPortal(
         <AnimatePresence>
           {isCartOpen && vm.itemCount > 0 && (
-            <div className="fixed inset-0 z-50">
+            <div className="fixed inset-0 z-[80]">
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="client-cart-drawer-overlay"
@@ -585,7 +639,7 @@ export default function MenuPage() {
       ══════════════════════════════════════════════ */}
       <AnimatePresence>
         {vm.selectedProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"

@@ -5404,3 +5404,115 @@ table tbody tr:hover {
 }
 .mv2-card-price { font-size: 18px; font-weight: 800; }
 
+
+/* ── Sidebar overlay less dark ── */
+/* (override the existing rule) */
+.mv2-sidebar .mv2-sidebar-overlay {
+  background: linear-gradient(180deg,
+    rgba(10,7,4,0.68) 0%,
+    rgba(10,7,4,0.55) 45%,
+    rgba(10,7,4,0.80) 100%);
+}
+
+/* ── Tagline always white ── */
+.mv2-sidebar-tagline {
+  font-family: var(--font-noto-serif), 'Georgia', serif !important;
+  font-style: italic !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+  color: #fff !important;
+  line-height: 1.4 !important;
+  margin: 28px 0 20px !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6) !important;
+  text-align: center !important;
+}
+
+/* ── Desktop title — compact ── */
+.mv2-desktop-title {
+  margin-bottom: 16px !important;
+}
+.mv2-desktop-name {
+  font-size: clamp(24px, 3vw, 36px) !important;
+  font-weight: 700 !important;
+  margin: 0 0 8px !important;
+  color: var(--text) !important;
+}
+.mv2-title-divider {
+  margin-bottom: 16px !important;
+}
+
+/* ── Pencil button on product card ── */
+.mv2-pencil-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border, #E5DDD4);
+  background: var(--surface, #fff);
+  color: var(--text-muted, #9A8F85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mv2-pencil-btn:hover {
+  background: var(--surface-hover, #F5EEE6);
+  border-color: var(--primary, #C5A059);
+  color: var(--primary, #C5A059);
+}
+
+/* ── Desktop cart FAB (bottom-right floating) ── */
+.mv2-desktop-cart-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 50;
+  display: none; /* hidden on mobile — mobile uses bottom nav */
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  font-family: inherit;
+  position: fixed;
+}
+.mv2-desktop-fab-badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #fff;
+  border-radius: 99px;
+  min-width: 22px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #1a1410;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+/* ── Bottom nav hidden when cart is open ── */
+.mv2-bottom-nav--hidden {
+  display: none !important;
+}
+
+/* ── On desktop: show FAB, keep bottom nav hidden ── */
+@media (min-width: 900px) {
+  .mv2-desktop-cart-fab {
+    display: flex;
+  }
+  .mv2-bottom-nav {
+    display: none !important;
+  }
+  /* Slightly tighter main padding */
+  .mv2-main {
+    padding: 28px 36px 60px !important;
+  }
+}
+
