@@ -149,17 +149,19 @@ export function useCajaDashboard() {
   // Realtime: silent update (sin flash de loading) para evitar "recargas"
   usePedidosRealtime(idRest || null, () => loadPedidos(true), () => loadPedidos(true));
 
-  // ── Agrupar por mesa ──
+  // ── Agrupar por mesa — solo pedidos activos (NO PAGADO) ──
   const mesasAgrupadas = useMemo<MesaCaja[]>(() => {
     const map = new Map<string | number, MesaCaja>();
-    for (const p of pedidos) {
+    // Solo incluir pedidos que NO estén completamente pagados
+    const activePedidos = pedidos.filter(p => p.estadoPago !== "PAGADO");
+    for (const p of activePedidos) {
       const key = p.mesa;
       if (!map.has(key)) {
         map.set(key, { mesa: key, pedidos: [], total: 0, itemsCount: 0, estadoPago: "PENDIENTE" });
       }
       const m = map.get(key)!;
       m.pedidos.push(p);
-      m.total += p.total;
+      m.total += p.montoRestante; // Solo el monto pendiente
       m.itemsCount += p.items.reduce((s, i) => s + i.cantidad, 0);
     }
     // Determinar estado de pago de la mesa
@@ -178,6 +180,7 @@ export function useCajaDashboard() {
 
   const mesasFiltradas = useMemo(() => {
     if (filtro === "TODOS") return mesasAgrupadas;
+    // PENDIENTE: muestra pendientes y mixtos
     return mesasAgrupadas.filter((m) => m.estadoPago === filtro || (filtro === "PENDIENTE" && m.estadoPago === "MIXTO"));
   }, [mesasAgrupadas, filtro]);
 

@@ -60,6 +60,11 @@ export function useCocinaDashboard() {
           agregados: grupo.agregados,
           pedidoId: pedido.id,
           detalleIds: grupo.detalleIds,
+          // Extraer imagen_url del primer detalle del grupo
+          imagen_url: (() => {
+            const primerDetalle = detallesPedido.find(d => grupo.detalleIds.includes(d.id));
+            return primerDetalle?.producto?.imagen_url || null;
+          })(),
         }));
 
         if (lineas.length === 0) continue;

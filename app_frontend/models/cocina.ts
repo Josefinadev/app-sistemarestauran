@@ -9,6 +9,7 @@ export interface PlatoCocina {
   agregados: string[];
   pedidoId: string;
   detalleIds: string[];
+  imagen_url?: string | null;
 }
 
 export interface PedidoRecienteCocina {

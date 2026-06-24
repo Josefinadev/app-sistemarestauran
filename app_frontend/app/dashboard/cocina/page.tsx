@@ -204,7 +204,12 @@ export default function CocinaDashboard() {
                           {/* Product */}
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", background: "var(--surface-hover)", border: "1px solid var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <ImageIcon size={14} color="var(--text-muted)" />
+                              {plato.imagen_url ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={plato.imagen_url} alt={plato.nombre} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                              ) : (
+                                <ImageIcon size={14} color="var(--text-muted)" />
+                              )}
                             </div>
                             <div>
                               <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>{plato.nombre}</p>

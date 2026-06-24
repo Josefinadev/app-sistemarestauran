@@ -142,9 +142,9 @@ export default function CajaDashboard() {
           {/* Left: pending orders */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {(["TODOS", "PENDIENTE", "PAGADO"] as const).map((f) => (
+              {(["TODOS", "PENDIENTE"] as const).map((f) => (
                 <button key={f} onClick={() => vm.setFiltro(f)} className={`wine-chip ${vm.filtro === f ? "wine-chip--active" : ""}`}>
-                  {f === "TODOS" ? "Todas" : f === "PENDIENTE" ? "Pendientes" : "Pagadas"}
+                  {f === "TODOS" ? "Todas las activas" : "Pendientes"}
                 </button>
               ))}
             </div>
@@ -428,8 +428,10 @@ export default function CajaDashboard() {
             })}
 
             {vm.mesasFiltradas.length === 0 && (
-              <div className="card-flat" style={{ padding: 40, textAlign: "center" }}>
-                <p style={{ color: "var(--text-muted)", fontSize: 12 }}>No hay mesas con este filtro</p>
+              <div className="card-flat" style={{ padding: 48, textAlign: "center" }}>
+                <CheckCircle2 size={36} color="var(--success)" style={{ margin: "0 auto 12px", display: "block", opacity: 0.5 }} />
+                <p style={{ color: "var(--text-muted)", fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>No hay pedidos pendientes de cobro</p>
+                <p style={{ color: "var(--text-muted)", fontSize: 12, margin: 0 }}>Los pedidos pagados se encuentran en el historial</p>
               </div>
             )}
 

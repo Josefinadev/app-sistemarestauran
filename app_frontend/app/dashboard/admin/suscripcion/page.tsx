@@ -43,6 +43,7 @@ function getPlanKey(nombre: string): string {
 export default function SuscripcionDashboard() {
   const vm = useSuscripcion();
   const [showHistorial, setShowHistorial] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<"mensual" | "anual">("mensual");
 
   if (vm.loading) {
     return <div className="skeleton" style={{ height: 400, borderRadius: 16 }} />;
@@ -107,8 +108,16 @@ export default function SuscripcionDashboard() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", margin: 0 }}>Planes disponibles</h3>
             <div style={{ display: "flex", alignItems: "center", gap: 2, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "2px" }}>
-              <button style={{ padding: "5px 14px", borderRadius: 6, background: "var(--primary)", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Mensual</button>
-              <button style={{ padding: "5px 14px", borderRadius: 6, background: "transparent", border: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer", position: "relative" }}>
+              <button
+                onClick={() => setBillingPeriod("mensual")}
+                style={{ padding: "5px 14px", borderRadius: 6, background: billingPeriod === "mensual" ? "var(--primary)" : "transparent", border: "none", color: billingPeriod === "mensual" ? "#fff" : "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+              >
+                Mensual
+              </button>
+              <button
+                onClick={() => setBillingPeriod("anual")}
+                style={{ padding: "5px 14px", borderRadius: 6, background: billingPeriod === "anual" ? "var(--primary)" : "transparent", border: "none", color: billingPeriod === "anual" ? "#fff" : "var(--text-muted)", fontSize: 12, cursor: "pointer", position: "relative", transition: "all 0.15s" }}
+              >
                 Anual
                 <span style={{ position: "absolute", top: -8, right: -4, background: "var(--success)", color: "#fff", fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 99 }}>Ahorra 20%</span>
               </button>
@@ -121,6 +130,9 @@ export default function SuscripcionDashboard() {
               const PlanIcon = planIcons[planKey] || Crown;
               const iconColor = planIconColors[planKey] || "var(--primary)";
               const iconBg = planIconBgs[planKey] || "rgba(197,160,89,0.1)";
+              const precioMensual = plan.precio_mensual || 0;
+              const precioAnual = precioMensual * 12 * 0.8; // 20% descuento anual
+              const precioMostrado = billingPeriod === "anual" ? precioAnual / 12 : precioMensual;
 
               return (
                 <div key={plan.id} className={`plan-card ${isCurrent ? "plan-card--current" : ""}`} style={{ position: "relative" }}>
@@ -139,9 +151,14 @@ export default function SuscripcionDashboard() {
                     </div>
                   </div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", margin: "0 0 4px" }}>
-                    {formatPrecio(plan.precio_mensual)}
+                    {formatPrecio(precioMostrado)}
                   </div>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 16px" }}>por mes + IGV</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 16px" }}>
+                    {billingPeriod === "anual"
+                      ? `por mes · S/ ${precioAnual.toFixed(2)}/año + IGV`
+                      : "por mes + IGV"
+                    }
+                  </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20, flex: 1 }}>
                     {(planKey === "basico"
                       ? ["Hasta 200 productos", "Hasta 10 mesas", "2 usuarios", "Reportes básicos", "Soporte por correo"]
@@ -221,50 +238,57 @@ export default function SuscripcionDashboard() {
       <div style={{ width: 260, flexShrink: 0 }}>
         <div className="card-flat" style={{ padding: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: "0 0 16px" }}>Resumen de facturación</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}><Calendar size={12} /> Próximo pago</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
-                {vm.suscripcionActual?.fecha_fin ? new Date(vm.suscripcionActual.fecha_fin).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Importe</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
-                {vm.suscripcionActual ? `${formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)} + IGV` : "—"}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Estado</span>
-              <span className={`badge ${vm.suscripcionActual?.estado === "activa" ? "badge-ready" : "badge-pending"}`} style={{ fontSize: 10 }}>
-                {vm.suscripcionActual?.estado === "activa" ? "Activa" : vm.suscripcionActual?.estado || "—"}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Plan</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>
-                {vm.suscripcionActual?.plan?.nombre || "—"}
-              </span>
-            </div>
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>Facturación</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <CreditCard size={14} color="var(--text-muted)" />
-                <span style={{ fontSize: 12, color: "var(--text)" }}>
-                  {vm.suscripcionActual?.plan?.precio_mensual
-                    ? `${formatPrecio(vm.suscripcionActual.plan.precio_mensual)}/mes`
-                    : "Sin suscripción activa"}
+          {vm.suscripcionActual ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}><Calendar size={12} /> Próximo pago</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                  {vm.suscripcionActual.fecha_fin ? new Date(vm.suscripcionActual.fecha_fin).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" }) : "Sin fecha"}
                 </span>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Importe</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                  {formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)} + IGV
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Estado</span>
+                <span className={`badge ${vm.suscripcionActual.estado === "activa" ? "badge-ready" : "badge-pending"}`} style={{ fontSize: 10 }}>
+                  {vm.suscripcionActual.estado === "activa" ? "Activa" : (vm.suscripcionActual.estado || "Inactiva")}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Plan</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>
+                  {vm.suscripcionActual.plan?.nombre || "—"}
+                </span>
+              </div>
+              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>Facturación</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <CreditCard size={14} color="var(--text-muted)" />
+                  <span style={{ fontSize: 12, color: "var(--text)" }}>
+                    {formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)}/mes
+                  </span>
+                </div>
+              </div>
+              <button className="btn btn-secondary btn-sm" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }} onClick={() => setShowHistorial(true)}>
+                <FileText size={13} /> Ver historial de facturación
+              </button>
             </div>
-            <button
-              className="btn btn-secondary btn-sm"
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
-              onClick={() => setShowHistorial(true)}
-            >
-              <FileText size={13} /> Ver historial de facturación
-            </button>
-          </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ padding: "16px", background: "rgba(197,160,89,0.06)", borderRadius: 12, border: "1px solid rgba(197,160,89,0.2)", textAlign: "center" }}>
+                <Crown size={28} color="var(--primary)" style={{ margin: "0 auto 8px", display: "block", opacity: 0.6 }} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: "0 0 4px" }}>Sin suscripción activa</p>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Selecciona un plan para activar tu cuenta</p>
+              </div>
+              <button className="btn btn-primary btn-sm" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Crown size={13} /> Ver planes disponibles
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
