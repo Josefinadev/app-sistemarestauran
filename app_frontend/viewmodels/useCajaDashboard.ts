@@ -83,7 +83,7 @@ export function useCajaDashboard() {
       const res = await getPedidos({ id_restaurante: idRest });
 
       const mapped: PedidoCaja[] = (res || []).map((p: any) => {
-        const pagosData = (p.pedido_pago || []).map((pay: any) => ({
+        const pagosData: PedidoPago[] = (p.pedido_pago || []).map((pay: any) => ({
           id: pay.id,
           metodoPago: pay.metodo_pago,
           monto: Number(pay.monto || 0),
