@@ -231,7 +231,7 @@ export function useAdminDashboard() {
     }
   };
 
-  // ── Update product in-place (optimistic, no reload) ──
+  
   const handleUpdateProduct = async (id: string, data: any, newImageFile?: File | null) => {
     try {
       let imagen_url = data.imagen_url;

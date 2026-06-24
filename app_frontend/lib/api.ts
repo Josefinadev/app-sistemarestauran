@@ -322,10 +322,10 @@ export const actualizarEstadoDetalleBatch = (ids: string[], estado: string) =>
     body: JSON.stringify({ ids, estado }),
   });
 
-export const registrarPago = (id: string, metodo_pago: string, comprobante_url?: string, efectivo_recibido?: number, detalle_ids?: string[]) =>
+export const registrarPago = (id: string, metodo_pago: string, comprobante_url?: string, efectivo_recibido?: number, detalle_ids?: string[], monto?: number) =>
   apiFetch(`/pedidos/${id}/pago`, {
     method: "PATCH",
-    body: JSON.stringify({ metodo_pago, comprobante_url, efectivo_recibido, detalle_ids }),
+    body: JSON.stringify({ metodo_pago, comprobante_url, efectivo_recibido, detalle_ids, monto }),
   });
 
 // ── Usuarios ──
@@ -428,4 +428,4 @@ export const verificarAccesoRestaurante = async (id_restaurante: string): Promis
   const res = await fetch(`${API_URL}/pagos/verificar-acceso/${id_restaurante}`);
   return res.json();
 };
-// trigger deploy mié 17 jun 2026 18:25:44 -05
+
