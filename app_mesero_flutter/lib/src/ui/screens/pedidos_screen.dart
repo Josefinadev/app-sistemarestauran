@@ -89,13 +89,17 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   DateTime _parseSupaDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return DateTime.now();
-    if (!dateStr.endsWith('Z') && !dateStr.contains('+')) {
-      final tIdx = dateStr.indexOf('T');
-      if (tIdx != -1 && dateStr.lastIndexOf('-') < tIdx) {
-        dateStr += 'Z';
+    try {
+      if (!dateStr.endsWith('Z') && !dateStr.contains('+')) {
+        final tIdx = dateStr.indexOf('T');
+        if (tIdx != -1 && dateStr.lastIndexOf('-') < tIdx) {
+          dateStr += 'Z';
+        }
       }
+      return (DateTime.tryParse(dateStr) ?? DateTime.now()).toLocal();
+    } catch (_) {
+      return DateTime.now();
     }
-    return (DateTime.tryParse(dateStr) ?? DateTime.now()).toLocal();
   }
 
   Future<void> _load() async {
@@ -112,14 +116,9 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
       for (final p in (data as List<dynamic>? ?? const [])) {
         final pedido = Map<String, dynamic>.from(p as Map);
-        final mesaNum = (pedido['mesa']?['numero'] ?? 0) is int
-            ? (pedido['mesa']['numero'] as int)
-            : int.tryParse((pedido['mesa']?['numero'] ?? '0').toString()) ?? 0;
-
+        final mesaNum = int.tryParse((pedido['mesa']?['numero'] ?? '0').toString()) ?? 0;
         final pedidoId = (pedido['id'] ?? '').toString();
-        final numeroPedido = (pedido['numero_pedido'] ?? 0) is int
-            ? (pedido['numero_pedido'] as int)
-            : int.tryParse((pedido['numero_pedido'] ?? '0').toString()) ?? 0;
+        final numeroPedido = int.tryParse((pedido['numero_pedido'] ?? '0').toString()) ?? 0;
 
         // Convert to LOCAL time
         final horaPedido = _parseSupaDate((pedido['created_at'] ?? '').toString());
@@ -178,8 +177,11 @@ class _PedidosScreenState extends State<PedidosScreen> {
       }
 
       if (mounted) setState(() => items = newItems);
-    } catch (_) {
-      // Keep silent; pull-to-refresh available
+    } catch (e) {
+      if (e is ApiException && e.message == 'SESSION_EXPIRED') {
+        if (mounted) context.read<MeseroAuthState>().logout();
+      }
+      // Keep silent for network errors; pull-to-refresh available
     } finally {
       if (mounted) setState(() { loading = false; refreshing = false; });
     }
