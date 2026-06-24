@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../screens/mesas_screen.dart';
 import '../screens/pedidos_screen.dart';
 import '../screens/perfil_screen.dart';
 import '../screens/tomar_pedido_screen.dart';
+import '../../state/auth_state.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key});
@@ -27,7 +31,10 @@ class _HomeTabsState extends State<HomeTabs> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: pages[index],
+      body: IndexedStack(
+        index: index,
+        children: pages,
+      ),
       bottomNavigationBar: NavigationBar(
         height: 74,
         backgroundColor: Theme.of(context).cardColor,

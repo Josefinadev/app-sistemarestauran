@@ -85,8 +85,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Perfil')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+      body: RefreshIndicator(
+        onRefresh: _loadStats,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         children: [
           Card(
             elevation: 0,
@@ -246,6 +248,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             label: Text('Cerrar sesión', style: TextStyle(color: cs.error, fontWeight: FontWeight.w900)),
           ),
         ],
+      ),
       ),
     );
   }
