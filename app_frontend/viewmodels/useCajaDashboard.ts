@@ -119,7 +119,7 @@ export function useCajaDashboard() {
           pagos: pagosData,
           hora: p.created_at,
           items: (p.detalle_pedido || []).map((d: any) => {
-            const isPaidByDetalle = pagosData.some((pay) => Array.isArray(pay.detalleIds) && pay.detalleIds.includes(d.id));
+            const isPaidByDetalle = pagosData.some((pay: any) => Array.isArray(pay.detalleIds) && pay.detalleIds.includes(d.id));
             const allPaidPedido = montoRestante <= 0;
             return {
               id: d.id,
