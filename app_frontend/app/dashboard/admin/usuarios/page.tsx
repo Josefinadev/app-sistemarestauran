@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getUsuarios, actualizarUsuario, eliminarUsuario } from "@/lib/api";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
 import { toast } from "@/lib/toast";
+import { showActionOverlay, ConfirmDeleteModal } from "@/components/ActionFeedback";
 import { sanitize, validate } from "@/lib/inputValidation";
 
 /* ═══════════════════════════════════════════════════════════
@@ -105,6 +106,9 @@ export default function UsuariosPage() {
       });
       setShowCreateModal(false);
       setNewUser({ nombre: "", email: "", rol: "mesero", password: "" });
+      showActionOverlay("success", "Usuario creado");
+      setSearchTerm(""); // Always reset search to show all users after creating
+      setFilterRol("all");
       toast.success({ message: "Usuario creado", description: `${newUser.nombre} ya puede iniciar sesión.` });
       loadUsers();
     } catch (err: any) {
@@ -133,7 +137,7 @@ export default function UsuariosPage() {
         rol: editData.rol,
       });
       setShowEditModal(false);
-      toast.success({ message: "Usuario actualizado", description: editData.nombre });
+      showActionOverlay("success", "Usuario actualizado"); toast.success({ message: "Usuario actualizado", description: editData.nombre });
       loadUsers();
     } catch (err: any) {
       setEditError(err.message || "Error al actualizar usuario.");
@@ -183,7 +187,7 @@ export default function UsuariosPage() {
     try {
       await eliminarUsuario(deleteUser.id);
       setShowDeleteModal(false);
-      toast.success({ message: "Usuario eliminado", description: deleteUser.nombre });
+      showActionOverlay("delete", "Usuario eliminado"); toast.success({ message: "Usuario eliminado", description: deleteUser.nombre });
       loadUsers();
     } catch (err: any) {
       toast.error({ message: "No se pudo eliminar", description: err.message });
@@ -249,7 +253,7 @@ export default function UsuariosPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ position: "relative", maxWidth: 380 }}>
           <Search size={14} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-          <input type="text" placeholder="Buscar por nombre o email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" style={{ paddingLeft: 36 }} />
+          <input type="text" autoComplete="off" placeholder="Buscar por nombre o email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" style={{ paddingLeft: 36 }} />
         </div>
         <button
           className="btn btn-primary btn-sm"
@@ -460,20 +464,17 @@ export default function UsuariosPage() {
         </div>
       </Modal>
 
-      {/* Delete modal */}
-      <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Eliminar usuario" description="Esta acción no se puede deshacer." icon={<AlertTriangle size={18} />} accentColor="var(--secondary)" size="sm"
-        footer={<ModalFooter><button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">Cancelar</button><button onClick={handleDeleteConfirm} className="btn btn-primary" disabled={deleting} style={{ opacity: deleting ? 0.6 : 1, background: "var(--secondary)", borderColor: "var(--secondary)" }}>{deleting ? "Eliminando..." : "Eliminar"}</button></ModalFooter>}
-      >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "8px 0 4px", gap: 12 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(226,114,91,0.1)", border: "1px solid rgba(226,114,91,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <AlertTriangle size={28} color="var(--secondary)" />
-          </div>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
-            ¿Estás seguro de que deseas eliminar a <strong style={{ color: "var(--text)" }}>{deleteUser?.nombre}</strong>?
-            <br /><span style={{ fontSize: 12 }}>Esta acción no se puede deshacer.</span>
-          </p>
-        </div>
-      </Modal>
+      {/* Delete modal — replaced with premium ConfirmDeleteModal */}
+      <ConfirmDeleteModal
+        open={showDeleteModal}
+        title="Eliminar usuario"
+        message={`¿Estás seguro de que deseas eliminar a ${deleteUser?.nombre}? Esta acción no se puede deshacer.`}
+        confirmLabel={deleting ? "Eliminando..." : "Eliminar"}
+        type="danger"
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }
+

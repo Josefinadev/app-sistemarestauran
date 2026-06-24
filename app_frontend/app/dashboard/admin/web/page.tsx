@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/store";
@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { ImageUploadInput } from "@/components/ImageUploadInput";
 import { toast } from "@/lib/toast";
+import { showActionOverlay } from "@/components/ActionFeedback";
 import {
   Gift, Plus, Trash2, Pencil, Save, CheckCircle2, Star,
   MessageCircle, Loader2, Upload, ImagePlus, Flame, Phone, MapPin, Clock, Eye,
@@ -102,7 +103,7 @@ export default function GestionWebPage() {
     setSaving(true);
     try {
       await saveWebConfig({ id_restaurante, ...webConfig });
-      toast.success({ message: "Configuración guardada", description: "Tu web ya refleja los cambios." });
+      showActionOverlay("success", "Configuración guardada"); toast.success({ message: "Configuración guardada", description: "Tu web ya refleja los cambios." });
     } catch (err: any) {
       toast.error({ message: "Error al guardar", description: err?.message });
     } finally { setSaving(false); }
@@ -114,7 +115,7 @@ export default function GestionWebPage() {
     try {
       const updated = await actualizarRestauranteBranding(id_restaurante, visualConfig);
       setRestaurante({ ...restaurante, ...updated } as any);
-      toast.success({ message: "Identidad visual guardada" });
+      showActionOverlay("success", "Identidad visual guardada"); toast.success({ message: "Identidad visual guardada" });
     } catch (err: any) {
       toast.error({ message: "Error al guardar", description: err?.message });
     } finally { setSavingVisual(false); }
@@ -161,13 +162,13 @@ export default function GestionWebPage() {
         await actualizarWebCombo(editingCombo.id, data);
         // Optimistic update — no reload
         setCombos((prev) => prev.map((c) => c.id === editingCombo.id ? { ...c, ...data } : c));
-        toast.success({ message: "Combo actualizado", description: newCombo.nombre });
+        showActionOverlay("success", "Combo actualizado"); toast.success({ message: "Combo actualizado", description: newCombo.nombre });
       } else {
         const created = await crearWebCombo(data);
         // Optimistic append
         if (created?.id) setCombos((prev) => [...prev, created]);
         else loadData();
-        toast.success({ message: "Combo creado", description: newCombo.nombre });
+        showActionOverlay("success", "Combo creado"); toast.success({ message: "Combo creado", description: newCombo.nombre });
       }
       closeComboModal();
     } catch (err: any) { toast.error({ message: "No se pudo guardar", description: err?.message }); }
@@ -180,7 +181,7 @@ export default function GestionWebPage() {
     setCombos((prev) => prev.filter((c) => c.id !== id));
     try {
       await eliminarWebCombo(id);
-      toast.success({ message: "Combo eliminado" });
+      showActionOverlay("delete", "Combo eliminado"); toast.success({ message: "Combo eliminado" });
     } catch (err: any) {
       if (removed) setCombos((prev) => [...prev, removed]);
       toast.error({ message: "No se pudo eliminar", description: err?.message });
@@ -209,13 +210,13 @@ export default function GestionWebPage() {
         await actualizarWebOferta(editingOferta.id, data);
         // Optimistic update — no reload
         setOfertas((prev) => prev.map((o) => o.id === editingOferta.id ? { ...o, ...data } : o));
-        toast.success({ message: "Oferta actualizada" });
+        showActionOverlay("success", "Oferta actualizada"); toast.success({ message: "Oferta actualizada" });
       } else {
         const created = await crearWebOferta(data);
         // Optimistic append
         if (created?.id) setOfertas((prev) => [...prev, created]);
         else loadData();
-        toast.success({ message: "Oferta creada" });
+        showActionOverlay("success", "Oferta creada"); toast.success({ message: "Oferta creada" });
       }
       closeOfertaModal();
     } catch (err: any) { toast.error({ message: "No se pudo guardar", description: err?.message }); }
@@ -227,7 +228,7 @@ export default function GestionWebPage() {
     setOfertas((prev) => prev.filter((o) => o.id !== id));
     try {
       await eliminarWebOferta(id);
-      toast.success({ message: "Oferta eliminada" });
+      showActionOverlay("delete", "Oferta eliminada"); toast.success({ message: "Oferta eliminada" });
     } catch (err: any) {
       if (removed) setOfertas((prev) => [...prev, removed]);
       toast.error({ message: "No se pudo eliminar", description: err?.message });
@@ -679,3 +680,4 @@ export default function GestionWebPage() {
     </div>
   );
 }
+

@@ -3898,9 +3898,120 @@ canvas {
   box-shadow: none !important;
 }
 
-/* Dashboard main area light — fondo diferente a cards */
+/* Dashboard main area light — mismo blanco que sidebar */
 :root:not([data-theme="dark"]) .dashboard-main {
-  background: var(--bg);
+  background: #FFFFFF;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM POLISH — Rounded corners, hover effects, animations
+   ═══════════════════════════════════════════════════════════ */
+
+/* Cards — more rounded + elevation on hover */
+.card-flat {
+  transition: box-shadow 0.22s ease, transform 0.18s ease !important;
+}
+.card-flat:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+}
+
+/* Buttons — more rounded */
+.btn {
+  border-radius: 10px !important;
+  transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-secondary:hover { border-color: var(--primary) !important; }
+
+/* Input — rounded */
+.input {
+  border-radius: 10px !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+.input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-ghost) !important;
+  outline: none !important;
+}
+
+/* Table rows */
+table tbody tr {
+  transition: background 0.15s ease !important;
+}
+table tbody tr:hover {
+  background: var(--surface-hover) !important;
+}
+
+/* Sidebar items */
+.premium-sidebar-item {
+  border-radius: 12px !important;
+  transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+}
+
+/* Badges — more rounded */
+.badge {
+  border-radius: 99px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Wine chips */
+.wine-chip {
+  transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+}
+.wine-chip:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(197,160,89,0.15) !important;
+}
+
+/* Modal — more rounded */
+.premium-modal-dialog {
+  border-radius: 24px !important;
+}
+
+/* Stat cards */
+.dash-stat-card {
+  transition: all 0.22s cubic-bezier(0.4,0,0.2,1) !important;
+}
+.dash-stat-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 24px rgba(197,160,89,0.14) !important;
+}
+
+/* Smooth page transitions */
+.animate-fade-in {
+  animation: fadeInUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Quick access buttons */
+.dash-quick-btn {
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
+  border-radius: 12px !important;
+}
+.dash-quick-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(197,160,89,0.18) !important;
+}
+
+/* Table pagination */
+.page-btn {
+  border-radius: 8px !important;
+  transition: all 0.15s ease !important;
+}
+.page-btn:hover {
+  transform: scale(1.08) !important;
+}
+
+/* Filter chips – more rounded */
+.filter-chip, [class*="chip"] {
+  border-radius: 99px !important;
 }
 
 /* ═══════════════════════════════════════════════════════════

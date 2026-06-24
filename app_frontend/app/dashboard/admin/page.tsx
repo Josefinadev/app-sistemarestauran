@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { formatPrecio } from "@/lib/utils";
@@ -7,12 +7,13 @@ import { useNotificaciones } from "@/lib/store";
 import { QRCode } from "react-qrcode-logo";
 import {
   Package, Tag, Armchair, Receipt, DollarSign, Plus, Pause, Play,
-  Trash2, Search, QrCode as QrIcon, X, Download, Copy, ImageIcon, ChefHat,
+  Trash2, Search, QrCode as QrIcon, Download, Copy, ImageIcon, ChefHat,
   GlassWater, Sparkles, Hash, Users, BookOpen, AlertCircle, Pencil,
-  TrendingUp, LayoutDashboard, BarChart3,
+  TrendingUp, BarChart3,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/Modal";
 import { sanitize, validate } from "@/lib/inputValidation";
+import { ConfirmDeleteModal } from "@/components/ActionFeedback";
 
 /* ═══════════════════════════════════════════════════════════
    VIEW — Admin Dashboard (Wine Design)
@@ -41,6 +42,9 @@ export default function AdminDashboard() {
   const [previewUrl, setPreviewUrl] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // ── Delete confirmation ──
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; nombre: string; type: "producto" | "categoria" } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -158,9 +162,8 @@ export default function AdminDashboard() {
     if (ok) setEditCat(null);
   };
 
-  const handleDeleteCategoria = async (id: string) => {
-    if (!confirm("¿Eliminar esta categoría?")) return;
-    await vm.handleDeleteCategoria(id);
+  const handleDeleteCategoria = (id: string, nombre: string) => {
+    setDeleteConfirm({ id, nombre, type: "categoria" });
   };
 
   // ── Stat cards data ──
@@ -335,7 +338,7 @@ export default function AdminDashboard() {
                           <button onClick={() => vm.handleToggleDisponible(p)} className="btn btn-ghost btn-sm" style={{ padding: "4px 8px" }} title={p.disponible ? "Pausar" : "Activar"}>
                             {p.disponible ? <Pause size={14} /> : <Play size={14} />}
                           </button>
-                          <button onClick={() => vm.handleDeleteProduct(p.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", color: "var(--secondary)" }} title="Eliminar"><Trash2 size={14} /></button>
+                          <button onClick={() => setDeleteConfirm({ id: p.id, nombre: p.nombre, type: "producto" })} className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", color: "var(--secondary)" }} title="Eliminar"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -390,7 +393,7 @@ export default function AdminDashboard() {
                 <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 14px" }}>{cat.descripcion || "Sin descripción"}</p>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => handleEditCategoria(cat)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }} title="Editar"><Pencil size={12} /></button>
-                  <button onClick={() => handleDeleteCategoria(cat.id)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px", color: "var(--secondary)" }} title="Eliminar"><Trash2 size={12} /></button>
+                  <button onClick={() => handleDeleteCategoria(cat.id, cat.nombre)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px", color: "var(--secondary)" }} title="Eliminar"><Trash2 size={12} /></button>
                 </div>
               </div>
             ))}
@@ -687,6 +690,27 @@ export default function AdminDashboard() {
         <div className="premium-field"><label className="premium-field-label">Nombre</label><input className="input" value={editCatData.nombre} onChange={(e) => setEditCatData({ ...editCatData, nombre: e.target.value })} /></div>
         <div className="premium-field"><label className="premium-field-label">Descripción</label><input className="input" value={editCatData.descripcion} onChange={(e) => setEditCatData({ ...editCatData, descripcion: e.target.value })} placeholder="Opcional" /></div>
       </Modal>
+
+      {/* ── Confirm Delete Modal ── */}
+      <ConfirmDeleteModal
+        open={!!deleteConfirm}
+        title={deleteConfirm?.type === "producto" ? "¿Eliminar producto?" : "¿Eliminar categoría?"}
+        message={
+          deleteConfirm?.type === "producto"
+            ? `¿Estás seguro de eliminar "${deleteConfirm?.nombre}"? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de eliminar la categoría "${deleteConfirm?.nombre}"?`
+        }
+        confirmLabel="Eliminar"
+        type="danger"
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (!deleteConfirm) return;
+          if (deleteConfirm.type === "producto") vm.handleDeleteProduct(deleteConfirm.id);
+          else vm.handleDeleteCategoria(deleteConfirm.id);
+          setDeleteConfirm(null);
+        }}
+      />
     </div>
   );
 }
+

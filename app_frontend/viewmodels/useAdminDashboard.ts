@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    VIEWMODEL — useAdminDashboard
    Toda la lógica de negocio del panel admin.
    ═══════════════════════════════════════════════════════════ */
@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/store";
 import { toast } from "@/lib/toast";
+import { showActionOverlay } from "@/components/ActionFeedback";
 
 export function useAdminDashboard() {
   const { restaurante } = useAuth();
@@ -146,6 +147,7 @@ export function useAdminDashboard() {
 
       setShowProductModal(false);
       setNewProd({ nombre: "", id_categoria: "", precio: "", descripcion: "", stock: "10", es_bebida: false, requiere_preparacion: true, imagen_url: "" });
+      showActionOverlay("success", "Producto creado");
       toast.success({
         message: "Producto creado",
         description: `${newProd.nombre} ya aparece en la carta.`,
@@ -174,6 +176,7 @@ export function useAdminDashboard() {
         productos: s.productos + (nextValue ? 1 : -1),
       }));
       await actualizarProducto(prod.id, { disponible: nextValue });
+      showActionOverlay("success", nextValue ? "Producto activado" : "Producto pausado");
       toast.success({
         message: nextValue ? "Producto activado" : "Producto pausado",
         description: `${prod.nombre} ahora está ${nextValue ? "visible" : "oculto"} en la carta.`,
@@ -208,6 +211,7 @@ export function useAdminDashboard() {
       if (removed?.imagen_url) {
         deleteImageFromStorage(removed.imagen_url).catch(() => {});
       }
+      showActionOverlay("delete", "Producto eliminado");
       toast.success({
         message: "Producto eliminado",
         description: removed ? `${removed.nombre} se quitó de la carta.` : undefined,
@@ -243,7 +247,7 @@ export function useAdminDashboard() {
       setProductos((prev) =>
         prev.map((p) => p.id === id ? { ...p, ...payload } : p)
       );
-      toast.success({ message: "Producto actualizado", description: data.nombre, duration: 2000 });
+      showActionOverlay("success", "Producto actualizado"); toast.success({ message: "Producto actualizado", description: data.nombre, duration: 2000 });
       return true;
     } catch (err: any) {
       toast.error({ message: "No se pudo actualizar", description: err?.message });
@@ -258,7 +262,7 @@ export function useAdminDashboard() {
       setCategorias((prev) =>
         prev.map((c) => c.id === id ? { ...c, ...data } : c)
       );
-      toast.success({ message: "Categoría actualizada", description: data.nombre, duration: 2000 });
+      showActionOverlay("success", "Categoría actualizada"); toast.success({ message: "Categoría actualizada", description: data.nombre, duration: 2000 });
       return true;
     } catch (err: any) {
       toast.error({ message: "No se pudo actualizar la categoría", description: err?.message });
@@ -272,7 +276,7 @@ export function useAdminDashboard() {
     try {
       setCategorias((prev) => prev.filter((c) => c.id !== id));
       await eliminarCategoria(id);
-      toast.success({ message: "Categoría eliminada", description: removed?.nombre });
+      showActionOverlay("delete", "Categoría eliminada"); toast.success({ message: "Categoría eliminada", description: removed?.nombre });
     } catch (err: any) {
       if (removed) setCategorias((prev) => [...prev, removed]);
       toast.error({ message: "No se pudo eliminar la categoría", description: err?.message });
@@ -295,6 +299,7 @@ export function useAdminDashboard() {
       }
       setShowMesaModal(false);
       setNewMesa({ numero: "", capacidad: "4" });
+      showActionOverlay("success", "Mesa creada");
       toast.success({
         message: "Mesa creada",
         description: `Mesa ${newMesa.numero} lista. Su QR ya está disponible.`,
@@ -325,6 +330,7 @@ export function useAdminDashboard() {
       }
       setShowCatModal(false);
       setNewCat({ nombre: "", descripcion: "" });
+      showActionOverlay("success", "Categoría creada");
       toast.success({
         message: "Categoría creada",
         description: newCat.nombre,
@@ -372,3 +378,4 @@ export function useAdminDashboard() {
     getQrUrl, loadData, clearError,
   };
 }
+

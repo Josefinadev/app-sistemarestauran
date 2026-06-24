@@ -210,7 +210,7 @@ export default function DashboardLayout({
   if (!accessToken) return null;
 
   return (
-    <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", background: "var(--surface)", overflow: "hidden" }}>
       <CursorGlow />
 
       {/* Mobile backdrop */}
