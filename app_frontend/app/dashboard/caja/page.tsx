@@ -254,10 +254,10 @@ export default function CajaDashboard() {
                                       </div>
                                     )}
                                   </div>
-                                  {p.items.some((item) => item.estado === "ENTREGADO") && (
+                                  {p.items.some((item) => item.pagado) && (
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>Platos ya pagados:</span>
-                                      {p.items.filter((item) => item.estado === "ENTREGADO").map((item) => (
+                                      {p.items.filter((item) => item.pagado).map((item) => (
                                         <span key={item.id} style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(22,163,74,0.12)", color: "var(--success)", fontSize: 11, fontWeight: 600 }}>
                                           {item.nombre}
                                         </span>
@@ -268,7 +268,7 @@ export default function CajaDashboard() {
                                     {p.items.map((item) => {
                                       const idDetalle = item.id;
                                       const selected = detallePagoIds.has(idDetalle);
-                                      const isLocked = item.estado === "ENTREGADO" || item.estado === "CANCELADO";
+                                      const isLocked = Boolean(item.pagado) || item.estado === "CANCELADO";
                                       const selectionDisabled = montoManual || isLocked;
                                       return (
                                         <button
@@ -306,7 +306,7 @@ export default function CajaDashboard() {
                                         >
                                           {isLocked ? "✓ " : selected ? "✓ " : "○ "}
                                           {item.nombre}
-                                          {item.estado === "ENTREGADO" && <span style={{ fontSize: 11, color: "var(--success)", marginLeft: 4 }}>(Pagado)</span>}
+                                          {item.pagado && <span style={{ fontSize: 11, color: "var(--success)", marginLeft: 4 }}>(Pagado)</span>}
                                           {item.estado === "CANCELADO" && <span style={{ fontSize: 11, color: "var(--warning)", marginLeft: 4 }}>(Cancelado)</span>}
                                         </button>
                                       );

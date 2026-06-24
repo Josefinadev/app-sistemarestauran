@@ -10,6 +10,7 @@ export interface PedidoItemCaja {
   precio: number;
   precioUnitario: number;
   estado: string;
+  pagado?: boolean;
   imagenUrl?: string | null;
 }
 
@@ -121,13 +122,15 @@ export function useCajaDashboard() {
           items: (p.detalle_pedido || []).map((d: any) => {
             const isPaidByDetalle = pagosData.some((pay: any) => Array.isArray(pay.detalleIds) && pay.detalleIds.includes(d.id));
             const allPaidPedido = montoRestante <= 0;
+            const pagado = allPaidPedido || isPaidByDetalle;
             return {
               id: d.id,
               nombre: d.producto?.nombre || "Producto",
               cantidad: d.cantidad || 1,
               precio: (d.precio_unitario || 0) * (d.cantidad || 1),
               precioUnitario: d.precio_unitario || 0,
-              estado: allPaidPedido || isPaidByDetalle ? "ENTREGADO" : d.estado,
+              estado: d.estado,
+              pagado,
               imagenUrl: d.producto?.imagen_url || null,
             };
           }),
