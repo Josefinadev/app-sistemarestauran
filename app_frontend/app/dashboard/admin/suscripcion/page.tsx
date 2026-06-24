@@ -2,7 +2,8 @@
 
 import { useSuscripcion } from "@/viewmodels/useSuscripcion";
 import { formatPrecio } from "@/lib/utils";
-import { Crown, CheckCircle2, Palette, Leaf, Rocket, Diamond, Pencil, Calendar, CreditCard, FileText, Save } from "lucide-react";
+import { useState } from "react";
+import { Crown, CheckCircle2, Palette, Leaf, Rocket, Diamond, Pencil, Calendar, CreditCard, FileText, Save, X, Printer } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    SUSCRIPCIÓN — Wine Design
@@ -41,6 +42,7 @@ function getPlanKey(nombre: string): string {
 
 export default function SuscripcionDashboard() {
   const vm = useSuscripcion();
+  const [showHistorial, setShowHistorial] = useState(false);
 
   if (vm.loading) {
     return <div className="skeleton" style={{ height: 400, borderRadius: 16 }} />;
@@ -212,10 +214,7 @@ export default function SuscripcionDashboard() {
           </div>
         </div>
 
-        {/* Footer security note */}
-        <p style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          🔒 Tus pagos están protegidos con cifrado de 256 bits y procesados de forma segura.
-        </p>
+        {/* Footer security note — removed */}
       </div>
 
       {/* ── Right billing summary ── */}
@@ -237,24 +236,82 @@ export default function SuscripcionDashboard() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Estado</span>
-              <span className="badge badge-ready" style={{ fontSize: 10 }}>
+              <span className={`badge ${vm.suscripcionActual?.estado === "activa" ? "badge-ready" : "badge-pending"}`} style={{ fontSize: 10 }}>
                 {vm.suscripcionActual?.estado === "activa" ? "Activa" : vm.suscripcionActual?.estado || "—"}
               </span>
             </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Plan</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>
+                {vm.suscripcionActual?.plan?.nombre || "—"}
+              </span>
+            </div>
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>Método de pago</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>Facturación</p>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <CreditCard size={14} color="var(--text-muted)" />
-                <span style={{ fontSize: 12, color: "var(--text)" }}>•••• 4242</span>
-                <button style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer" }}>Cambiar</button>
+                <span style={{ fontSize: 12, color: "var(--text)" }}>
+                  {vm.suscripcionActual?.plan?.precio_mensual
+                    ? `${formatPrecio(vm.suscripcionActual.plan.precio_mensual)}/mes`
+                    : "Sin suscripción activa"}
+                </span>
               </div>
             </div>
-            <button className="btn btn-secondary btn-sm" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
+              onClick={() => setShowHistorial(true)}
+            >
               <FileText size={13} /> Ver historial de facturación
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── Historial de facturación modal ── */}
+      {showHistorial && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowHistorial(false)}>
+          <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 20, padding: 28, width: "min(600px, 92vw)", maxHeight: "80vh", overflowY: "auto", boxShadow: "var(--shadow-xl)" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: 0 }}>Historial de facturación</h3>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => window.print()}>
+                  <Printer size={13} /> Imprimir
+                </button>
+                <button onClick={() => setShowHistorial(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            {vm.suscripcionActual ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ padding: "14px 16px", background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Plan {vm.suscripcionActual.plan?.nombre}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>{formatPrecio(vm.suscripcionActual.plan?.precio_mensual || 0)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" }}>
+                    <span>Inicio: {vm.suscripcionActual.fecha_inicio ? new Date(vm.suscripcionActual.fecha_inicio).toLocaleDateString("es-PE") : "—"}</span>
+                    <span>Vence: {vm.suscripcionActual.fecha_fin ? new Date(vm.suscripcionActual.fecha_fin).toLocaleDateString("es-PE") : "—"}</span>
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <span className={`badge ${vm.suscripcionActual.estado === "activa" ? "badge-ready" : "badge-pending"}`} style={{ fontSize: 10 }}>
+                      {vm.suscripcionActual.estado === "activa" ? "Activa" : vm.suscripcionActual.estado}
+                    </span>
+                  </div>
+                </div>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                  El historial completo de pagos estará disponible próximamente.
+                </p>
+              </div>
+            ) : (
+              <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: "center", padding: "32px 0" }}>No hay suscripción activa.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

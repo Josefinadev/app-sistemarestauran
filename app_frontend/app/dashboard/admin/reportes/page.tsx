@@ -10,14 +10,21 @@ import {
 } from "recharts";
 import {
   TrendingUp, DollarSign, ShoppingBag, Download, Calendar,
-  Star, Monitor, LayoutGrid, Info,
+  Star, LayoutGrid, Info,
 } from "lucide-react";
+import Image from "next/image";
 
 /* ═══════════════════════════════════════════════════════════
    REPORTES — Dashboard de Análisis (Wine Design)
    ═══════════════════════════════════════════════════════════ */
 
 const CHART_COLORS = ["#C5A059", "#E2725B", "#4ADE80", "#97B0FF", "#FBBF24", "#F472B6", "#818CF8", "#94A3B8"];
+
+const METODO_IMAGES: Record<string, string> = {
+  YAPE: "/assets/metodos_pago/yape.png",
+  PLIN: "/assets/metodos_pago/PLIN.png",
+  BCP: "/assets/metodos_pago/BCP.webp",
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -75,6 +82,30 @@ export default function ReportesPage() {
     const totalPedidos = pedidos.length;
     const ticketPromedio = pagados.length > 0 ? totalIngresos / pagados.length : 0;
 
+    // Tendencias reales vs período anterior (14 días previos)
+    const now = new Date();
+    const cutoff14 = new Date(now.getTime() - 14 * 86400000);
+    const cutoff28 = new Date(now.getTime() - 28 * 86400000);
+    const periodoActual = pedidos.filter(p => new Date(p.created_at) >= cutoff14);
+    const periodoAnterior = pedidos.filter(p => {
+      const d = new Date(p.created_at);
+      return d >= cutoff28 && d < cutoff14;
+    });
+    const pagActual = periodoActual.filter(p => p.estado_pago === "PAGADO");
+    const pagAnterior = periodoAnterior.filter(p => p.estado_pago === "PAGADO");
+    const ingActual = pagActual.reduce((s, p) => s + Number(p.total || 0), 0);
+    const ingAnterior = pagAnterior.reduce((s, p) => s + Number(p.total || 0), 0);
+    const calcTrend = (a: number, b: number) => {
+      if (b === 0) return a > 0 ? "+100% vs. período anterior" : "Sin datos previos";
+      const pct = Math.round(((a - b) / b) * 100);
+      return `${pct >= 0 ? "+" : ""}${pct}% vs. período anterior`;
+    };
+    const trendIngresos = calcTrend(ingActual, ingAnterior);
+    const trendPedidos = calcTrend(periodoActual.length, periodoAnterior.length);
+    const trendTicket = pagActual.length > 0 && pagAnterior.length > 0
+      ? calcTrend(ingActual / pagActual.length, ingAnterior / pagAnterior.length)
+      : "Sin datos previos";
+
     const prodCount: Record<string, { nombre: string; cantidad: number; imagen_url?: string }> = {};
     for (const ped of pedidos) {
       for (const det of ped.detalle_pedido || []) {
@@ -114,6 +145,7 @@ export default function ReportesPage() {
       totalIngresos, totalPedidos, ticketPromedio,
       topProductos, metodosPago, mejorDia, mejorDiaMonto,
       productoEstrella, productoEstrellaCount,
+      trendIngresos, trendPedidos, trendTicket,
     };
   }, [pedidos, productos, mesas]);
 
@@ -193,7 +225,7 @@ export default function ReportesPage() {
           <div className="dash-stat-body">
             <p className="dash-stat-label">Ingresos Totales</p>
             <p className="dash-stat-value">{formatPrecio(stats.totalIngresos)}</p>
-            <p className="dash-stat-trend"><TrendingUp size={8} /> +18% vs. período anterior</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> {stats.trendIngresos}</p>
           </div>
         </div>
         <div className="dash-stat-card">
@@ -203,7 +235,7 @@ export default function ReportesPage() {
           <div className="dash-stat-body">
             <p className="dash-stat-label">Total Pedidos</p>
             <p className="dash-stat-value">{stats.totalPedidos}</p>
-            <p className="dash-stat-trend"><TrendingUp size={8} /> +15% vs. período anterior</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> {stats.trendPedidos}</p>
           </div>
         </div>
         <div className="dash-stat-card">
@@ -213,7 +245,7 @@ export default function ReportesPage() {
           <div className="dash-stat-body">
             <p className="dash-stat-label">Ticket Promedio</p>
             <p className="dash-stat-value">{formatPrecio(stats.ticketPromedio)}</p>
-            <p className="dash-stat-trend"><TrendingUp size={8} /> +2% vs. período anterior</p>
+            <p className="dash-stat-trend"><TrendingUp size={8} /> {stats.trendTicket}</p>
           </div>
         </div>
       </div>
@@ -329,10 +361,15 @@ export default function ReportesPage() {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
               {stats.metodosPago.map((m, i) => {
                 const pct = totalMonto > 0 ? Math.round((m.monto / totalMonto) * 100) : 0;
+                const imgSrc = METODO_IMAGES[m.name];
                 return (
                   <div key={m.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: CHART_COLORS[i % 8], flexShrink: 0 }} />
+                      {imgSrc ? (
+                        <Image src={imgSrc} alt={m.name} width={20} height={20} style={{ objectFit: "contain", borderRadius: 4 }} />
+                      ) : (
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: CHART_COLORS[i % 8], flexShrink: 0 }} />
+                      )}
                       <span style={{ fontSize: 12, color: "var(--text)" }}>{m.name}</span>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -374,16 +411,6 @@ export default function ReportesPage() {
                 <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Producto estrella</p>
                 <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "2px 0 0" }}>{stats.productoEstrella}</p>
                 <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "1px 0 0" }}>{stats.productoEstrellaCount} vendidos</p>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(22,163,74,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Monitor size={16} color="var(--success)" />
-              </div>
-              <div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Canal más usado</p>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "2px 0 0" }}>Mesero</p>
-                <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "1px 0 0" }}>Canal principal de pedidos</p>
               </div>
             </div>
           </div>

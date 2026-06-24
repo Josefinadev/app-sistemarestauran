@@ -269,16 +269,29 @@ export default function GestionWebPage() {
 
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Tab bar */}
-      <div className="wine-tab-bar">
-        {tabs.map((tab) => {
-          const Icon = tab.Icon;
-          return (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`wine-tab-btn ${activeTab === tab.key ? "wine-tab-btn--active" : ""}`}>
-              <Icon size={13} />{tab.label}
-            </button>
-          );
-        })}
+      {/* Tab bar + Visitar la web */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div className="wine-tab-bar" style={{ flex: 1 }}>
+          {tabs.map((tab) => {
+            const Icon = tab.Icon;
+            return (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`wine-tab-btn ${activeTab === tab.key ? "wine-tab-btn--active" : ""}`}>
+                <Icon size={13} />{tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {restaurante?.slug && (
+          <a
+            href={`/${restaurante.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary btn-sm"
+            style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, textDecoration: "none" }}
+          >
+            <Globe size={14} /> Visitar la web
+          </a>
+        )}
       </div>
 
       {/* ═══ COMBOS ═══ */}

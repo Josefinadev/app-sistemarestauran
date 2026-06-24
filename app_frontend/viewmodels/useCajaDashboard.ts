@@ -55,7 +55,7 @@ export function useCajaDashboard() {
 
   const [pedidos, setPedidos] = useState<PedidoCaja[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"pedidos" | "cuadre" | "monitor">("pedidos");
+  const [activeTab, setActiveTab] = useState<"pedidos" | "cuadre" | "monitor" | "historial">("pedidos");
   const [filtro, setFiltro] = useState<"TODOS" | "PENDIENTE" | "PAGADO">("PENDIENTE");
   const [selectedMesa, setSelectedMesa] = useState<string | number | null>(null);
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
@@ -77,10 +77,10 @@ export function useCajaDashboard() {
     checkUsuarios();
   }, [idRest]);
 
-  const loadPedidos = useCallback(async () => {
+  const loadPedidos = useCallback(async (silent = false) => {
     if (!idRest) return;
     try {
-      if (loading) setLoading(true);
+      if (!silent) setLoading(true);
       const res = await getPedidos({ id_restaurante: idRest });
 
       const mapped: PedidoCaja[] = (res || []).map((p: any) => {
@@ -141,12 +141,13 @@ export function useCajaDashboard() {
     } catch (err) {
       console.error("Error loading caja data:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [idRest]);
 
   useEffect(() => { loadPedidos(); }, [loadPedidos]);
-  usePedidosRealtime(idRest || null, loadPedidos, loadPedidos);
+  // Realtime: silent update (sin flash de loading) para evitar "recargas"
+  usePedidosRealtime(idRest || null, () => loadPedidos(true), () => loadPedidos(true));
 
   // ── Agrupar por mesa ──
   const mesasAgrupadas = useMemo<MesaCaja[]>(() => {

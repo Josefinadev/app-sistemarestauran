@@ -104,7 +104,7 @@ export default function MenuPage() {
                 <ChefHat size={34} />
               )}
             </div>
-            <div>
+            <div className="client-brand-text">
               <span className="client-brand-kicker">Restaurante</span>
               <strong>{vm.restaurante?.nombre || "Cargando..."}</strong>
             </div>

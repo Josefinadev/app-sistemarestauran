@@ -35,7 +35,7 @@ export function useAdminDashboard() {
   const [productos, setProductos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [mesas, setMesas] = useState<any[]>([]);
-  const [stats, setStats] = useState({ productos: 0, mesas: 0, pedidosHoy: 0, ingresosHoy: 0 });
+  const [stats, setStats] = useState({ productos: 0, mesas: 0, pedidosHoy: 0, ingresosHoy: 0, trendPedidos: "—", trendIngresos: "—" });
 
   const [showProductModal, setShowProductModal] = useState(false);
   const [showMesaModal, setShowMesaModal] = useState(false);
@@ -73,14 +73,41 @@ export function useAdminDashboard() {
 
       const activePrds = (prods || []).filter((p: any) => p.disponible && !p.deleted_at);
       const activeMesas = (mesasData || []).filter((m: any) => m.activa);
-      const pagados = (pedidosData || []).filter((p: any) => p.estado_pago === "PAGADO");
-      const ingresos = pagados.reduce((s: number, p: any) => s + Number(p.total), 0);
+
+      // Filtrar pedidos de HOY y AYER para calcular tendencias reales
+      const todayStr = new Date().toISOString().split("T")[0];
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const pedidosHoy = (pedidosData || []).filter((p: any) => {
+        const d = new Date(p.created_at);
+        // Ajustar a zona horaria local
+        const localStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return localStr === todayStr;
+      });
+      const pedidosAyer = (pedidosData || []).filter((p: any) => {
+        const d = new Date(p.created_at);
+        const localStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return localStr === yesterdayStr;
+      });
+
+      const pagadosHoy = pedidosHoy.filter((p: any) => p.estado_pago === "PAGADO");
+      const pagadosAyer = pedidosAyer.filter((p: any) => p.estado_pago === "PAGADO");
+      const ingresosHoy = pagadosHoy.reduce((s: number, p: any) => s + Number(p.total), 0);
+      const ingresosAyer = pagadosAyer.reduce((s: number, p: any) => s + Number(p.total), 0);
+
+      // Calcular tendencias (porcentaje de cambio vs ayer)
+      const calcTrend = (hoy: number, ayer: number): string => {
+        if (ayer === 0) return hoy > 0 ? "+100% vs ayer" : "Sin datos ayer";
+        const pct = Math.round(((hoy - ayer) / ayer) * 100);
+        return `${pct >= 0 ? "+" : ""}${pct}% vs ayer`;
+      };
 
       setStats({
         productos: activePrds.length,
         mesas: activeMesas.length,
-        pedidosHoy: (pedidosData || []).length,
-        ingresosHoy: ingresos,
+        pedidosHoy: pedidosHoy.length,
+        ingresosHoy,
+        trendPedidos: calcTrend(pedidosHoy.length, pedidosAyer.length),
+        trendIngresos: calcTrend(ingresosHoy, ingresosAyer),
       });
     } catch (err: any) {
       console.error("Error loading admin data:", err);

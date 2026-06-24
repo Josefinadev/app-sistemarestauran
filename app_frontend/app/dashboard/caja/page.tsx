@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { formatPrecio } from "@/lib/utils";
 import { useCajaDashboard } from "@/viewmodels/useCajaDashboard";
 import { NoUsuariosAsignados } from "@/components/NoUsuariosAsignados";
@@ -9,7 +9,7 @@ import {
   CreditCard, CheckCircle2, DollarSign,
   Smartphone, Banknote,
   ShoppingBag, BarChart3, Monitor, Printer,
-  TrendingUp, ChevronDown, ChevronUp,
+  TrendingUp, ChevronDown, ChevronUp, History, Calendar, Clock, Utensils,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -34,6 +34,7 @@ const tabs = [
   { key: "pedidos", label: "Pedidos", Icon: ShoppingBag },
   { key: "cuadre", label: "Cuadre", Icon: BarChart3 },
   { key: "monitor", label: "Monitor", Icon: Monitor },
+  { key: "historial", label: "Historial", Icon: History },
 ] as const;
 
 const monitorColors: Record<string, string> = {
@@ -53,6 +54,7 @@ export default function CajaDashboard() {
   const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] = useState<string | null>(null);
   const [montoAPagar, setMontoAPagar] = useState<number | undefined>();
   const [montoManual, setMontoManual] = useState<boolean>(false);
+  const [historialFiltro, setHistorialFiltro] = useState<"dia" | "semana" | "mes">("dia");
 
   const toggleMesa = (mesa: string | number) => {
     setExpandedMesas((prev) => {
@@ -64,6 +66,23 @@ export default function CajaDashboard() {
   };
 
   if (vm.noUsuariosAsignados) return <NoUsuariosAsignados rolLabel="Cajero" rol="caja" />;
+
+  // Historial de pedidos pagados con filtros por período
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const historialPedidos = useMemo(() => {
+    const now = new Date();
+    let cutoff: Date;
+    if (historialFiltro === "dia") {
+      cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else if (historialFiltro === "semana") {
+      cutoff = new Date(now.getTime() - 7 * 86400000);
+    } else {
+      cutoff = new Date(now.getTime() - 30 * 86400000);
+    }
+    return vm.pagados
+      .filter((p) => new Date(p.hora) >= cutoff)
+      .sort((a, b) => new Date(b.hora).getTime() - new Date(a.hora).getTime());
+  }, [vm.pagados, historialFiltro]);
 
   if (vm.loading) {
     return (
@@ -592,6 +611,125 @@ export default function CajaDashboard() {
           </div>
         </div>
 
+      )}
+
+      {/* ═══ HISTORIAL tab ═══ */}
+      {vm.activeTab === "historial" && (
+        <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Filtros */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              {([
+                { key: "dia", label: "Hoy" },
+                { key: "semana", label: "Últimos 7 días" },
+                { key: "mes", label: "Últimos 30 días" },
+              ] as const).map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setHistorialFiltro(f.key)}
+                  className={`wine-chip ${historialFiltro === f.key ? "wine-chip--active" : ""}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => window.print()}>
+              <Printer size={14} /> Imprimir historial
+            </button>
+          </div>
+
+          {/* Resumen del período */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            {[
+              { label: "Total cobrado", value: formatPrecio(historialPedidos.flatMap(p => p.pagos).reduce((s, pay) => s + pay.monto, 0)), iconColor: "var(--success)", Icon: DollarSign },
+              { label: "Pedidos", value: String(historialPedidos.length), iconColor: "var(--primary)", Icon: ShoppingBag },
+              { label: "Ticket promedio", value: historialPedidos.length > 0 ? formatPrecio(historialPedidos.flatMap(p => p.pagos).reduce((s, pay) => s + pay.monto, 0) / historialPedidos.length) : "S/ 0.00", iconColor: "var(--tertiary)", Icon: TrendingUp },
+            ].map((s) => (
+              <div key={s.label} className="dash-stat-card">
+                <div className="dash-stat-icon" style={{ background: `${s.iconColor}20` }}>
+                  <s.Icon size={17} color={s.iconColor} />
+                </div>
+                <div className="dash-stat-body">
+                  <p className="dash-stat-label">{s.label}</p>
+                  <p className="dash-stat-value">{s.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabla de historial */}
+          <div className="card-flat" style={{ overflow: "hidden" }}>
+            <div className="table-container" style={{ border: "none" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha y hora</th>
+                    <th>Mesa</th>
+                    <th># Pedido</th>
+                    <th>Productos</th>
+                    <th>Método de pago</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historialPedidos.map((p) => {
+                    const fechaPago = new Date(p.hora);
+                    const metodo = p.pagos[0]?.metodoPago || p.metodoPago || "—";
+                    const imgSrc = metodoImages[metodo] || null;
+                    const MetodoIcon = metodoIcons[metodo] || CreditCard;
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontSize: 12, color: "var(--text)", fontWeight: 500 }}>
+                              {fechaPago.toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+                              <Clock size={10} />
+                              {fechaPago.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>Mesa {p.mesa}</td>
+                        <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{p.numeroPedido}</td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 220 }}>
+                            {p.items.slice(0, 3).map((item, i) => (
+                              <span key={i} style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                                {item.cantidad}× {item.nombre}
+                              </span>
+                            ))}
+                            {p.items.length > 3 && (
+                              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>+{p.items.length - 3} más</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {imgSrc ? (
+                              <Image src={imgSrc} alt={metodo} width={18} height={18} style={{ objectFit: "contain", borderRadius: 3 }} />
+                            ) : (
+                              <MetodoIcon size={14} color="var(--text-muted)" />
+                            )}
+                            <span style={{ fontSize: 12, color: "var(--text)" }}>{metodo}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 700, color: "var(--success)" }}>{formatPrecio(p.pagos.reduce((s, pay) => s + pay.monto, 0) || p.total)}</td>
+                      </tr>
+                    );
+                  })}
+                  {historialPedidos.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontSize: 13 }}>
+                        No hay pedidos pagados en este período.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

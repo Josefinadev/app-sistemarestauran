@@ -170,10 +170,20 @@ export default function EstadoPage() {
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <h1 style={{ fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontSize: 24, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>
-          Estado del Pedido
-        </h1>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>{numeroPedido} · Seguimiento en tiempo real</p>
+        <div style={{
+          display: "inline-block",
+          padding: "14px 24px",
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderRadius: 16,
+          border: "1px solid rgba(255,255,255,0.1)",
+        }}>
+          <h1 style={{ fontFamily: "var(--font-noto-serif), 'Noto Serif', serif", fontSize: 24, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>
+            Estado del Pedido
+          </h1>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", margin: 0 }}>{numeroPedido} · Seguimiento en tiempo real</p>
+        </div>
       </div>
 
       {/* Main card */}

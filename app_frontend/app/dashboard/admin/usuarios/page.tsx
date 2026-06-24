@@ -209,6 +209,10 @@ export default function UsuariosPage() {
     acc[u.rol] = (acc[u.rol] || 0) + 1;
     return acc;
   }, {});
+  // El dueño del restaurante siempre tiene rol admin aunque no aparezca en la lista de usuarios.
+  if (!rolCounts["admin"] || rolCounts["admin"] === 0) {
+    rolCounts["admin"] = 1;
+  }
 
   if (loading && !usuarios.length) {
     return (

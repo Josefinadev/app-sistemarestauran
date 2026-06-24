@@ -172,25 +172,25 @@ export default function AdminDashboard() {
       label: "Productos activos", value: String(vm.stats.productos),
       sub: "Disponibles en carta", Icon: Package,
       iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)",
-      trend: "+12% vs ayer",
+      trend: `${vm.stats.productos} disponibles`,
     },
     {
       label: "Mesas activas", value: String(vm.stats.mesas),
       sub: "De mesas totales", Icon: Armchair,
       iconBg: "rgba(74,108,247,0.1)", iconColor: "var(--tertiary)",
-      trend: "+8% vs ayer",
+      trend: `${vm.stats.mesas} habilitadas`,
     },
     {
       label: "Pedidos hoy", value: String(vm.stats.pedidosHoy),
       sub: "Total del día", Icon: Receipt,
       iconBg: "rgba(22,163,74,0.1)", iconColor: "var(--success)",
-      trend: "+15% vs ayer",
+      trend: vm.stats.trendPedidos,
     },
     {
       label: "Ingresos hoy", value: formatPrecio(vm.stats.ingresosHoy),
       sub: "Total pagado", Icon: DollarSign,
       iconBg: "rgba(197,160,89,0.1)", iconColor: "var(--primary)",
-      trend: "+18% vs ayer",
+      trend: vm.stats.trendIngresos,
     },
   ];
 
