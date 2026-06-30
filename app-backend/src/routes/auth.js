@@ -291,11 +291,10 @@ router.post('/registrar-cliente', async (req, res) => {
       return res.status(400).json({ error: true, message: 'Faltan campos obligatorios.' });
     }
 
-    // 1. Crear usuario en Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // 1. Crear usuario en Supabase Auth usando el cliente normal para disparar OTP
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      email_confirm: true,
     });
 
     if (authError) {
@@ -305,11 +304,53 @@ router.post('/registrar-cliente', async (req, res) => {
       throw authError;
     }
 
-    // 2. Insertar en tabla usuario con rol 'cliente' forzado
-    const { data: usuario, error: userError } = await supabaseAdmin
+    // Ya no insertamos en la tabla usuario aquí para evitar cuentas basura.
+    // Solo le decimos al frontend que revise su correo.
+    res.status(201).json({ message: 'OTP enviado con éxito al correo.', email: email.trim().toLowerCase() });
+  } catch (err) {
+    console.error('[Auth Registrar Cliente Error]', err);
+    res.status(500).json({ error: true, message: err.message || 'Error en el registro.' });
+  }
+});
+
+/**
+ * POST /api/auth/completar-registro
+ * Se llama DESPUÉS de que el cliente validó su OTP correctamente.
+ * Inserta al usuario de forma oficial en la tabla `usuario`.
+ */
+router.post('/completar-registro', async (req, res) => {
+  try {
+    const { email, nombre, id_restaurante } = req.body;
+
+    if (!email || !nombre || !id_restaurante) {
+      return res.status(400).json({ error: true, message: 'Faltan campos obligatorios.' });
+    }
+
+    // 1. Obtener el auth_id buscando al usuario en Supabase Auth por email
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listError) throw listError;
+
+    const authUser = users.find(u => u.email === email.trim().toLowerCase());
+    if (!authUser) {
+      return res.status(404).json({ error: true, message: 'Usuario no encontrado en la autenticación.' });
+    }
+
+    // 2. Verificar si ya existe en nuestra tabla
+    const { data: existente } = await supabaseAdmin
+      .from('usuario')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .maybeSingle();
+
+    if (existente) {
+      return res.status(200).json({ message: 'El usuario ya estaba registrado en la base de datos.', data: existente });
+    }
+
+    // 3. Insertar en la tabla usuario (oficial)
+    const { data: nuevoUsuario, error: userError } = await supabaseAdmin
       .from('usuario')
       .insert({
-        auth_id: authData.user.id,
+        auth_id: authUser.id,
         email: email.trim().toLowerCase(),
         nombre,
         rol: 'cliente',
@@ -318,15 +359,12 @@ router.post('/registrar-cliente', async (req, res) => {
       .select()
       .single();
 
-    if (userError) {
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      throw userError;
-    }
+    if (userError) throw userError;
 
-    res.status(201).json({ data: usuario });
+    res.status(201).json({ data: nuevoUsuario });
   } catch (err) {
-    console.error('[Auth Registrar Cliente Error]', err);
-    res.status(500).json({ error: true, message: err.message || 'Error en el registro.' });
+    console.error('[Auth Completar Registro Error]', err);
+    res.status(500).json({ error: true, message: err.message || 'Error al completar el registro.' });
   }
 });
 

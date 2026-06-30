@@ -121,10 +121,17 @@ export const loginAuth = async (email: string, password: string) => {
 /** Registro de cliente (comensal) */
 export const registrarCliente = (data: {
   email: string;
-  password: string;
+  password?: string;
   nombre: string;
   id_restaurante: string;
 }) => apiFetch("/auth/registrar-cliente", { method: "POST", body: JSON.stringify(data) });
+
+/** Completar el registro del cliente después de validar OTP */
+export const completarRegistroCliente = (data: {
+  email: string;
+  nombre: string;
+  id_restaurante: string;
+}) => apiFetch("/auth/completar-registro", { method: "POST", body: JSON.stringify(data) });
 
 /** Verificar sesión actual — devuelve datos del usuario */
 export const getAuthMe = () => apiFetch("/auth/me");
@@ -339,6 +346,9 @@ export const actualizarUsuario = (id: string, data: any) =>
 
 export const eliminarUsuario = (id: string) =>
   apiFetch(`/usuarios/${id}`, { method: "DELETE" });
+
+export const enviarPromocionEmail = (clientesIds: string[], asunto: string, mensajeHTML: string) =>
+  apiFetch("/email/promociones", { method: "POST", body: JSON.stringify({ clientesIds, asunto, mensajeHTML }) });
 
 // ── Web ──
 export const getWebConfig = (id_restaurante: string) => apiFetch(`/web/config/${id_restaurante}`);

@@ -34,6 +34,7 @@ const webRoutes = require('./routes/web');
 const uploadRoutes = require('./routes/upload');
 const authRoutes = require('./routes/auth');
 const pagosRoutes = require('./routes/pagos');
+const emailRoutes = require('./routes/email');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
@@ -45,6 +46,7 @@ app.use('/api/web', webRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/pagos', pagosRoutes);
+app.use('/api/email', emailRoutes);
 
 // ── Health check ──
 app.get('/', (req, res) => {
