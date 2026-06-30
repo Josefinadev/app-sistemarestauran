@@ -3,16 +3,18 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, UserPlus, LogIn, ShoppingBag, LogOut } from "lucide-react";
-import { loginAuth, registrarCliente } from "@/lib/api";
+import { loginAuth, registrarCliente, completarRegistroCliente } from "@/lib/api";
 import { useAuth } from "@/lib/store";
+
+import { supabase } from "@/lib/supabase";
 
 /* ═══════════════════════════════════════════════════════════
    ClientAuthModal — Modal de autenticacion para clientes
-   Opciones: Continuar sin cuenta / Iniciar sesion / Registrarse
+   Opciones: Continuar sin cuenta / Iniciar sesion / Registrarse / OTP
    Respeta colores primary/secondary del restaurante.
    ═══════════════════════════════════════════════════════════ */
 
-type View = "options" | "login" | "register" | "account";
+type View = "options" | "login" | "register" | "otp" | "account";
 
 interface Props {
   open: boolean;
@@ -32,6 +34,7 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHist
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   // Cuando el modal se abre, mostrar la vista correcta según estado de sesión
   useEffect(() => {
@@ -49,6 +52,7 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHist
     setError("");
     setShowPassword(false);
     setSuccess(false);
+    setOtpCode("");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -85,14 +89,45 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHist
     setLoading(true);
     setError("");
     try {
-      // 1. Crear la cuenta
+      // 1. Crear la cuenta (se mandará el OTP automáticamente por Supabase si Confirm Email está activado)
       await registrarCliente({ email: email.trim(), password, nombre, id_restaurante: restaurante.id });
       
-      // 2. Iniciar sesión automáticamente
+      // 2. Cambiar la vista a OTP en vez de iniciar sesión
+      setView("otp");
+    } catch (err: any) {
+      setError(err.message || "Error al registrar la cuenta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.length !== 8) {
+      setError("Ingresa el código de 8 dígitos.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      // Verificar OTP directamente con Supabase
+      const { data, error: otpError } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otpCode,
+        type: 'signup'
+      });
+
+      if (otpError) throw otpError;
+
+      // Una vez verificado el OTP, registramos oficialmente en la tabla de nuestra BD
+      await completarRegistroCliente({
+        email: email.trim(),
+        nombre: nombre,
+        id_restaurante: restaurante!.id
+      });
+
+      // Iniciamos sesión normalmente a nuestro backend
       const loginData = await loginAuth(email.trim(), password);
-      if (loginData.usuario?.rol !== "cliente") {
-        throw new Error("Error en la asignación de rol.");
-      }
       
       useAuth.getState().setSession({
         accessToken: loginData.access_token,
@@ -104,7 +139,7 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHist
       setSuccess(true);
       setTimeout(() => { onClose(); setView("account"); }, 1000);
     } catch (err: any) {
-      setError(err.message || "Error al registrar la cuenta.");
+      setError(err.message || "Código incorrecto o expirado.");
     } finally {
       setLoading(false);
     }
@@ -312,6 +347,50 @@ export function ClientAuthModal({ open, onClose, onContinueAsGuest, slug, onHist
                     <button onClick={() => { resetForm(); setView("options"); }} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 12 }}>Volver</button>
                     {" · "}Ya tienes cuenta?{" "}
                     <button onClick={() => { resetForm(); setView("login"); }} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 600, cursor: "pointer", fontSize: 12 }}>Ingresar</button>
+                  </p>
+                </motion.div>
+              )}
+
+              {/* ═══ OTP VIEW ═══ */}
+              {view === "otp" && !success && (
+                <motion.div
+                  key="otp"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div style={{ marginBottom: 20 }}>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>Verifica tu correo</h2>
+                    <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                      Hemos enviado un código de verificación a <br/>
+                      <strong style={{ color: "var(--text)" }}>{email}</strong>
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ position: "relative" }}>
+                      <Lock size={14} color="var(--text-muted)" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+                      <input 
+                        type="text" 
+                        maxLength={8}
+                        value={otpCode} 
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} 
+                        placeholder="12345678" 
+                        style={{ width: "100%", padding: "12px 14px 12px 38px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text)", fontSize: 18, letterSpacing: 8, textAlign: "center", outline: "none", fontWeight: 700 }} 
+                        autoFocus
+                      />
+                    </div>
+
+                    {error && <p style={{ fontSize: 12, color: "var(--error)", margin: 0, padding: "8px 12px", background: "rgba(220,38,38,0.06)", borderRadius: 8 }}>{error}</p>}
+
+                    <button type="submit" disabled={loading || otpCode.length !== 8} style={{ width: "100%", padding: "13px", background: "var(--primary)", color: "var(--text-inverse)", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: (loading || otpCode.length !== 8) ? "not-allowed" : "pointer", opacity: (loading || otpCode.length !== 8) ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      {loading ? <Loader2 size={16} className="spin-icon" /> : <ArrowRight size={16} />} {loading ? "Verificando..." : "Verificar Código"}
+                    </button>
+                  </form>
+
+                  <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: "14px 0 0" }}>
+                    <button onClick={() => { setView("register"); }} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 12 }}>Volver atrás</button>
                   </p>
                 </motion.div>
               )}
